@@ -22,10 +22,15 @@ import type { ReviewControl } from './useReviewActions'
  * Pinch-zoom stays with the browser; «Скрыть фото» folds it to leave the screen to the form. */
 export function CropPin({ children }: { children: ReactNode }) {
   const [shown, setShown] = useState(true)
+  // Small by default: a strip to glance at while typing; «Крупнее» (or a tap on the photo) to read a figure.
+  const [big, setBig] = useState(false)
   const id = useId()
   return <div className="ck-rec-crop-pin">
-    <button type="button" className="ck-review-secondary ck-rec-crop-toggle" aria-expanded={shown} aria-controls={id} onClick={() => setShown(!shown)}>{cropToggleLabel(shown)}</button>
-    <div id={id} className="ck-rec-crop-image" hidden={!shown}>{children}</div>
+    <div className="ck-rec-crop-tools">
+      {shown && <button type="button" className="ck-review-secondary" aria-pressed={big} onClick={() => setBig(!big)}>{big ? 'Мельче' : 'Крупнее'}</button>}
+      <button type="button" className="ck-review-secondary" aria-expanded={shown} aria-controls={id} onClick={() => setShown(!shown)}>{cropToggleLabel(shown)}</button>
+    </div>
+    <div id={id} className={`ck-rec-crop-image${big ? ' ck-rec-crop-big' : ''}`} hidden={!shown} onClick={() => setBig(!big)}>{children}</div>
   </div>
 }
 
@@ -62,7 +67,16 @@ function ImageCard({ item, confirmed, finished, busy, review, remember, result }
     {shown.confirmed_at !== null && <p className="ck-rec-confirmed">Подтверждено вручную: <time dateTime={shown.confirmed_at}>{formatObservedAt(shown.confirmed_at)}</time></p>}
     {linked && <p className="ck-rec-warning">Чек уже был сохранён раньше: вырезка привязана к нему. Заполненные значения этого чека не изменены — исправления к ним не применены. Расхождения перечислены в замечаниях.</p>}
     {shown.status === 'needs_review'
-      ? <ReviewResult image={shown} finished={finished} busy={busy} review={review} remember={remember} />
+      ? <>
+        {/* The one spend form (2026-10-14): place, date and lines beside a small photo; this form keeps every field. */}
+        {finished && <Link className="action-link ck-rec-check" to={{ kind: 'expense-new', crop: shown.id }}>Проверить и сохранить</Link>}
+        {finished
+          ? <details className="ck-rec-more ck-rec-all-fields">
+            <summary>Все поля распознавания</summary>
+            <ReviewResult image={shown} finished={finished} busy={busy} review={review} remember={remember} />
+          </details>
+          : <ReviewResult image={shown} finished={finished} busy={busy} review={review} remember={remember} />}
+      </>
       : <RecognitionIssues issues={shown.issues} status={shown.status} />}
     {shown.receipt_id !== null && <Link className="action-link" to={{ kind: 'receipt', receiptId: shown.receipt_id }}>Открыть {numbered('чек', shown.receipt_id)}</Link>}
     {shown.receipt_deleted && <p>Ранее сохранённый чек удалён.</p>}

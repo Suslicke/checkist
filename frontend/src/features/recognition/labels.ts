@@ -86,7 +86,7 @@ export function sizeText({ width, height }: { width: number; height: number }) {
 /** Refusals of a crop confirmation. The server message is never shown; nothing is replayed automatically. */
 export function reviewErrorText(error: LocalApiFailure): string {
   switch (error.reason) {
-    case 'review_invalid': return 'Исправленные данные не прошли проверку, чек не сохранён. Причины обновлены, поля отмечены: исправьте их и подтвердите снова.'
+    case 'review_invalid': return 'Чек не сохранён: исправленные данные не прошли проверку. Что исправить — в списке выше: нажмите пункт, чтобы перейти к полю.'
     case 'invalid_parameter': return 'Сервер не принял часть значений, чек не сохранён. Проверьте отмеченные поля и подтвердите снова.'
     case 'invalid_request': return 'Сервер не принял запрос, чек не сохранён. Обновите страницу: несохранённые правки при этом будут потеряны.'
     case 'review_resolved': return 'Этот результат уже подтверждён с другими данными. Ваши правки не сохранены; показываем актуальное состояние.'

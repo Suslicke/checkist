@@ -175,7 +175,7 @@ textarea.expense-row-input { resize: none; field-sizing: content; max-height: 12
 .expense-save { width: 100%; min-height: 56px; padding: 0 20px; border: 1px solid var(--ck-primary); border-radius: var(--ck-radius-button); background: var(--ck-primary); color: var(--ck-on-primary); font-size: var(--ck-text-lg); font-weight: 800; white-space: nowrap; }
 .expense-save:hover:not(:disabled) { border-color: var(--ck-primary-hover); background: var(--ck-primary-hover); }
 
-.expense-failure { margin: 0; padding: 12px; border: 1px solid var(--ck-error-border); border-radius: var(--ck-radius-sm); background: var(--ck-error-bg); color: var(--ck-error-text); }
+.expense-failure { margin: 0; white-space: pre-line; padding: 12px; border: 1px solid var(--ck-error-border); border-radius: var(--ck-radius-sm); background: var(--ck-error-bg); color: var(--ck-error-text); }
 .expense-notice { margin: 0; padding: 12px; border: 1px solid var(--ck-success-border); border-radius: var(--ck-radius-sm); background: var(--ck-success-bg); color: var(--ck-success-text); }
 .expense-confirm { display: grid; gap: 12px; padding: 12px; border: 1px solid var(--ck-warning-border); border-radius: var(--ck-radius-sm); background: var(--ck-warning-bg); }
 .expense-confirm p { margin: 0; color: var(--ck-warning-text); }
@@ -206,3 +206,6 @@ textarea.expense-row-input { resize: none; field-sizing: content; max-height: 12
   .expense-line-remove { justify-self: start; width: auto; padding: 0 12px; border-radius: var(--ck-radius-pill); }
   .expense-line-percent-field { grid-area: discount; }
 }
+
+/* «Что проверить» of a recognized receipt in the form: the causes the recognition could not settle. */
+.expense-causes { margin: 4px 0 0; padding-left: 18px; }

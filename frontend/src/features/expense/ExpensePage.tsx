@@ -3,6 +3,11 @@ import type { CSSProperties, FormEvent, RefObject } from 'react'
 import { getCategories } from '../../api/catalog'
 import { announceIncome, createIncome, getIncome, getIncomeCategories, updateIncome } from '../../api/incomes'
 import { createManualSpend, getManualDefaults, getReceipt, getReceiptLines, updateManualSpend } from '../../api/receipts'
+import { confirmReceiptImage, getReceiptImage, getRecognitionCsrf } from '../../api/recognition'
+import type { ReceiptImageDetail } from '../../api/recognition'
+import { reviewErrorText } from '../recognition/labels'
+import { afterConfirm, cropCauses, cropErrors, cropInput, cropReview, draftFromCrop } from './crop-review'
+import type { CropReview } from './crop-review'
 import type { Line, ManualDefaults, Receipt } from '../../api/receipts'
 import type { Category, LocalApiResult } from '../../api/types'
 import RequestState from '../../components/RequestState'
@@ -84,7 +89,7 @@ export type ExpenseFormProps = {
   /** The income being changed: the form ends with «Удалить доход». */
   incomeId?: number
   /** The photo of a photo receipt being changed, kept beside the form to check the lines against. */
-  media?: { thumb: string | null; image: string | null }
+  media?: { thumb: string | null; image: string | null; back?: { to: string; text: string }; causes?: string[] }
 }
 
 /** A focused field of the form stays above the save bar and the keyboard of a phone: after the focus and whenever the
@@ -185,15 +190,19 @@ export function ExpenseForm({ draft, chips, errors, saving, failure, receiptId, 
   useFocusFirstError(formRef, errors)
   return <form ref={formRef} className="expense-form" onSubmit={submit} noValidate aria-busy={saving}>
     {/* The source is only a mark (one form for every spend): the photo stays beside the lines to check them against. */}
-    {photo && receiptId !== undefined && <section className="expense-card expense-source" aria-label="Фото чека">
+    {photo && (receiptId !== undefined || media?.back) && <section className="expense-card expense-source" aria-label="Фото чека">
       {media?.thumb || media?.image
         ? <a className="expense-source-photo" href={media.image ?? media.thumb ?? undefined} target="_blank" rel="noreferrer">
           <img src={media.thumb ?? media.image ?? undefined} alt="Фото чека" loading="lazy" /></a>
         : <span className="expense-source-photo expense-source-empty" aria-hidden="true" />}
       <div className="expense-source-text">
         <p className="expense-source-title">Чек с фото</p>
-        <p className="expense-hint-note">Сверьте строки с фото: правка меняет итог, скидки и налог чека.</p>
-        <Link className="expense-source-link" to={`/receipts/${receiptId}`}>Открыть чек с фото</Link>
+        <p className="expense-hint-note">{media?.back ? 'Сверьте место, дату и строки с фото — нажмите на фото, чтобы увеличить.' : 'Сверьте строки с фото: правка меняет итог, скидки и налог чека.'}</p>
+        {media?.causes && media.causes.length > 0 && <div className="expense-failure" role="note">
+          <p className="expense-source-title">Что проверить</p>
+          <ul className="expense-causes">{media.causes.map((cause) => <li key={cause}>{cause}</li>)}</ul>
+        </div>}
+        <Link className="expense-source-link" to={media?.back?.to ?? `/receipts/${receiptId}`}>{media?.back?.text ?? 'Открыть чек с фото'}</Link>
       </div>
     </section>}
     {draft.statement && <p className="expense-source-mark" role="note">{`Из выписки: ${draft.statement.replace(/^Выписка /, '')}`}</p>}
@@ -341,10 +350,12 @@ const isFailure = (value: unknown): value is Failure => typeof value === 'object
 /** `/receipts/new` and `/receipts/{id}/edit`: loads what the form needs, saves, then opens the page of the spend.
  * The shell keys it by the spend, so another spend starts from «loading» again. A new form switches «Трата / Доход»
  * (`income` — it opens on «Доход»); `/incomes/{id}/edit` (`incomeId`) changes an income and goes back to «Доходы». */
-export default function ExpensePage({ receiptId, repeat, income = false, incomeId }: { receiptId?: number; repeat?: number; income?: boolean; incomeId?: number }) {
-  const isNew = receiptId === undefined && incomeId === undefined
+export default function ExpensePage({ receiptId, repeat, income = false, incomeId, crop }: { receiptId?: number; repeat?: number; income?: boolean; incomeId?: number; crop?: number }) {
+  const isNew = receiptId === undefined && incomeId === undefined && crop === undefined
   const [kind, setKind] = useState<FormKind>(income || incomeId !== undefined ? 'income' : 'spend')
-  usePageTitle(isNew ? (kind === 'income' ? 'Новый доход' : 'Новая трата') : undefined)
+  usePageTitle(crop !== undefined ? 'Проверка чека' : isNew ? (kind === 'income' ? 'Новый доход' : 'Новая трата') : undefined)
+  // `?crop=`: a recognized receipt that needs a check is checked here and saved by its confirmation (`crop-review.ts`).
+  const cropRef = useRef<CropReview | undefined>(undefined)
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [draft, setDraft] = useState<ExpenseDraft | undefined>()
@@ -384,7 +395,9 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
       const source = receiptId ?? (handed ? undefined : repeat)
       const copied = source === undefined ? undefined
         : Promise.all([getReceipt(source, { signal }), getReceiptLines(source, { page_size: 200 }, { signal })])
-      const loaded = receiptId === undefined
+      const loaded = crop !== undefined
+        ? Promise.all([categories, getManualDefaults({ signal }), getReceiptImage(crop, { signal, fresh: true })])
+        : receiptId === undefined
         ? Promise.all([categories, getManualDefaults({ signal })])
         : Promise.all([categories, getReceipt(receiptId, { signal, fresh: true }), allReceiptLines(receiptId, signal)])
       const [categoryResult, ...rest] = await loaded
@@ -400,7 +413,19 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
       let frequent: number[] = []
       let byline: string | undefined
       let media: Loaded['media']
-      if (receiptId === undefined) {
+      if (crop !== undefined) {
+        const defaults = values[1] as ManualDefaults
+        const image = values[2] as ReceiptImageDetail
+        if (image.status !== 'needs_review') {
+          setLoad({ kind: 'error', message: 'Этот чек уже не ждёт проверки: откройте его задание, чтобы увидеть результат.' })
+          return
+        }
+        cropRef.current = cropReview(image)
+        next = { ...draftFromCrop(cropRef.current, todayISO(), defaults.currency), method: lastMethod() }
+        frequent = defaults.frequent_categories
+        media = { thumb: image.thumb_url ?? image.display_url ?? image.image_url, image: image.display_url ?? image.image_url,
+          back: { to: `/recognition/jobs/${image.job_id}`, text: 'Все поля распознавания' }, causes: cropCauses(cropRef.current) }
+      } else if (receiptId === undefined) {
         const defaults = values[1] as ManualDefaults
         next = handed ? draftFromPending(handed.body, categoryData.results) : emptyDraft(defaults.currency)
         if (copiedReceipt?.kind === 'ok' && copiedLines?.kind === 'ok' && copiedReceipt.data.source === 'manual') {
@@ -421,7 +446,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
         incomeChips: incomeResult?.kind === 'ok' ? incomeResult.data.map(incomeChip) : [], byline, media } })
     })()
     return () => controller.abort()
-  }, [receiptId, incomeId, repeat, attempt, handed])
+  }, [receiptId, incomeId, repeat, attempt, handed, crop])
 
   useEffect(() => () => saveController.current?.abort(), [])
 
@@ -448,9 +473,52 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
     setFailure(saveMessage(result))
   }
 
+  /** A crop is saved by its confirmation — one request, never replayed; what it cannot carry (note, method, line
+   * categories) follows by a PATCH of the new receipt. */
+  const saveCrop = async (current: ExpenseDraft, review: CropReview) => {
+    const send = cropInput(review, current)
+    if ('errors' in send) { setErrors(send.errors); setFailure(undefined); return }
+    setErrors({})
+    setFailure(undefined)
+    setSaving(true)
+    const controller = new AbortController()
+    saveController.current = controller
+    const { signal } = controller
+    const result = await confirmReceiptImage(review.imageId, send.input, { signal })
+    if (signal.aborted || result.kind === 'aborted') return
+    if (result.kind !== 'ok') {
+      setSaving(false)
+      if (result.reason === 'review_invalid' || result.reason === 'invalid_parameter') {
+        const found = cropErrors(result, send)
+        setErrors(found)
+        setFailure(Object.keys(found).length ? 'Чек не сохранён: исправьте отмеченное.' : reviewErrorText(result))
+      } else if (result.reason === 'csrf_failed') {
+        await getRecognitionCsrf({ signal })
+        setFailure('Токен безопасности обновлён. Чек не сохранён: нажмите «Сохранить» ещё раз.')
+      } else setFailure(reviewErrorText(result))
+      return
+    }
+    const { image } = result.data
+    const receipt = image.receipt_id
+    if (receipt === null) { navigate(`/recognition/jobs/${image.job_id}`); return }
+    // A receipt found already saved is not changed by the form (the rule of the confirmation): nothing follows.
+    let extraFailed = false
+    if (image.status === 'imported') {
+      const wantsLines = send.lines.some((line) => line.category !== null)
+      const saved = wantsLines ? await allReceiptLines(receipt, signal) : undefined
+      const body = afterConfirm(current, send, saved?.kind === 'ok' ? saved.data.results : null)
+      if (body) extraFailed = (await updateManualSpend(receipt, body, { signal })).kind !== 'ok'
+      if (signal.aborted) return
+    }
+    setExpenseNotice(receipt, extraFailed ? 'Чек сохранён, но комментарий, способ оплаты или категории не записались — измените трату ещё раз.'
+      : image.status === 'imported' ? 'Чек проверен и сохранён.' : 'Такой чек уже был сохранён: фото привязано к нему, его данные не изменены.')
+    navigate({ kind: 'receipt', receiptId: receipt })
+  }
+
   const save = async () => {
     if (!draft || saving) return
     if (kind === 'income') { await saveIncome(draft); return }
+    if (cropRef.current) { await saveCrop(draft, cropRef.current); return }
     const checked = draftBody(draft)
     if ('errors' in checked) { setErrors(checked.errors); setFailure(undefined); return }
     setErrors({})

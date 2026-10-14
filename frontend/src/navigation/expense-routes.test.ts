@@ -16,6 +16,9 @@ describe('«Добавить трату» routes', () => {
     expect(buildRoute({ kind: 'expense-new' })).toBe('/receipts/new')
     expect(buildRoute({ kind: 'expense-edit', receiptId: 90 })).toBe('/receipts/90/edit')
     expect(parseRoute('/receipts/new?total=5')).toEqual({ kind: 'expense-new' })
+    expect(parseRoute('/receipts/new?crop=7')).toEqual({ kind: 'expense-new', crop: 7 })
+    expect(buildRoute({ kind: 'expense-new', crop: 7 })).toBe('/receipts/new?crop=7')
+    expect(parseRoute('/receipts/new?crop=x')).toEqual({ kind: 'expense-new' })
     expect(parseRoute('/receipts/%39%30/edit')).toEqual({ kind: 'expense-edit', receiptId: 90 })
   })
   it('keeps receipt details and upload apart from the new spend', () => {

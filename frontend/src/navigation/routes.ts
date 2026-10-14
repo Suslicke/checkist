@@ -160,7 +160,7 @@ export type NavigableRoute = CatalogRoute
   | { kind: 'upload' }
   /** «Добавить трату» — a spend without a receipt; `repeat` — a manual spend whose copy with today's date starts the form
    * («Повторить»). `expense-edit` changes a manual spend with the same form. `income` — the same form on «Доход». */
-  | { kind: 'expense-new'; repeat?: number; income?: boolean }
+  | { kind: 'expense-new'; repeat?: number; income?: boolean; crop?: number }
   | { kind: 'expense-edit'; receiptId: number }
   /** «Доходы» of a month (no `month` — the current one) and the form of one income. */
   | { kind: 'incomes'; month?: string }
@@ -582,6 +582,7 @@ export function buildRoute(route: NavigableRoute): string {
     case 'receipts': return `/receipts${buildReceiptsQuery(route.query)}`
     case 'upload': return '/receipts/upload'
     case 'expense-new': return route.income ? '/receipts/new?kind=income'
+      : route.crop !== undefined ? `/receipts/new?crop=${buildId(route.crop)}`
       : route.repeat === undefined ? '/receipts/new' : `/receipts/new?repeat=${buildId(route.repeat)}`
     case 'expense-edit': return `/receipts/${buildId(route.receiptId)}/edit`
     case 'incomes': return parseMonthParam(route.month) ? `/incomes?month=${route.month}` : '/incomes'
@@ -639,6 +640,9 @@ export function parseRoute(input: string | URL): Route {
   if (normalizedPath === '/receipts/upload') return { kind: 'upload' }
   if (normalizedPath === '/receipts/new') {
     if (url.searchParams.get('kind') === 'income') return { kind: 'expense-new', income: true }
+    // A crop of a photo that needs a check opens in the same form (2026-10-14); a wrong one is dropped like `repeat`.
+    const crop = positiveInteger(url.searchParams.get('crop') ?? '')
+    if (crop !== undefined) return { kind: 'expense-new', crop }
     // A wrong `repeat` is dropped: the form opens empty.
     const repeat = positiveInteger(url.searchParams.get('repeat') ?? '')
     return repeat === undefined ? { kind: 'expense-new' } : { kind: 'expense-new', repeat }

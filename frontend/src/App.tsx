@@ -47,7 +47,7 @@ function pageTitle(route: Route) {
     case 'health': return 'Состояние сервисов'
     case 'receipts': return 'Траты'
     case 'upload': return 'Загрузка фото чеков'
-    case 'expense-new': return route.income ? 'Новый доход' : 'Новая трата'
+    case 'expense-new': return route.income ? 'Новый доход' : route.crop !== undefined ? 'Проверка чека' : 'Новая трата'
     case 'expense-edit': return 'Изменить трату'
     case 'incomes': return 'Доходы'
     case 'income-edit': return 'Изменить доход'
@@ -107,7 +107,7 @@ function pageContent({ route, returnTo }: NavigationSnapshot, username: string) 
     case 'health': return <HealthPage />
     case 'receipts': return <ReceiptsPage query={route.query} />
     case 'upload': return <UploadPage />
-    case 'expense-new': return <ExpensePage key={`new-${route.income ? 'income' : route.repeat ?? ''}`} repeat={route.repeat} income={route.income} />
+    case 'expense-new': return <ExpensePage key={`new-${route.income ? 'income' : route.crop !== undefined ? `crop-${route.crop}` : route.repeat ?? ''}`} repeat={route.repeat} income={route.income} crop={route.crop} />
     case 'expense-edit': return <ExpensePage key={route.receiptId} receiptId={route.receiptId} />
     case 'incomes': return <IncomesPage month={route.month} />
     case 'income-edit': return <ExpensePage key={`income-${route.incomeId}`} incomeId={route.incomeId} />

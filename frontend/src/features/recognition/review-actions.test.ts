@@ -50,8 +50,8 @@ describe('crop confirmation state machine', () => {
     expect(await actions.run(42, input)).toBe(error)
     expect(error.issues).toHaveLength(3)
     expect(life.failure).toHaveBeenCalledExactlyOnceWith(error, false); expect(life.success).not.toHaveBeenCalled()
-    expect(actions.getSnapshot()).toMatchObject({ kind: 'failed', imageId: 42, error, message: expect.stringContaining('не прошли проверку, чек не сохранён') })
-    expect(JSON.stringify(actions.getSnapshot())).toContain('Исправленные данные не прошли проверку, чек не сохранён')
+    expect(actions.getSnapshot()).toMatchObject({ kind: 'failed', imageId: 42, error, message: expect.stringContaining('Чек не сохранён: исправленные данные не прошли проверку') })
+    expect(JSON.stringify(actions.getSnapshot())).toContain('Чек не сохранён: исправленные данные не прошли проверку')
   })
   it('keeps the form after invalid_parameter and names the marked fields', async () => {
     const error = readError(400, publicFixture('review-invalid-parameter.json'), true)

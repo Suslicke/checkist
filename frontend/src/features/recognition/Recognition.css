@@ -114,11 +114,18 @@
 .ck-rec-more > * + * { margin-top: 12px; }
 
 /* The crop being checked, pinned at the top of its card while the form scrolls under it. Pinch-zoom is the browser's. */
-.ck-rec-crop-pin { position: sticky; top: 0; z-index: var(--ck-z-action-bar); display: grid; gap: 8px; min-width: 0; padding-block: 8px; border-bottom: 1px solid var(--ck-divider); background: var(--ck-surface); }
-.ck-rec .ck-rec-crop-toggle { justify-self: end; }
+.ck-rec-crop-pin { position: sticky; top: var(--ck-top-bar-height); z-index: var(--ck-z-action-bar); display: grid; gap: 8px; min-width: 0; padding-block: 8px; border-bottom: 1px solid var(--ck-divider); background: var(--ck-surface); }
+.ck-rec-crop-tools { display: flex; justify-content: flex-end; gap: 8px; }
 .ck-rec-crop-image[hidden] { display: none; }
 .ck-rec-crop-image .ck-rec-image { min-height: 0; }
-.ck-rec-crop-image .ck-rec-image img { height: auto; max-height: 38vh; touch-action: pan-x pan-y pinch-zoom; }
+.ck-rec-crop-image .ck-rec-image img { height: auto; max-height: 22vh; touch-action: pan-x pan-y pinch-zoom; cursor: zoom-in; }
+.ck-rec-crop-big .ck-rec-image img { max-height: 62vh; cursor: zoom-out; }
+/* What blocks the save, right above the button: each entry is a button that takes its field into view. */
+.ck-review-problems { display: grid; gap: 8px; min-width: 0; padding: 14px; border: 1px solid var(--ck-error-border); border-radius: var(--ck-radius-sm); background: var(--ck-error-bg); color: var(--ck-error-text); }
+.ck-review-problems > p { margin: 0; font-weight: 600; }
+.ck-rec p.ck-review-problem { margin: 0; text-decoration: none; cursor: auto; }
+.ck-rec .ck-review-problems ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.ck-rec .ck-review-problem { display: block; width: 100%; min-height: 44px; padding: 10px 0; border: 0; background: none; color: var(--ck-error-text); font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
 /* The correction form as line cards: «name ……… amount», the main fields, «Подробнее» with the rest. */
 .ck-review-line { min-width: 0; }
@@ -130,3 +137,7 @@
 .ck-review-jumps { display: grid; gap: 8px; min-width: 0; padding: 14px; border: 1px solid var(--ck-error-border); border-radius: var(--ck-radius-sm); background: var(--ck-error-bg); color: var(--ck-error-text); }
 .ck-rec .ck-review-jumps ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .ck-review-jumps a { display: inline-block; min-height: 44px; padding-block: 10px; color: var(--ck-error-text); font-weight: 600; text-underline-offset: 3px; }
+
+/* «Проверить и сохранить»: the crop opens in the one spend form; the full correction form stays folded below it. */
+.ck-rec .ck-rec-check { justify-self: stretch; text-align: center; background: var(--ck-primary); border-color: var(--ck-primary); color: var(--ck-on-primary); font-weight: 600; }
+.ck-rec .ck-rec-check:hover, .ck-rec .ck-rec-check:active { background: var(--ck-primary-hover, var(--ck-primary)); border-color: var(--ck-primary); color: var(--ck-on-primary); }

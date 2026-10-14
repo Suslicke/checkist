@@ -11,7 +11,7 @@ import { addField, headerField, problemsAt, rowField, storeLabel } from './revie
 import type { ReviewEdit, ReviewHeader, ReviewLine, ReviewList, ReviewState, ReviewStore } from './review-state'
 import { useRequest } from './useRequest'
 import { SERVICE_CHARGE_CATEGORY, isServiceCharge } from './service-charge'
-import { lineAmountText, lineCardId, lineDetailsForced, lineIssues, useStickyOpen } from './mobile-state'
+import { lineAmountText, lineCardId, lineDetailsForced, lineIssues, problemSummary, useStickyOpen } from './mobile-state'
 import type { LineIssue } from './mobile-state'
 
 const kinds = { product: 'Товар', service: 'Услуга', deposit: 'Залог', deposit_return: 'Возврат залога' }
@@ -113,6 +113,31 @@ export function LineJumps({ imageId, issues }: { imageId: number; issues: LineIs
       <span className="ck-rec-note"> — {issue.problems.join(' ')}</span>
     </li>)}</ul>
   </nav>
+}
+
+/** What blocks the save, next to the button: each problem named by its place, a press takes the field into view and focus. */
+function ProblemList({ imageId, state, dom }: { imageId: number; state: ReviewState; dom: (field: string) => string }) {
+  const entries = problemSummary(state)
+  if (entries.length === 0) return null
+  const go = (id: string) => {
+    const [list, key] = id.split('.')
+    const target = [dom(id), list === 'lines' && key !== undefined ? lineCardId(imageId, Number(key)) : '', dom(`${id}.name`), dom(`${id}.tax_rate.kind`),
+      key === undefined ? dom(addField(list as ReviewList)) : '']
+      .map((candidate) => candidate && document.getElementById(candidate)).find(Boolean)
+    if (!target) return
+    const folded = target.closest('details')
+    if (folded && !folded.open) folded.open = true
+    target.scrollIntoView({ block: 'center' })
+    target.focus({ preventScroll: true })
+  }
+  return <div className="ck-review-problems">
+    <p>Чтобы сохранить, исправьте ({entries.length.toLocaleString('ru-RU')}):</p>
+    <ul>{entries.map((entry) => <li key={entry.id}>
+      {entry.id === 'receipt'
+        ? <p className="ck-review-problem">{entry.title} — {entry.texts.join(' ')}</p>
+        : <button type="button" className="ck-review-problem" onClick={() => go(entry.id)}>{entry.title} — {entry.texts.join(' ')}</button>}
+    </li>)}</ul>
+  </div>
 }
 
 export type ReviewFormProps = {
@@ -319,6 +344,7 @@ export default function ReviewForm({ imageId, state, dispatch, countries, countr
       <button type="button" id={dom(addField('taxes'))} className="ck-review-secondary" onClick={() => dispatch({ type: 'add', list: 'taxes' })}>Добавить налоговый итог</button>
     </fieldset>
     <p ref={notice} tabIndex={-1} role="status" className="ck-review-notice">{state.notice.text}</p>
+    <ProblemList imageId={imageId} state={state} dom={dom} />
     <p role="status" className="ck-review-refusal">{refusal ?? ''}</p>
     {/* Pinned to the bottom of a phone while this form is longer than the screen: buttons only, the note stays in the flow below. */}
     <div className="ck-rec-action-block ck-action-bar">

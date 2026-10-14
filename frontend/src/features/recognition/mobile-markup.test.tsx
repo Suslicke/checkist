@@ -94,7 +94,7 @@ describe('phone markup of the correction form (SSR, compact)', () => {
 describe('phone markup of the job screens (SSR)', () => {
   it('pins the crop with a button that folds it', () => {
     const html = renderToStaticMarkup(<CropPin><img alt="Вырезка" /></CropPin>)
-    expect(html).toMatch(/^<div class="ck-rec-crop-pin"><button type="button" class="ck-review-secondary ck-rec-crop-toggle" aria-expanded="true" aria-controls="([^"]+)">Скрыть фото<\/button><div id="\1" class="ck-rec-crop-image"><img alt="Вырезка"\/><\/div><\/div>$/)
+    expect(html).toMatch(/^<div class="ck-rec-crop-pin"><div class="ck-rec-crop-tools"><button type="button" class="ck-review-secondary" aria-pressed="false">Крупнее<\/button><button type="button" class="ck-review-secondary" aria-expanded="true" aria-controls="([^"]+)">Скрыть фото<\/button><\/div><div id="\1" class="ck-rec-crop-image"><img alt="Вырезка"\/><\/div><\/div>$/)
   })
   it('draws the miniature of a job row from the job itself, without a request of its own', () => {
     expect(job().thumb_url).toBe('/media/originals/test/thumb-400-v1.webp')

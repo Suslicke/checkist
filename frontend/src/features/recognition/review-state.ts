@@ -248,8 +248,11 @@ export function issueProblems(issues: RecognitionIssue[], sent: SentKeys): Recor
       push(problems, key === undefined ? list : `${list}.${key}${attribute}`, text)
     } else if (view.entity === 'receipt') {
       const fields = new Set([view.attribute === null ? undefined : receiptAttributes[view.attribute], reasonFields[view.reason]])
-      for (const field of fields) if (field) push(problems, `receipt.${field}`, text)
-    }
+      const placed = [...fields].filter(Boolean)
+      for (const field of placed) push(problems, `receipt.${field}`, text)
+      // A cause of the whole receipt (sums that disagree, taxes that do not add up) has no field: it is named on the receipt.
+      if (placed.length === 0) push(problems, 'receipt', text)
+    } else push(problems, 'receipt', text)
   }
   return problems
 }

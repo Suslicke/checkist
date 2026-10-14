@@ -5,6 +5,7 @@ import { isReceiptImageDetail, isReviewConfirmInput } from '../../api/recognitio
 import { issue, publicFixture } from '../../api/recognition-test-support'
 import { addField, buildInput, createReview, decimalText, fieldProblems, issueProblems, missingRequired, problemTexts, reviewReducer, storeLabel } from './review-state'
 import type { ReviewEdit, ReviewState } from './review-state'
+import { problemSummary } from './mobile-state'
 
 function image(): ReceiptImageDetail { const value = publicFixture('receipt-image.json'); if (!isReceiptImageDetail(value)) throw new Error('Invalid fixture'); return value }
 const start = () => createReview(image().normalized_result, image().issues)
@@ -316,7 +317,10 @@ describe('causes and refused paths at the fields', () => {
     expect(problems).toEqual({
       'receipt.store': ['Найдено несколько подходящих магазинов'], 'receipt.country': ['Страна магазина не определена'], 'receipt.currency': ['Валюта не определена'],
       'receipt.local_time': ['Местное время покупки неоднозначно'], 'receipt.utc_offset': ['Местное время покупки неоднозначно'],
+      // Blocking causes with no field are not dropped: the person sees them on the receipt as a whole.
+      receipt: expect.any(Array),
     })
+    expect(problems.receipt).toHaveLength(2)
     // An old server sends no reason and context: the field is found from its pointer.
     expect(issueProblems([{ code: 'missing_required', field: '/lines/0/quantity', message: 'x' }, { code: 'invalid_value', field: '/total', message: 'x' }], { ...sent, lines: [9] }))
       .toEqual({ 'lines.9.quantity': ['Не удалось прочитать обязательное поле'], 'receipt.total': ['Замечание распознавания'] })
@@ -338,5 +342,16 @@ describe('causes and refused paths at the fields', () => {
   it.each(['review_busy', 'review_resolved', 'review_unavailable', 'job_active', 'network', 'timeout', 'csrf_failed', 'server'] as const)('leaves typed values and marks untouched after %s', (reason) => {
     const typed = apply(start(), { type: 'header', patch: { total: '2,63' } })
     expect(reviewReducer(typed, { type: 'refused', error: { kind: 'error', reason }, sent: buildInput(typed).sent })).toBe(typed)
+  })
+})
+
+describe('problems next to the save button', () => {
+  it('names each problem by its place, in the order of the form', () => {
+    const state = start()
+    const [first] = state.lines
+    const named = { ...state, lines: state.lines.map((row) => row.key === first.key ? { ...row, name: 'Сахар' } : row), problems: {
+      [`lines.${first.key}.amount`]: ['Сумма не совпадает'], 'receipt.total': ['Заполните поле.'], receipt: ['Итог не сходится'], lines: [problemTexts.lines],
+    } }
+    expect(problemSummary(named).map((entry) => entry.title)).toEqual(['Чек целиком', 'Итого', 'Строки', 'Строка 1: Сахар · Сумма'])
   })
 })

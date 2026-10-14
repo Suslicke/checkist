@@ -28,6 +28,8 @@ export type LineDraft = {
   lead?: 'price' | 'amount'
   /** A saved line read with a zero or negative sum (a returned deposit): it keeps its sign. */
   signed?: boolean
+  /** The line of a recognized crop it came from (`crop-review.ts`): it keeps its kind and tax rate on the confirmation. */
+  reviewKey?: number
   /** «＋ Обслуживание %» (2026-10-13): the percent typed; the sum is that percent of the other positions (`withService`).
    * A typed sum makes it an ordinary position. */
   service?: string

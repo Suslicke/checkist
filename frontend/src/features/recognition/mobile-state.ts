@@ -56,3 +56,42 @@ export function lineIssues(state: ReviewState): LineIssue[] {
 export function lineAmountText(line: Pick<ReviewLine, 'amount'>): string {
   return line.amount.trim() || '—'
 }
+
+const headerTitles: Record<string, string> = {
+  store: 'Магазин', store_name: 'Вывеска', address: 'Адрес', country: 'Страна', currency: 'Валюта', operation: 'Операция',
+  purchased_on: 'Дата на чеке', local_time: 'Местное время', utc_offset: 'Смещение от UTC', total: 'Итого', prices_include_tax: 'Налог включён в цены',
+}
+const rowTitles: Record<string, string> = {
+  kind: 'Тип строки', name: 'Название', quantity: 'Количество', unit: 'Единица', unit_price: 'Цена за единицу', amount: 'Сумма',
+  tax_rate: 'Налог', 'tax_rate.kind': 'Вид налога', 'tax_rate.rate': 'Ставка НДС', tax_code: 'Код налога', parent_position: 'Залог к строке',
+  line_position: 'К чему относится', net: 'Сумма без налога', tax: 'Сумма налога', gross: 'Сумма с налогом',
+}
+const listTitles: Record<string, [list: string, row: string]> = { lines: ['Строки', 'Строка'], discounts: ['Скидки', 'Скидка'], taxes: ['Налоговые итоги', 'Налоговый итог'] }
+
+export type ProblemEntry = { id: string; title: string; texts: string[] }
+
+/** Every problem of the form in the order of the form, each named by where it is: «Строка 2: Сахар · Сумма».
+ * The list next to the save button: a refusal says what is wrong and where, not only that something is. */
+export function problemSummary(state: ReviewState): ProblemEntry[] {
+  const order = (id: string) => {
+    const [list, key] = id.split('.')
+    if (list === 'receipt') return [0, key === undefined ? -1 : 0]
+    const rows: { key: number }[] = list in listTitles ? state[list as 'lines'] : []
+    return [Object.keys(listTitles).indexOf(list) + 1, key === undefined ? -1 : rows.findIndex((row) => String(row.key) === key)]
+  }
+  return Object.entries(state.problems).filter(([, texts]) => texts.length > 0)
+    .sort(([a], [b]) => { const [x, y] = [order(a), order(b)]; return x[0] - y[0] || x[1] - y[1] })
+    .map(([id, texts]) => {
+      const [list, key, ...rest] = id.split('.')
+      const field = rest.join('.')
+      if (list === 'receipt') return { id, title: key === undefined ? 'Чек целиком' : headerTitles[key] ?? key, texts }
+      const names = listTitles[list]
+      if (!names) return { id, title: id, texts }
+      if (key === undefined) return { id, title: names[0], texts }
+      const rows: { key: number; name?: string }[] = state[list as 'lines']
+      const index = rows.findIndex((row) => String(row.key) === key)
+      const name = rows[index]?.name?.trim()
+      const row = `${names[1]} ${index + 1}${name ? `: ${name}` : ''}`
+      return { id, title: field ? `${row} · ${rowTitles[field] ?? field}` : row, texts }
+    })
+}
