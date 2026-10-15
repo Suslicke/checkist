@@ -39,6 +39,20 @@ class ReceiptsAPITests(TestCase):
         self.assertEqual(self.client.get("/api/receipts/71/discounts/").json()["results"][0]["line_id"], self.line.pk)
         self.assertEqual(self.client.get("/api/receipts/71/taxes/").json()["results"][0]["gross"], "2.38")
 
+    def test_a_shop_without_address_shows_the_one_printed_on_the_photo(self):
+        from recognition.models import ReceiptImage
+        from stores.models import Store
+        # A branch glued to a main shop without an address (statements' «MAGNUM») keeps its printed address.
+        Store.objects.filter(pk=self.receipt.store_id).update(address_raw="")
+        ReceiptImage.objects.filter(pk=41).update(normalized_result={"store": {"address_raw": " г. Алматы, мкр. Аксай-5 д. 25 "}})
+        for path in ("/api/receipts/71/", "/api/receipts/"):
+            body = self.client.get(path).json()
+            store = (body["results"][0] if "results" in body else body)["store"]
+            self.assertEqual(store["address"], "г. Алматы, мкр. Аксай-5 д. 25")
+        # The shop's own address stays first.
+        Store.objects.filter(pk=self.receipt.store_id).update(address_raw="Teststrasse 12")
+        self.assertEqual(self.client.get("/api/receipts/71/").json()["store"]["address"], "Teststrasse 12")
+
     def test_unmatched_products_and_legacy(self):
         self.line.product = None
         self.line.save()

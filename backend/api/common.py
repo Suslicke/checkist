@@ -80,13 +80,14 @@ def store_brief(store):
     return {"id": store.pk, "name": store_name(store), "city": store.city, "country": store.country_id}
 
 
-def store_object(store):
-    """Полный объект магазина: ``{"id", "name", "city", "address", "country", "timezone"}``."""
+def store_object(store, printed_address=None):
+    """Полный объект магазина: ``{"id", "name", "city", "address", "country", "timezone"}``. ``printed_address`` —
+    адрес с фото чека: показывается, когда у магазина своего нет (филиал, склеенный с главным без адреса)."""
     return {
         "id": store.pk,
         "name": store_name(store),
         "city": store.city,
-        "address": store.address_raw,
+        "address": store.address_raw or (printed_address or "").strip(),
         "country": store.country_id,
         "timezone": store.timezone,
     }

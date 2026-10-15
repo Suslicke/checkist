@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from django.db import connection
 from django.db.models import Count, Exists, F, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models.fields.json import KT
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -413,6 +414,10 @@ def receipts_queryset(request, include_hidden=False):
         image_count=related_count(images, "receipt_id"),
         preview_file=Subquery(images.order_by("-created_at", "-id").values("file")[:1]),
         has_review=Exists(images.filter(REVIEW_IMAGES)),
+        # The address printed on the photo: shown when the shop has none of its own — a branch glued to a main shop
+        # without an address («MAGNUM» of the statements) keeps it on its receipts.
+        printed_address=Subquery(images.order_by("-created_at", "-id").values(
+            address=KT("normalized_result__store__address_raw"))[:1]),
     )
 
 
@@ -422,7 +427,8 @@ def receipt_object(receipt):
         "id": receipt.pk, "owner": receipt.owner.get_username(), "owner_name": display_name(receipt.owner),
         "source": receipt.source,
         # null — «Без места»: только у траты, внесённой вручную.
-        "store": None if receipt.store_id is None else store_object(receipt.store), "currency": receipt.currency_id,
+        "store": None if receipt.store_id is None else store_object(receipt.store, getattr(receipt, "printed_address", None)),
+        "currency": receipt.currency_id,
         "operation": receipt.operation, "purchased_on": iso_date(receipt.purchased_on),
         "purchased_at": utc_datetime(receipt.purchased_at), "total": amount(receipt.total),
         "discount_total": amount(receipt.discount_total), "prices_include_tax": receipt.prices_include_tax,
