@@ -9,6 +9,7 @@ import type { Theme } from '../../theme'
 import { listIconsNames, setListIcons, useListIcons } from '../../lib/list-icons'
 import SettingsSection from './SettingsSection'
 import PushSection from '../push/PushSection'
+import McpSection from './McpSection'
 import { checkPassword, useAuthForm } from './auth-state'
 import type { FormState, PasswordInput } from './auth-state'
 import { settingsTexts } from './settings-texts'
@@ -155,7 +156,7 @@ export default function AccountPage({ username }: { username: string }) {
   const session = useSession()
   const displayName = session.kind === 'user' ? session.user.display_name || username : username
   const family = session.kind === 'user' && session.household ? { name: session.household.name, head: isHead(session) } : null
-  return <AccountView username={username} displayName={displayName} family={family} settings={<><SettingsSection /><PushSection /></>} password={password.state} values={values}
+  return <AccountView username={username} displayName={displayName} family={family} settings={<><SettingsSection /><PushSection />{session.kind === 'user' && session.mode === 'accounts' && <McpSection />}</>} password={password.state} values={values}
     onChange={setValues} onPassword={() => { void password.run(values) }}
     signOut={signOut.state} onSignOut={() => { void signOut.run(null) }} />
 }

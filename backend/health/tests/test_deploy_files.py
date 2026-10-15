@@ -153,7 +153,7 @@ class DeployFilesTests(SimpleTestCase):
 
     def test_caddy_passes_django_paths_to_gunicorn(self):
         matcher = re.search(r"^\s*@django path (.+)$", self.caddy, flags=re.MULTILINE).group(1).split()
-        self.assertEqual(set(matcher), {"/api/*", "/admin", "/admin/*", "/media/*", "/robots.txt"})
+        self.assertEqual(set(matcher), {"/api/*", "/admin", "/admin/*", "/media/*", "/robots.txt", "/mcp", "/mcp/*"})
         block = caddy_block(self.caddy, "handle @django").split()
         self.assertEqual(block, ["reverse_proxy", UPSTREAM])
         self.assertEqual(self.caddy.count("reverse_proxy"), 1)

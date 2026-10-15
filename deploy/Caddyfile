@@ -29,7 +29,7 @@ checkist.example {
 
 	# Django: API, admin, robots.txt and uploaded files. Uploaded files are never read from
 	# disk by Caddy: only Django knows whose file it is.
-	@django path /api/* /admin /admin/* /media/* /robots.txt
+	@django path /api/* /admin /admin/* /media/* /robots.txt /mcp /mcp/*
 	handle @django {
 		reverse_proxy 127.0.0.1:8000
 	}

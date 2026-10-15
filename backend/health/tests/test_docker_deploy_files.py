@@ -260,7 +260,7 @@ class DockerDeployFilesTests(SimpleTestCase):
             return set(re.search(r"^\s*@django path (.+)$", source, flags=re.MULTILINE).group(1).split())
 
         self.assertEqual(paths(code("Caddyfile")), paths(uncommented("Caddyfile")))
-        self.assertEqual(paths(code("Caddyfile")), {"/api/*", "/admin", "/admin/*", "/media/*", "/robots.txt"})
+        self.assertEqual(paths(code("Caddyfile")), {"/api/*", "/admin", "/admin/*", "/media/*", "/robots.txt", "/mcp", "/mcp/*"})
 
     def test_caddy_hides_the_metrics_of_django(self):
         # Prometheus scrapes checkist-web:8000 over its own network; through Caddy the path is a 404.

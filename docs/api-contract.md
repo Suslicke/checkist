@@ -2664,3 +2664,21 @@ Gold"}` либо null (одним запросом; в списке поля н�
 Черновик «Траты словами» (`GET /api/receipts/manual/parse/{id}/` → `draft.lines[]`) — того же вида, что строка формы:
 `name`, `quantity` (нет — «1»), `unit` (`pcs`), `unit_price` (сумма / количество), `amount`, `discount_amount` («0»),
 `category`. Распознанные строки фото уже в этом виде (`GET /api/receipts/{id}/lines/`).
+
+## MCP: подключение нейросети по личному токену (2026-10-15)
+
+Любой клиент MCP (Claude Code / Desktop, Cursor, ChatGPT и др.) подключается к `https://<сайт>/mcp`. Только режим `accounts` (в `local_single` — `404`). Код — `backend/accounts/mcp.py`, токены — `accounts.ApiToken` (миграция `accounts.0006_api_token`, откат — `migrate accounts 0005_membership_visible_from`).
+
+**Токены** (вход по сессии и CSRF, сам MCP их не вызывает):
+
+| Метод и путь | Ответ |
+| --- | --- |
+| `GET /api/auth/tokens/` | `{results: [{id, name, scope, prefix, created_at, last_used_at, revoked_at}]}` — живые, затем последние 20 отозванных |
+| `POST /api/auth/tokens/` | `{name (1–60), scope: "read" \| "write"}` → `201`, тот же объект и `token` — **единственный раз**; не больше 20 живых токенов (`400` у `name`) |
+| `DELETE /api/auth/tokens/{id}/` | `204`; отзыв (`revoked_at`), чужой — `404` |
+
+Хранится только SHA-256 токена (`ck_` + 43 знака). Токен неактивного пользователя и отозванный не действуют. Смена пароля токены не отзывает.
+
+**Транспорт** — Streamable HTTP без состояния: `POST /mcp` с одним JSON-RPC 2.0 запросом → один `application/json`; уведомление (без `id`) → `202`; `GET`/`DELETE` → `405`; сессий (`Mcp-Session-Id`) нет. Методы: `initialize` (возвращает запрошенную версию из `2026-07-28`, `2025-11-25`, `2025-06-18`, `2025-03-26`, иначе `2025-11-25`; `capabilities.tools`, `instructions`), `ping`, `tools/list`, `tools/call`; прочие — `404` с `-32601`. Вход — `Authorization: Bearer ck_…` либо `/mcp/ck_…` (для клиентов, где можно вписать только адрес; токен тогда виден в адресе). Без токена — `401` с `WWW-Authenticate: Bearer`. Caddy пропускает `/mcp` и `/mcp/*` к Django.
+
+**Инструменты** — каждый вызывает существующий вью API внутри процесса от имени владельца токена (видимость семьи, скрытые траты, «видит с», права модератора, проверки тела — те же); ответ — JSON того вью в `content[0].text` и `structuredContent`, отказ — `isError: true` и `{status, data}`. Чтение (`read` и `write`): `whoami`, `dashboard`, `list_spends`, `get_spend` (с позициями), `spending_stats`, `monthly_trends`, `list_categories`, `list_limits`, `list_incomes`, `list_recurring`, `list_goals`, `list_stores`. Запись (только `write`): `add_spend`, `update_spend`, `delete_spend`, `add_income`, `add_limit`, `update_limit`. Новый инструмент — строка `_tool(...)` в `TOOLS`: путь существующего вью и белый список параметров; прямого доступа к моделям у инструментов нет.

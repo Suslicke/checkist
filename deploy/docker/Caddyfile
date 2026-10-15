@@ -30,7 +30,7 @@
 
 	# Django: API, admin, robots.txt and uploaded files. Uploaded files are never read from
 	# disk by Caddy: only Django knows whose file it is, and this container has no such volume.
-	@django path /api/* /admin /admin/* /media/* /robots.txt
+	@django path /api/* /admin /admin/* /media/* /robots.txt /mcp /mcp/*
 	handle @django {
 		reverse_proxy web:8000
 	}

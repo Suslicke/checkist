@@ -156,3 +156,34 @@ class AiUsage(models.Model):
 
     def __str__(self):
         return f"{self.household} — {self.day}: {self.count}"
+
+
+class ApiToken(models.Model):
+    """Личный токен подключения нейросети по MCP (``/mcp``, ``accounts.mcp``; 2026-10-15).
+
+    Хранится только SHA-256; сам токен показывается один раз при выпуске. Действует от имени владельца ровно с его
+    правами и видимостью; ``read`` — только чтение, ``write`` — ещё и запись трат, доходов, лимитов. Отозванный
+    (``revoked_at``) и токен неактивного пользователя не действуют.
+    """
+
+    class Scope(models.TextChoices):
+        READ = "read", "Чтение"
+        WRITE = "write", "Чтение и запись"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_tokens")
+    name = models.CharField(max_length=60)
+    scope = models.CharField(max_length=5, choices=Scope.choices, default=Scope.READ)
+    token_hash = models.CharField(max_length=64, unique=True)
+    # Начало токена («ck_Ab3x…») — узнать его в списке; по нему не войти.
+    prefix = models.CharField(max_length=12)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "API token"
+        verbose_name_plural = "API tokens"
+        ordering = ("-created_at", "-id")
+
+    def __str__(self):
+        return f"{self.user} — {self.name} ({self.scope})"

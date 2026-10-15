@@ -443,7 +443,7 @@ SKIPPED_ROUTES = {
          "product-classifications-reject", "receipts-manual-parse", "receipts-hide", "receipts-unhide",
          "family-members", "family-member", "family-head", "family-leave", "family-invites", "family-invite",
          "family-join", "recurring-decision", "recurring-pay", "recurring-suggestion-accept", "recurring-suggestion-dismiss",
-         "store-merges-merge", "store-merges-dismiss", "store-merges-category", "family-ai", "family-new-invites", "family-new-invite",
+         "store-merges-merge", "store-merges-dismiss", "store-merges-category", "auth-tokens", "auth-token", "family-ai", "family-new-invites", "family-new-invite",
          "auth-new-family", "auth-new-family-check", "statements-save", "statements-goal", "goal-contributions",
          "push-subscribe", "push-unsubscribe", "push-test", "goal-reconcile"),
         "только POST",

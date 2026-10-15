@@ -136,3 +136,16 @@ ul.ck-auth-rules { display: grid; gap: 2px; padding-left: 20px; }
   .ck-auth button[aria-disabled="true"] { border-color: GrayText; color: GrayText; }
   .ck-auth button:focus-visible, .ck-auth input:focus-visible, .ck-auth select:focus-visible, .ck-auth a:focus-visible { outline-color: Highlight; }
 }
+
+/* «Подключение нейросети (MCP)» on /account (2026-10-15). */
+.ck-auth-mcp { display: grid; gap: 14px; }
+.ck-auth-mcp code { overflow-wrap: anywhere; }
+.ck-auth-mcp-form { display: grid; gap: 12px; }
+.ck-auth-mcp-scope { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; border: 0; }
+.ck-auth-mcp-scope legend { margin-bottom: 6px; font-weight: 600; }
+.ck-auth-mcp-scope label { display: inline-flex; align-items: center; gap: 8px; }
+.ck-auth-mcp-issued { display: grid; gap: 10px; padding: 14px; border: 1.5px solid var(--ck-primary); border-radius: var(--ck-radius-button); }
+.ck-auth-mcp-copy { display: grid; gap: 4px; }
+.ck-auth-mcp-copy-row { display: flex; gap: 8px; }
+.ck-auth-mcp-copy-row input { flex: 1 1 auto; min-width: 0; font-family: var(--ck-font-figures, monospace); font-size: var(--ck-text-xs); }
+.ck-auth-mcp-tokens [data-revoked] { opacity: 0.6; }
