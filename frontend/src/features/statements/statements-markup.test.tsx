@@ -102,6 +102,10 @@ describe('upload screen and rules', () => {
     const failed = renderToStaticMarkup(<UploadStatementView state={{ kind: 'failed', message: 'Нет.' }} history={[]} onFile={noop} />)
     expect(failed).toContain('role="alert">Нет.</p>')
     expect(failed).not.toContain('Загруженные выписки')
+    expect(failed).not.toContain('Распознать как чек')
+    const receipt = new File(['%PDF-'], 'receipt.pdf', { type: 'application/pdf' })
+    const other = renderToStaticMarkup(<UploadStatementView state={{ kind: 'failed', message: 'Нет.', receipt }} history={[]} onFile={noop} />)
+    expect(other).toContain('>Распознать как чек</button>')
   })
 
   it('lists the rules and opens the form of a new one', () => {
@@ -121,7 +125,7 @@ describe('upload screen and rules', () => {
   })
 
   it('names refusals by their code only', () => {
-    expect(statementFailure({ kind: 'error', reason: 'statement_unsupported_bank' })).toBe('Это не выписка Kaspi Gold или ForteBank. Другие банки пока не поддерживаются.')
+    expect(statementFailure({ kind: 'error', reason: 'statement_unsupported_bank' })).toBe('Это не выписка Kaspi Gold или ForteBank. Если это чек — распознайте его как чек.')
     expect(statementFailure({ kind: 'error', reason: 'statement_empty' })).toContain('не нашлось операций')
     expect(statementFailure({ kind: 'error', reason: 'pdf_encrypted' })).toContain('паролем')
   })

@@ -17,6 +17,7 @@ export const statementTexts = {
   modelWaiting: (count: number) => `Спрашиваю модель о незнакомых получателях: ${count}. Можно сохранять, не дожидаясь.`,
   modelAbsent: 'Исполнитель не запущен — модель сейчас не ответит. Выберите категории сами.',
   missing: (count: number) => `Без категории отмечено: ${count}. Выберите категорию или снимите отметку.`,
+  asReceipt: 'Распознать как чек',
   deleteQuestion: 'Убрать черновик? Сохранённые из него траты останутся.',
 } as const
 
@@ -27,7 +28,7 @@ export function statementFailure(failure: LocalApiFailure): string {
     case 'invalid_pdf': return 'Не удалось прочитать PDF. Скачайте выписку из приложения банка ещё раз.'
     case 'pdf_encrypted': return 'PDF защищён паролем. Сохраните выписку без пароля и загрузите снова.'
     case 'pdf_too_many_pages': case 'statement_too_large': return 'Выписка слишком большая. Выберите период короче.'
-    case 'statement_unsupported_bank': return 'Это не выписка Kaspi Gold или ForteBank. Другие банки пока не поддерживаются.'
+    case 'statement_unsupported_bank': return 'Это не выписка Kaspi Gold или ForteBank. Если это чек — распознайте его как чек.'
     case 'statement_empty': return 'В файле не нашлось операций. Нужна выписка по карте за период, в PDF из приложения банка.'
     case 'upload_too_large': return 'Файл слишком большой.'
     case 'not_found': return 'Выписка не найдена. Возможно, её черновик уже убран.'

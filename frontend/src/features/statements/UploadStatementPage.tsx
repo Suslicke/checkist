@@ -3,12 +3,13 @@ import type { ChangeEvent } from 'react'
 import { getStatements, uploadStatement } from '../../api/statements'
 import type { StatementSummary } from '../../api/statements'
 import Icon from '../../components/Icon'
+import { handOver } from '../recognition/quick-shot'
 import { Link, navigate } from '../../navigation'
 import { historyMeta } from './statement-state'
 import { statementFailure, statementTexts } from './statement-texts'
 import './Statements.css'
 
-export type UploadState = { kind: 'idle' } | { kind: 'reading' } | { kind: 'failed'; message: string }
+export type UploadState = { kind: 'idle' } | { kind: 'reading' } | { kind: 'failed'; message: string; receipt?: File }
 
 export type UploadStatementViewProps = { state: UploadState; history: StatementSummary[]; onFile: (file: File) => void }
 
@@ -33,6 +34,8 @@ export function UploadStatementView({ state, history, onFile }: UploadStatementV
       </label>
       <p id="statement-upload-status" className={`statement-status${state.kind === 'failed' ? ' statement-status-error' : ''}`}
         role={state.kind === 'failed' ? 'alert' : 'status'}>{state.kind === 'failed' ? state.message : reading ? statementTexts.reading : ''}</p>
+      {state.kind === 'failed' && state.receipt && <button type="button" className="ck-button-secondary"
+        onClick={() => handOver(state.receipt!)}>{statementTexts.asReceipt}</button>}
       <p className="statement-note statement-small">{statementTexts.uploadPrivacy}</p>
     </section>
     {history.length > 0 && <section className="ck-panel" aria-labelledby="statement-history-heading">
@@ -70,7 +73,12 @@ export default function UploadStatementPage() {
     setState({ kind: 'reading' })
     const result = await uploadStatement(file, { signal: current.signal })
     if (current.signal.aborted || result.kind === 'aborted') return
-    if (result.kind === 'error') { setState({ kind: 'failed', message: statementFailure(result) }); return }
+    if (result.kind === 'error') {
+      // A PDF that is no bank statement is most likely an e-receipt: the same file can go to receipt recognition.
+      const receipt = result.reason === 'statement_unsupported_bank' ? file : undefined
+      setState({ kind: 'failed', message: statementFailure(result), receipt })
+      return
+    }
     navigate(`/statements/${result.data.statement.id}`)
   }
   return <UploadStatementView state={state} history={history} onFile={(file) => { void upload(file) }} />
