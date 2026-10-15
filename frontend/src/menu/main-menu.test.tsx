@@ -32,8 +32,8 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
   })
 
   it.each<[string, Session, string[]]>([
-    ['thirteen items in local_single', local, ['Доходы', 'Платежи', 'Цели', 'Разбор месяца', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Состояние сервисов']],
-    ['fifteen items in accounts', reader, ['Доходы', 'Платежи', 'Цели', 'Разбор месяца', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов']],
+    ['thirteen items in local_single', local, ['Доходы', 'Платежи', 'Цели', 'Разбор месяца', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Состояние сервисов']],
+    ['fifteen items in accounts', reader, ['Доходы', 'Платежи', 'Цели', 'Разбор месяца', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов']],
   ])('keeps the links after the third one behind «Ещё» with %s', (_name, session, more) => {
     const html = render(session, { kind: 'not-found', path: '/missing' })
     // The same nav: «Главная · Траты · ＋ · Статистика · Ещё»; the sections are its direct children, with no new attributes.
@@ -48,7 +48,7 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
     expect(html).not.toContain('main-more-theme')
     // The sections for the header row of a wide screen: «Деньги» — links; «Данные» and «Настройки» — a word with ▾.
     expect(list).toContain('<div class="main-more-tiles" role="group" aria-label="Деньги"><a href="/incomes">')
-    expect(html).toContain('<div class="main-group"><button type="button" class="main-group-toggle" aria-expanded="false" aria-controls="main-group-data">Данные</button><div class="main-group-list" id="main-group-data" role="group" aria-label="Данные"><a href="/catalog">')
+    expect(html).toContain('<div class="main-group"><button type="button" class="main-group-toggle" aria-expanded="false" aria-controls="main-group-data">Данные</button><div class="main-group-list" id="main-group-data" role="group" aria-label="Данные"><a href="/receipts/upload">')
     expect(html).not.toMatch(/role="(dialog|menu)"|aria-modal/)
     expect(html.match(/aria-haspopup/g)).toHaveLength(1)
     expect(html).not.toMatch(/<img/)
@@ -57,8 +57,8 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
   it('draws a picture over each word of the bar and before each row of «Ещё», hidden from the screen reader', () => {
     const html = raw(reader, catalog)
     const pictures = html.match(/<svg\b[^>]*>/g) ?? []
-    // Twelve links behind «Ещё», three of the bar, «Ещё» itself, «＋» (26 px) and ▾ of «Данные» and «Настройки».
-    expect(pictures.filter((tag) => tag.includes('class="ck-icon"'))).toHaveLength(3 + 12 + 1 + 1 + 2)
+    // Fourteen links behind «Ещё», three of the bar, «Ещё» itself, «＋» (26 px) and ▾ of «Данные» and «Настройки».
+    expect(pictures.filter((tag) => tag.includes('class="ck-icon"'))).toHaveLength(3 + 14 + 1 + 1 + 2)
     for (const tag of pictures) expect(tag).toContain('aria-hidden="true"')
     expect(html).toMatch(/<a href="\/"><svg class="ck-icon" viewBox="0 0 24 24" width="22" height="22"[^>]*>.*?<\/svg>Главная<\/a>/)
     expect(html).toMatch(/<button type="button" class="main-add-toggle"[^>]*><svg class="ck-icon" viewBox="0 0 24 24" width="26" height="26"/)

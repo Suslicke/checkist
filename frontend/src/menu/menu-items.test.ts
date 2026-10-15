@@ -40,7 +40,7 @@ describe('items of the main menu and their split for the bottom bar of a phone',
     expect(ADD_AFTER).toBe(2)
     expect(menu.groups.map((group) => [group.title, group.items.map((item) => [item.label, item.to])])).toEqual([
       ['Деньги', [['Доходы', '/incomes'], ['Платежи', '/recurring'], ['Цели', '/goals'], ['Разбор месяца', '/review']]],
-      ['Данные', [['Каталог', '/catalog'], ['Магазины', '/stores'], ['Правила выписок', '/statements/rules'], ['Обработка чеков', '/recognition/jobs'], ['Выгрузка', '/export']]],
+      ['Данные', [['Загрузить чек', '/receipts/upload'], ['Загрузить выписку', '/statements/new'], ['Каталог', '/catalog'], ['Магазины', '/stores'], ['Правила выписок', '/statements/rules'], ['Обработка чеков', '/recognition/jobs'], ['Выгрузка', '/export']]],
       ['Настройки', [['Состояние сервисов', '/health']]],
     ])
     expect(menu.more).toEqual(menu.groups.flatMap((group) => group.items))
@@ -51,11 +51,11 @@ describe('items of the main menu and their split for the bottom bar of a phone',
     const menu = menuItems(reader, catalog)
     expect(labels(menu.primary)).toEqual(['Главная', 'Траты', 'Статистика'])
     expect(menu.add).toBe(true)
-    expect(labels(menu.more)).toEqual(['Доходы', 'Платежи', 'Цели', 'Разбор месяца', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов'])
+    expect(labels(menu.more)).toEqual(['Доходы', 'Платежи', 'Цели', 'Разбор месяца', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов'])
     expect(labels(menu.groups[2].items)).toEqual(['Семья', 'synthetic-reader', 'Состояние сервисов'])
-    expect(menu.more[10]).toEqual({ key: 'account', to: '/account', label: 'synthetic-reader', current: false, account: true, icon: 'account' })
+    expect(menu.more[12]).toEqual({ key: 'account', to: '/account', label: 'synthetic-reader', current: false, account: true, icon: 'account' })
     // The pictures of the bottom bar and of the list behind «Ещё» (components/Icon.tsx).
-    expect([...menu.primary, ...menu.more].map((item) => item.icon)).toEqual(['home', 'list', 'stats', 'income', 'repeat', 'goal', 'insight', 'catalog', 'store', 'statement', 'jobs', 'export', 'family', 'account', 'health'])
+    expect([...menu.primary, ...menu.more].map((item) => item.icon)).toEqual(['home', 'list', 'stats', 'income', 'repeat', 'goal', 'insight', 'image', 'statement', 'catalog', 'store', 'statement', 'jobs', 'export', 'family', 'account', 'health'])
   })
 
   it('never puts more into the bar than it holds, and keeps «Ещё» for at least two links', () => {

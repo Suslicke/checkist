@@ -75,6 +75,10 @@ export function menuItems(session: Session, route: Route): Menu {
       { key: 'review', to: '/review', label: 'Разбор месяца', current: route.kind === 'review' || route.kind === 'ask', icon: 'insight' },
     ] },
     { key: 'data', title: 'Данные', items: [
+      // A computer has no «＋» sheet: a photo or a PDF of a receipt and a bank statement are picked from here. «Траты»
+      // stays the current section of both screens.
+      { key: 'upload', to: '/receipts/upload', label: 'Загрузить чек', current: false, icon: 'image' },
+      { key: 'statement-new', to: '/statements/new', label: 'Загрузить выписку', current: false, icon: 'statement' },
       { key: 'catalog', to: '/catalog', label: 'Каталог', current: catalogKinds.includes(route.kind), icon: 'catalog' },
       { key: 'stores', to: '/stores', label: 'Магазины', current: route.kind === 'stores', icon: 'store' },
       { key: 'statement-rules', to: '/statements/rules', label: 'Правила выписок', current: route.kind === 'statement-rules', icon: 'statement' },

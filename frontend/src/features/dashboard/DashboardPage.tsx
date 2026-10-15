@@ -159,9 +159,13 @@ function Unconverted({ items }: { items: ExcludedSpends[] }) {
  * «Доход» beside it. Not pinned: they stand in the page under the total, the «＋» of the bottom bar is always at hand. */
 function Actions() {
   const shot = useQuickShot('camera')
+  const file = useQuickShot('gallery')
+  // One of the two is shown: the camera where there is a phone to hold, a photo or a PDF from the disk on a computer.
   return <div className="dash-actions">
-    <button type="button" className="dash-action dash-action-shot" onClick={shot.open}><Icon name="camera" />Снять чек</button>
+    <button type="button" className="dash-action dash-action-shot dash-action-camera" onClick={shot.open}><Icon name="camera" />Снять чек</button>
+    <button type="button" className="dash-action dash-action-shot dash-action-file" onClick={file.open}><Icon name="image" />Загрузить чек</button>
     {shot.field}
+    {file.field}
     <Link className="dash-action dash-action-spend" to="/receipts/new"><Icon name="plus" />Добавить</Link>
   </div>
 }
