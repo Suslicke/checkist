@@ -52,12 +52,11 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
   it('has the two big actions of the artifact, in the page and not pinned: the camera of «Снять чек» and «＋ Добавить» (a spend or an income)', () => {
     const html = view()
     const actions = between(html, 'class="dash-actions"', '</div>')
-    expect(actions).toMatch(/<button type="button" class="dash-action dash-action-shot dash-action-camera"><svg class="ck-icon"[^>]*>.*?<\/svg>Снять чек<\/button>/)
-    expect(actions).toMatch(/class="dash-action dash-action-shot dash-action-file"><svg class="ck-icon"[^>]*>.*?<\/svg>Загрузить чек<\/button>/)
+    expect(actions).toMatch(/<button type="button" class="dash-action dash-action-shot"><svg class="ck-icon"[^>]*>.*?<\/svg>Снять чек<\/button>/)
+    expect(actions).not.toContain('capture=')
     expect(actions).toContain('accept="image/*,.heic,.heif,application/pdf"')
-    expect(actions).toContain('<input class="ck-quick-shot-input" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true"/>')
     expect(actions).toMatch(/<a class="dash-action dash-action-spend" href="\/receipts\/new"><svg class="ck-icon"[^>]*>.*?<\/svg>Добавить<\/a>/)
-    // «Из галереи» lives in the «＋» sheet of the bottom bar.
+    // One button: the system menu offers the camera, the gallery and files.
     expect(actions).not.toContain('Из галереи')
     expect(html).not.toContain('ck-action-bar')
   })

@@ -93,8 +93,6 @@
 .dash-action-shot { border-color: var(--ck-primary); background: var(--ck-primary); color: var(--ck-on-primary); }
 .dash-action-shot:hover:not(:disabled) { border-color: var(--ck-primary-hover); background: var(--ck-primary-hover); color: var(--ck-on-primary); }
 .dash-action-spend:hover { border-color: var(--ck-link-hover); background: var(--ck-surface-raised); color: var(--ck-link-hover); }
-@media not (pointer: coarse) { .dash-action-camera { display: none; } }
-@media (pointer: coarse) { .dash-action-file { display: none; } }
 
 /* Лимиты по категориям: a coloured dot and the name, «spent / limit» on one line at the right, an 8 px bar. */
 .dash-limit-list, .dash-plain-list, .limits-list { display: grid; margin: 0; padding: 0; list-style: none; }

@@ -74,7 +74,7 @@ describe('«Главная» and «Лимиты» styles (text of the rules, not
     expect(body('.dash-limit-name')).toContain('min-width: 0;')
   })
   it('uses the single phone breakpoint of the project, two columns on a wide screen, and moves only without reduced motion', () => {
-    expect([...css.matchAll(/@media[^{]+/g)].map((match) => match[0].trim())).toEqual(['@media (prefers-reduced-motion: no-preference)', '@media not (pointer: coarse)', '@media (pointer: coarse)', '@media (min-width: 960px)', '@media (max-width: 540px)'])
+    expect([...css.matchAll(/@media[^{]+/g)].map((match) => match[0].trim())).toEqual(['@media (prefers-reduced-motion: no-preference)', '@media (min-width: 960px)', '@media (max-width: 540px)'])
     const motion = css.slice(css.indexOf('@media (prefers-reduced-motion'), css.indexOf('@media (min-width'))
     expect(css.replace(motion, '')).not.toMatch(/animation|@keyframes|transition/)
     expect(motion).toContain('.dash-slide-forward { animation: dash-slide-forward 200ms ease-out; }')

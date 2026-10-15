@@ -41,7 +41,7 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
     expect(links(html)).toEqual(['Главная', 'Траты', 'Статистика', 'Ещё', ...more])
     // «Ещё» of the phone's bar is a link to its screen (/more, 2026-10-13); «＋» a closed sheet (a dialog, components/Sheet).
     expect(html).toContain('<a class="main-more-toggle" href="/more">Ещё</a>')
-    expect(html).toContain('<button type="button" class="main-add-toggle" aria-haspopup="dialog" aria-expanded="false" aria-label="Добавить: снять чек, выбрать из галереи, внести трату или доход, загрузить выписку">')
+    expect(html).toContain('<button type="button" class="main-add-toggle" aria-haspopup="dialog" aria-expanded="false" aria-label="Добавить: снять или загрузить чек, внести трату или доход, загрузить выписку">')
     const list = html.split('<div class="main-more-list">')[1]
     expect(links(list)).toEqual(more)
     // The theme and the pictures of the spends live on the screen «Ещё» (features/more), not in the menu.
@@ -64,7 +64,7 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
     expect(html).toMatch(/<button type="button" class="main-add-toggle"[^>]*><svg class="ck-icon" viewBox="0 0 24 24" width="26" height="26"/)
   })
 
-  it('offers the actions: «Снять чек» and «Из галереи» with their fields outside of the sheet, and «Трата или доход»', () => {
+  it('offers the actions: one «Снять чек» for the camera, the gallery and files, its field outside of the sheet, and «Трата или доход»', () => {
     const html = render(reader, catalog)
     const add = html.slice(html.indexOf('<div class="main-add">'), html.indexOf('<a href="/stats">'))
     // Closed: the button and the two fields only. The open sheet is drawn by Sheet (components/sheet-markup.test.tsx).
@@ -73,13 +73,12 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
     expect(source).toContain('<Sheet open={open} onClose={close} title="Добавить" id={ADD_SHEET_ID}>')
     // Big rows: a picture, the action and a line about it; «Снять чек» is the main one.
     expect(source).toContain(`<button type="button" className="main-add-action main-add-primary" onClick={choose(shot.open)}>{body('camera', 'Снять чек', `)
-    expect(source).toContain(`<button type="button" className="main-add-action" onClick={choose(gallery.open)}>{body('image', 'Из галереи', `)
+    expect(source).not.toContain('Из галереи')
     expect(source).toContain(`<Link className="main-add-action" to="/receipts/new" onClick={close}>{body('pencil', 'Трата или доход', `)
     // The fields stay mounted when the sheet closes: iOS opens the camera or the picker only from the press itself.
-    // The gallery has no capture, so iOS offers the photo library and Files; a PDF bill is accepted too.
+    // No capture: iOS offers the camera, the photo library and Files at once; a PDF bill is accepted too.
     expect(source.indexOf('</Sheet>')).toBeLessThan(source.indexOf('{shot.field}'))
-    expect(add).toMatch(/<\/button><input class="ck-quick-shot-input" type="file" accept="image\/\*" capture="environment" tabindex="-1" aria-hidden="true"\/>/)
-    expect(add).toMatch(/<input class="ck-quick-shot-input" type="file" accept="image\/\*,\.heic,\.heif,application\/pdf" tabindex="-1" aria-hidden="true"\/><\/div>$/)
+    expect(add).toMatch(/<\/button><input class="ck-quick-shot-input" type="file" accept="image\/\*,\.heic,\.heif,application\/pdf" tabindex="-1" aria-hidden="true"\/><\/div>$/)
   })
 
   it('keeps the account link as it was in the header', () => {
