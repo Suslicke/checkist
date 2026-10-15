@@ -42,7 +42,8 @@ export function draftFromCrop({ base }: CropReview, today: string, currency: str
       return {
         ...newLine(), reviewKey: line.key, name: line.name, quantity: plain(line.quantity) || '1', unit: line.unit || 'pcs', price: plain(line.unitPrice),
         discount: discount ? moneyText(discount) : '', amount: amount === undefined ? line.amount : moneyText(amount - discount),
-        lead: 'amount', signed: amount !== undefined && amount <= 0n,
+        // A recognized price leads: a corrected weight or count recounts the sum (quantity × price − discount).
+        lead: plain(line.unitPrice) ? 'price' : 'amount', signed: amount !== undefined && amount <= 0n,
       }
     }),
     ...(extra > 0n && { extraDiscount: decimalText(extra, 2) }),

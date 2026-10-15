@@ -122,7 +122,7 @@ export default function LineEditor({ lines, errors, chips, currency, onChange: c
                   {UNITS.map((unit) => <option key={unit} value={unit}>{UNIT_LABELS[unit]}</option>)}
                 </select>
               </label>
-              {number('price', 'Цена', '0')}
+              {number('price', `Цена за ${UNIT_LABELS[line.unit]}`, '0')}
               {number('discount', 'Скидка', '0')}
             </>}
           {number('amount', 'Сумма', '0')}

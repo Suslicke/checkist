@@ -5,7 +5,7 @@ import { isReceiptImageDetail } from '../../api/recognition-schema'
 import { publicFixture } from '../../api/recognition-test-support'
 import { afterConfirm, cropErrors, cropInput, cropReview, draftFromCrop } from './crop-review'
 import type { CropSend } from './crop-review'
-import { newLine } from './line-draft'
+import { editLine, newLine } from './line-draft'
 
 const line = (position: number, patch: Partial<NormalizedLine> = {}): NormalizedLine => ({
   position, parent_position: null, kind: 'product', name: `ТОВАР ${position}`, unit: 'pcs', quantity: '1.000', unit_price: '100.0000', amount: '100.00',
@@ -30,6 +30,12 @@ describe('a crop in the one spend form', () => {
     expect(draft).toMatchObject({ place: 'Тестовый магазин', date: '2026-10-04', currency: 'KZT', source: 'photo' })
     expect(draft.lines.map((row) => [row.name, row.quantity, row.price, row.discount, row.amount])).toEqual([
       ['ТОВАР 1', '1', '100', '10', '90'], ['САХАР', '2', '50', '', '100']])
+  })
+  it('counts the sum of a recognized line from a corrected weight or count', () => {
+    const [first, second] = draftFromCrop(cropReview(image()), '2026-10-14', 'USD').lines
+    expect(editLine(second, 'quantity', '0,486')).toMatchObject({ price: '50', amount: '24.30' })
+    // The line's own discount stays taken off: 3 × 100 − 10.
+    expect(editLine(first, 'quantity', '3')).toMatchObject({ price: '100', amount: '290' })
   })
   it('sends the recognized receipt back unchanged: kinds, tax rates, the discount and the taxes stay', () => {
     const crop = cropReview(image())

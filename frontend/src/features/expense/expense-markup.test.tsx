@@ -101,7 +101,7 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
     expect(html).toContain('aria-label="Убрать позицию 3"')
     expect(html).toContain('<span class="expense-line-label">Позиция 3</span>')
     // A position is a line of a receipt (2026-10-13): quantity, unit, price, discount, sum and category, all labelled.
-    for (const label of ['Кол-во', 'Ед.', 'Цена', 'Скидка', 'Сумма', 'Категория']) {
+    for (const label of ['Кол-во', 'Ед.', 'Цена за шт', 'Скидка', 'Сумма', 'Категория']) {
       expect(html).toContain(`<span class="expense-line-label">${label}</span>`)
     }
     expect(html).toContain('<option value="kg">кг</option>')
