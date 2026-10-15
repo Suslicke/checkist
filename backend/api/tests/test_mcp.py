@@ -83,6 +83,10 @@ class McpTests(TwoUsers, TestCase):
         self.assertEqual(self.post(None, rpc("tools/list")).status_code, 401)
         self.assertEqual(self.post("ck_wrong", rpc("tools/list")).status_code, 401)
         self.assertEqual(self.post(None, rpc("tools/list"), path=f"/mcp/{token}").status_code, 200)
+        # A token in the address only reads, even a write token.
+        _, writer = mcp.issue(self.first, "в адресе", "write")
+        listed = APIClient().generic("POST", f"/mcp/{writer}", rpc("tools/list"), content_type="application/json").json()
+        self.assertNotIn("add_spend", {tool["name"] for tool in listed["result"]["tools"]})
         ApiToken.objects.filter(pk=row.pk).update(revoked_at="2026-10-15T00:00:00Z")
         self.assertEqual(self.post(token, rpc("tools/list")).status_code, 401)
         self.assertEqual(APIClient().get("/mcp").status_code, 405)

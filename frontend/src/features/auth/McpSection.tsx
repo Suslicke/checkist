@@ -51,7 +51,7 @@ export function McpView({ origin, tokens, failed, issued, busy, error, onCreate,
 
       {lines && issued && <div className="ck-auth-mcp-issued" role="status" data-mcp-issued>
         <p><strong>Токен «{issued.name}» выпущен.</strong> Скопируйте его сейчас — больше он показан не будет.</p>
-        {([['Токен', issued.token], ['Заголовок', lines.header], ['Адрес с токеном (если клиент берёт только адрес)', lines.inUrl],
+        {([['Токен', issued.token], ['Заголовок', lines.header], ['Адрес с токеном — только чтение (если клиент берёт только адрес)', lines.inUrl],
           ['Claude Code', lines.claudeCode]] as const).map(([label, value]) => <div key={label} className="ck-auth-mcp-copy">
           <span className="ck-auth-row-label">{label}</span>
           <div className="ck-auth-mcp-copy-row">

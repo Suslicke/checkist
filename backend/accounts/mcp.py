@@ -5,7 +5,7 @@
 ``405``. Понимает и прежние ревизии с ``initialize`` (2025-03-26 … 2025-11-25), и 2026-07-28 без него.
 
 Вход — ``Authorization: Bearer ck_…`` либо токен в адресе ``/mcp/<токен>`` (для клиентов, где вписать можно только
-адрес). Каждый инструмент вызывает **существующий вью API** внутри процесса от имени владельца токена: видимость семьи,
+адрес; такой адрес может остаться в истории и журналах, поэтому он **только читает** при любых правах токена). Каждый инструмент вызывает **существующий вью API** внутри процесса от имени владельца токена: видимость семьи,
 скрытые траты, «видит с», права модератора и проверки тела — те же, что у приложения, второй копии правил нет.
 Токен ``read`` получает только инструменты чтения, ``write`` — ещё и записи. Только режим ``accounts``.
 """
@@ -220,8 +220,9 @@ def _result(id_, result):
 
 
 def _bearer(request, path_token):
+    """(token, from_header). A token in the address may stay in histories and proxy logs: it only reads."""
     header = request.headers.get("Authorization", "")
-    return header[7:].strip() if header.startswith("Bearer ") else path_token
+    return (header[7:].strip(), True) if header.startswith("Bearer ") else (path_token, False)
 
 
 @csrf_exempt
@@ -232,7 +233,10 @@ def endpoint(request, path_token=None):
         response = HttpResponse(status=405)
         response["Allow"] = "POST"
         return response
-    token = authenticate(_bearer(request, path_token))
+    secret, from_header = _bearer(request, path_token)
+    token = authenticate(secret)
+    if token is not None and not from_header:
+        token.scope = ApiToken.Scope.READ  # in memory only: writes need the header
     if token is None:
         response = JsonResponse({"error": "invalid_token"}, status=401)
         response["WWW-Authenticate"] = 'Bearer error="invalid_token"'
