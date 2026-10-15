@@ -19,7 +19,7 @@ from django.db import IntegrityError, connection, transaction
 
 from receipts.decimal_math import price_context
 from receipts.dedup import build_fiscal_key, find_duplicates, name_key
-from receipts import service_charges
+from receipts import service_charges, store_category
 from receipts.models import Receipt, ReceiptDiscount, ReceiptLine, ReceiptTax
 from receipts.validation import validate_receipt
 from stores.models import Store
@@ -615,6 +615,8 @@ def import_receipt(image, observation, *, run_token, version, on_saved=None):
                     issues = [issue("invalid_value", "/", "Значения не соответствуют модели чека.")]
                 except Exception:
                     status, issues = ImageStatus.FAILED, [issue("import_failed", "/", "Не удалось сохранить чек.")]
+                if receipt is not None:
+                    store_category.resync(receipt.lines.all())
                 if receipt is not None and settings.PRODUCT_MERGE_AUTO_DETECT:
                     _detect_product_merges(receipt)
                 if receipt is not None and settings.PRODUCT_CLASSIFICATION_AUTO_SUGGEST:

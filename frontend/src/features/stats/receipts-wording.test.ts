@@ -28,8 +28,8 @@ describe('signs and signed numbers', () => {
   it.each([['18.71', 1], ['-3.10', -1], ['0.00', 0], ['-0.00', 0], ['0', 0], [null, null], ['abc', null], ['1e3', null]] as const)(
     'reads the sign of %s without a float', (value, sign) => expect(decimalSign(value)).toBe(sign))
   it('marks only a positive value with a plus', () => {
-    expect(plain(signedAmount('8.65', 'EUR'))).toBe('+9 €')
-    expect(plain(signedAmount('-3.10', 'EUR'))).toBe('-4 €')
+    expect(plain(signedAmount('8.65', 'EUR'))).toBe('+8,65 €')
+    expect(plain(signedAmount('-3.10', 'EUR'))).toBe('-3,10 €')
     expect(plain(signedAmount('0.00', 'EUR'))).toBe('0 €')
     expect(signedAmount(null, 'EUR')).toBe('—')
     expect(plain(signedPercent('46.23'))).toBe('+46,23 %')
@@ -43,8 +43,8 @@ describe('the answer in words (server fixtures)', () => {
   it('names growth, its size and the main cause for the main question of the demo', () => {
     const result = verdict(eur)
     expect(result.kind).toBe('grew')
-    expect(plain(result.headline)).toBe('Средний чек вырос на 19 € (+69,27 %): с 28 € до 46 €.')
-    expect(plain(result.lead)).toBe('Главная причина: стал покупать больше позиций за поход — +9 €, 46,23 % изменения.')
+    expect(plain(result.headline)).toBe('Средний чек вырос на 18,71 € (+69,27 %): с 27,01 € до 45,72 €.')
+    expect(plain(result.lead)).toBe('Главная причина: стал покупать больше позиций за поход — +8,65 €, 46,23 % изменения.')
     expect(result.note).toBeNull()
     expect(result.parts.map((part) => [part.key, part.amount, part.percent, part.phrase, part.against])).toEqual([
       ['quantity', '8.65', '46.23', 'стал покупать больше позиций за поход', false],
@@ -54,8 +54,8 @@ describe('the answer in words (server fixtures)', () => {
   })
   it('picks prices as the main cause where they outweigh quantity (KZT)', () => {
     const result = verdict(kzt)
-    expect(plain(result.headline)).toBe('Средний чек вырос на 4 425 ₸ (+144,88 %): с 3 055 ₸ до 7 480 ₸.')
-    expect(plain(result.lead)).toBe('Главная причина: выросли цены на те же товары — +2 823 ₸, 63,79 % изменения.')
+    expect(plain(result.headline)).toBe('Средний чек вырос на 4 424,92 ₸ (+144,88 %): с 3 054,29 ₸ до 7 479,21 ₸.')
+    expect(plain(result.lead)).toBe('Главная причина: выросли цены на те же товары — +2 822,60 ₸, 63,79 % изменения.')
   })
   it('shows quantity and the price per line when no product was bought in both periods', () => {
     const [only] = compare('compare-no-matched-products.json').currencies
@@ -66,7 +66,7 @@ describe('the answer in words (server fixtures)', () => {
     expect(result.note).toBe(noMatchedNote)
     expect(result.note).toContain('рост цен нельзя отделить от смены состава')
     // The largest term has no share from the server, so none is invented.
-    expect(plain(result.lead)).toBe('Главная причина: выросла средняя сумма за одну позицию — +14 €.')
+    expect(plain(result.lead)).toBe('Главная причина: выросла средняя сумма за одну позицию — +13,34 €.')
   })
   it('says there is nothing to compare with when one period has no visits', () => {
     const [only] = compare('compare-one-sided.json').currencies
@@ -94,7 +94,7 @@ describe('the answer in words (other signs)', () => {
     })
     const result = verdict(lower)
     expect(result.kind).toBe('fell')
-    expect(plain(result.headline)).toBe('Средний чек снизился на 7 € (-14,22 %): с 46 € до 40 €.')
+    expect(plain(result.headline)).toBe('Средний чек снизился на 6,50 € (-14,22 %): с 45,72 € до 39,22 €.')
     expect(plain(result.lead)).toBe('Главная причина: стал покупать меньше позиций за поход — -4 €, 61,54 % изменения.')
     expect(result.parts.map((part) => part.phrase)).toEqual([
       'стал покупать меньше позиций за поход', 'снизились цены на те же товары', 'другой состав покупок: позиции в среднем дешевле',
@@ -114,7 +114,7 @@ describe('the answer in words (other signs)', () => {
     })
     const result = verdict(flat)
     expect(result.kind).toBe('same')
-    expect(plain(result.headline)).toBe('Средний чек не изменился: 46 € в обоих периодах.')
+    expect(plain(result.headline)).toBe('Средний чек не изменился: 45,72 € в обоих периодах.')
     expect(result.lead).toBe('Слагаемые уравновесили друг друга.')
     expect(result.parts.map((part) => [part.phrase, part.against, part.percent])).toEqual([
       ['стал покупать больше позиций за поход', false, null], ['снизились цены на те же товары', false, null], ['состав покупок на чек не повлиял', false, null],
@@ -133,7 +133,7 @@ describe('the answer in words (other signs)', () => {
   })
   it('omits the percent the server could not give', () => {
     const result = verdict(block('18.71', {}, { change: { avg_receipt: '18.71', avg_receipt_percent: null } }))
-    expect(plain(result.headline)).toBe('Средний чек вырос на 19 €: с 28 € до 46 €.')
+    expect(plain(result.headline)).toBe('Средний чек вырос на 18,71 €: с 27,01 € до 45,72 €.')
   })
 })
 
@@ -190,8 +190,8 @@ describe('price index', () => {
 describe('period cards', () => {
   it('formats the facts of a period from the wire decimals', () => {
     expect(sideFacts(eur.base, 'EUR').map(([label, value]) => [label, plain(value)])).toEqual([
-      ['Походов в магазин', '48 (3,99 в месяц)'], ['Средний чек', '28 €'], ['Медианный чек', '28 €'],
-      ['Позиций на чек', '11,5'], ['Сумма на позицию', '2,35 €'], ['Потрачено всего', '1 297 €'],
+      ['Походов в магазин', '48 (3,99 в месяц)'], ['Средний чек', '27,01 €'], ['Медианный чек', '27,28 €'],
+      ['Позиций на чек', '11,5'], ['Сумма на позицию', '2,35 €'], ['Потрачено всего', '1 296,41 €'],
     ])
   })
   it('leaves the averages of a period without visits empty instead of zero', () => {

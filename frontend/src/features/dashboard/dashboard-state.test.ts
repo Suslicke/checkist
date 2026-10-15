@@ -18,9 +18,9 @@ describe('money of the dashboard', () => {
   it('shows kopecks only when there are any and never breaks a value', () => {
     // The sign of the currency (lib/money.ts): «287 450 ₸»; a rare code stays a code.
     expect(formatMoney('287450.00', 'KZT')).toBe(nb('287 450 ₸'))
-    expect(formatMoney('1500.50', 'KZT')).toBe(nb('1 501 ₸'))
-    expect(formatMoney(5n, 'EUR')).toBe(nb('1 €'))
-    expect(formatMoney(-40n, 'EUR')).toBe(nb('-1 €'))
+    expect(formatMoney('1500.50', 'KZT')).toBe(nb('1 500,50 ₸'))
+    expect(formatMoney(5n, 'EUR')).toBe(nb('0,05 €'))
+    expect(formatMoney(-40n, 'EUR')).toBe(nb('-0,40 €'))
     expect(formatMoney('-1200.00', 'KZT')).toBe(nb('-1 200 ₸'))
     expect(formatMoney('10.00', 'UZS')).toBe(nb('10 UZS'))
     expect(formatNumber('92300.00')).toBe(nb('92 300'))

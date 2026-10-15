@@ -4,11 +4,14 @@
 магазины общие для всех семей. Предложения считаются и отдаются только модератору. Ответ склейки и «Не то» —
 тот же объект, что у ``GET``: экран заменяет им своё состояние без второго запроса.
 """
+from django.db import transaction
 from django.db.models import Count
 from rest_framework.response import Response
 
 from accounts.access import Moderator, is_moderator, request_user, visible_receipts_q
+from catalog.models import Category
 from config.exceptions import InvalidParameter, RecognitionApiError
+from receipts import store_category
 from stores import merging
 from stores.models import Store
 
@@ -25,6 +28,7 @@ MESSAGES = {
     "required": "Выберите магазины для склейки.",
     "few": "Нужно не меньше двух магазинов.",
     "unknown_field": "Неизвестное поле.",
+    "category": "Категория не найдена.",
 }
 
 
@@ -59,7 +63,8 @@ def stores_state(request):
         "can_merge": moderator,
         "suggestions": merging.suggestions(counts, names) if moderator else [],
         "stores": [{"id": store.pk, "name": names[store.pk], "receipts_count": counts[store.pk],
-                    "aliases": spellings.get(store.pk, [])} for store in stores],
+                    "aliases": spellings.get(store.pk, []), "default_category": store.default_category_id}
+                   for store in stores],
     }
 
 
@@ -122,4 +127,24 @@ class StoreDismissView(StoreMergeMutationView):
         if Store.objects.filter(pk__in=ids).count() != len(ids):
             raise _invalid({"stores": "unknown"})
         merging.dismiss(ids)
+        return Response(stores_state(request))
+
+
+class StoreCategoryView(StoreMergeMutationView):
+    """``POST {"store": id, "category": id | null}`` — категория неразобранных позиций чеков магазина
+    (``receipts.store_category``): ставится и прошлым чекам сразу; ``null`` — снять."""
+
+    fields = ("store", "category")
+
+    def post(self, request):
+        data = self.body(request)
+        store, category = data.get("store"), data.get("category")
+        if not _id(store):
+            raise _invalid({"store": "type"})
+        if category is not None and (not _id(category) or not Category.objects.filter(pk=category).exists()):
+            raise _invalid({"category": "category"})
+        with transaction.atomic():
+            if not Store.objects.filter(pk=store, merged_into__isnull=True).update(default_category_id=category):
+                raise _invalid({"store": "unknown"})
+            store_category.resync_store(store)
         return Response(stores_state(request))

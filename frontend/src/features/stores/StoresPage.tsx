@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { dismissStores, getStoresState, mergeStores } from '../../api/store-merges'
+import { getCategories } from '../../api/catalog'
+import { dismissStores, getStoresState, mergeStores, setStoreCategory } from '../../api/store-merges'
 import type { StoresState } from '../../api/store-merges'
-import type { LocalApiResult } from '../../api/types'
+import type { Category, LocalApiResult } from '../../api/types'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
+import { categoryTree } from '../expense/expense-form'
 import { errorMessage } from '../receipts/state'
 import { defaultMain, filterStores, mergedNotice, pick, spendsText, storeMeta, storesFailure, storesTexts } from './stores-state'
 import './Stores.css'
@@ -26,10 +28,15 @@ export type StoresViewProps = {
   onCancel: () => void
   onMerge: () => void
   onDismiss: (ids: number[]) => void
+  /** The categories for «Неразобранное считать в»; empty — not loaded, the choice is not offered. */
+  categories?: Category[]
+  onCategory?: (store: number, category: number | null) => void
 }
 
 /** The screen without the network: the markup tests render it directly. */
-export function StoresView({ state, search, selected, ask, busy, notice, failure, onSearch, onToggle, onAsk, onMain, onCancel, onMerge, onDismiss }: StoresViewProps) {
+export function StoresView({ state, search, selected, ask, busy, notice, failure, onSearch, onToggle, onAsk, onMain, onCancel, onMerge, onDismiss, categories = [], onCategory }: StoresViewProps) {
+  const tree = categoryTree(categories)
+  const categoryName = (id: number | null) => id === null ? undefined : categories.find((category) => category.id === id)?.name
   const shown = filterStores(state.stores, search)
   const asked = ask ? pick(state, ask.ids) : []
   return <div className="stores-page">
@@ -71,11 +78,21 @@ export function StoresView({ state, search, selected, ask, busy, notice, failure
           const content = <span className="ck-row-main">
             <span className="ck-row-title">{store.name}</span>
             <span className="ck-row-meta">{storeMeta(store)}</span>
+            {categoryName(store.default_category) && <span className="ck-row-meta stores-category">
+              Неразобранное — в «{categoryName(store.default_category)}»</span>}
           </span>
           return <li key={store.id}>
             {state.can_merge
               ? <label className="ck-row stores-row"><input type="checkbox" checked={selected.includes(store.id)} onChange={() => onToggle(store.id)} />{content}</label>
               : <div className="ck-row stores-row">{content}</div>}
+            {state.can_merge && onCategory && tree.length > 0 && <label className="stores-category-pick">
+              <span>Неразобранное считать в</span>
+              <select value={store.default_category ?? ''} disabled={busy} aria-label={`${store.name}: неразобранные позиции считать в категории`}
+                onChange={(event) => onCategory(store.id, event.target.value ? Number(event.target.value) : null)}>
+                <option value="">Не разбирать (как есть)</option>
+                {tree.map(({ category, depth }) => <option key={category.id} value={category.id}>{`${'\u2003'.repeat(depth)}${category.name}`}</option>)}
+              </select>
+            </label>}
           </li>
         })}
       </ul>}
@@ -120,8 +137,14 @@ export default function StoresPage() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string>()
   const [failure, setFailure] = useState<string>()
+  const [categories, setCategories] = useState<Category[]>([])
   const controller = useRef<AbortController | undefined>(undefined)
   useEffect(() => () => controller.current?.abort(), [])
+  useEffect(() => {
+    const current = new AbortController()
+    void getCategories({}, { signal: current.signal }).then((result) => { if (result.kind === 'ok') setCategories(result.data.results) })
+    return () => current.abort()
+  }, [])
 
   useEffect(() => {
     const current = new AbortController()
@@ -166,5 +189,8 @@ export default function StoresPage() {
       if (!main || !merged.length) return
       void send((signal) => mergeStores(main.id, merged.map((store) => store.id), { signal }), mergedNotice(main, merged))
     }}
-    onDismiss={(ids) => { void send((signal) => dismissStores(ids, { signal }), 'Больше не предложим.') }} />
+    onDismiss={(ids) => { void send((signal) => dismissStores(ids, { signal }), 'Больше не предложим.') }}
+    categories={categories}
+    onCategory={(store, category) => { void send((signal) => setStoreCategory(store, category, { signal }),
+      category === null ? 'Категория места снята.' : 'Категория места сохранена: прошлые чеки пересчитаны.') }} />
 }

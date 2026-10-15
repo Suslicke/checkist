@@ -157,7 +157,7 @@ class GoalRuleAccessTests(TestCase):
 
     def test_switching_a_rule_to_a_goal_moves_it_to_its_owner(self):
         andrey = signed_in(self.andrey)
-        food = Category.objects.create(name="Еда и напитки")
+        food = Category.objects.create(name="Супермаркет")
         created = andrey.post(RULES, {"pattern": "Kaspi Депозит", "action": "category", "category": food.pk}, format="json").json()
         self.assertEqual(StatementRule.objects.get().household, self.family)
         changed = andrey.patch(f"{RULES}{created['id']}/", {"action": "goal", "goal": self.andreys.pk}, format="json")

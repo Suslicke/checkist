@@ -2028,6 +2028,7 @@ Line несёт ещё `category` (`{"id","name"}` либо `null`, после `
 | `GET /api/store-merges/` | `LocalOrSignedIn` | состояние экрана (ниже) |
 | `POST /api/store-merges/merge/` | модератор каталога, CSRF | `{"store": id главного, "merged": [id, …]}` → состояние |
 | `POST /api/store-merges/dismiss/` | модератор каталога, CSRF | `{"stores": [id, id, …]}` → состояние |
+| `POST /api/store-merges/category/` | модератор каталога, CSRF | `{"store": id, "category": id \| null}` → состояние; категория неразобранных позиций чеков с фото этого места, ставится и прошлым чекам (`receipts.store_category`, 2026-10-15); у мест в `GET` — `default_category` |
 
 Состояние: `{"can_merge": bool, "suggestions": [{"source": "similar" | "model", "stores": [id, …]}], "stores":
 [{"id", "name", "receipts_count", "aliases": [название, …]}]}`. `stores` — действующие (не склеенные) магазины, у

@@ -105,8 +105,8 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
       expect(html).toContain(`<span class="expense-line-label">${label}</span>`)
     }
     expect(html).toContain('<option value="kg">кг</option>')
-    // The exact sum stays in the field; the summary next to it shows whole units, rounded up.
-    expect(html).toContain('<button type="submit" class="expense-save">Сохранить · 351\u00a0₸</button>')
+    // The exact sum stays in the field; the summary next to it shows it exactly, kopecks when there are any.
+    expect(html).toContain('<button type="submit" class="expense-save">Сохранить · 350,50\u00a0₸</button>')
   })
   it('folds every line into a card on a phone and unfolds a line with a message', () => {
     const panini = { ...newLine(), name: 'Панини', quantity: '2', price: '1790', amount: '3580' }
@@ -133,9 +133,9 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
     expect(statement).toContain('<p class="expense-source-mark" role="note">Из выписки: Kaspi Gold</p>')
     expect(statement).toContain('<p class="expense-method-fixed">Kaspi Gold — банк выписки</p>')
   })
-  it('names the rounded amount on the save button, chooses the date by chips and keeps the calendar', () => {
+  it('names the exact amount on the save button, chooses the date by chips and keeps the calendar', () => {
     const html = form({ ...emptyDraft('KZT', '2026-10-11'), amount: '4500,40' }, { today: '2026-10-12' })
-    expect(html).toContain('<button type="submit" class="expense-save">Сохранить · 4\u00a0501\u00a0₸</button>')
+    expect(html).toContain('<button type="submit" class="expense-save">Сохранить · 4\u00a0500,40\u00a0₸</button>')
     expect(html).toContain('<button type="button" class="expense-chip expense-day" aria-pressed="false">Сегодня</button>')
     expect(html).toContain('<button type="button" class="expense-chip expense-day" aria-pressed="true">Вчера</button>')
     expect(html).toContain('<div class="expense-row" role="group" aria-labelledby="expense-when-label"><span id="expense-when-label" class="expense-row-label">Когда</span>')

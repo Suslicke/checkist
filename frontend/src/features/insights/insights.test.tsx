@@ -66,7 +66,7 @@ describe('words and states of the month review and the questions', () => {
   it('keeps a number of the model with its groups and its sign on one line, and marks a change of money', () => {
     expect(modelText('ушло 45 301 ₸, на 12 месяцев, 1 200 350 KZT, 15 %')).toBe(`ушло 45${NBSP}301${NBSP}₸, на 12 месяцев, 1${NBSP}200${NBSP}350${NBSP}KZT, 15${NBSP}%`)
     expect(plain(delta('73893.00', 'KZT')?.text ?? '')).toBe('▲ 73 893 ₸')
-    expect(delta('-5714.40', 'KZT')).toEqual({ tone: 'less', text: `▼${NBSP}5${NBSP}715${NBSP}₸` })
+    expect(delta('-5714.40', 'KZT')).toEqual({ tone: 'less', text: `▼${NBSP}5${NBSP}714,40${NBSP}₸` })
     expect(delta('0.00', 'KZT')?.tone).toBe('same')
     expect(delta(null, 'KZT')).toBeNull()
     expect(monthIsEmpty(figures({ spent: '0.00', categories: [] }))).toBe(true)
@@ -103,8 +103,8 @@ describe('markup of the month review', () => {
   it('shows the server figures next to the text of the model, which stays plain text', () => {
     const markup = html(<ReviewView month="2026-09" figures={figures()} review={review()} status={{ kind: 'idle' }} current="2026-10" />)
     const text = words(markup)
-    expect(text).toContain('Сентябрь 2026 Потрачено в сентябре 540 680 ₸ На 15 % больше, чем в августе')
-    expect(text).toContain('Среднее прошлых месяцев — 446 532 ₸ ▲ 94 149 ₸')
+    expect(text).toContain('Сентябрь 2026 Потрачено в сентябре 540 679,83 ₸ На 15 % больше, чем в августе')
+    expect(text).toContain('Среднее прошлых месяцев — 446 531,58 ₸ ▲ 94 148,25 ₸')
     expect(text).toContain('Еда и напитки Август: 125 075 ₸ · среднее 120 305 ₸ 198 968 ₸ ▲ 73 893 ₸')
     expect(text).toContain('Кафе и рестораны Август: 55 533 ₸ 49 819 ₸ ▼ 5 714 ₸')
     expect(text).toContain('Кафе и рестораны Лимит 40 000 ₸ · сверх на 9 819 ₸ 49 819 ₸')
@@ -127,7 +127,7 @@ describe('markup of the month review', () => {
     expect(waiting).not.toContain('Следующий месяц')
     const refused = html(<ReviewView month="2026-09" figures={figures()} review={null} status={{ kind: 'message', text: aiTexts.disabled }} />)
     expect(refused).toContain(`role="alert">${aiTexts.disabled}</p>`)
-    expect(words(refused)).toContain('540 680 ₸')
+    expect(words(refused)).toContain('540 679,83 ₸')
     const empty = html(<ReviewView month="2026-09" figures={figures({ spent: '0.00', previous: '0.00', categories: [], limits: [], places: [] })} review={null} status={{ kind: 'idle' }} />)
     expect(empty).toContain(insightTexts.empty)
     expect(empty).not.toContain('Обновить')

@@ -2,16 +2,17 @@
  * the merge and «Не то» (`/api/store-merges/`). Stores are shared by all families, so only a catalog moderator merges
  * (`can_merge`); a refusal is `403 permission_denied`. */
 import { getLocalJson, mutate } from './local.ts'
-import { array, choice, isId, nonNegativeInteger, object, text } from './schema.ts'
+import { array, choice, isId, nonNegativeInteger, nullable, object, text } from './schema.ts'
 import type { Guard } from './schema.ts'
 import type { LocalApiResult, RequestOptions } from './types.ts'
 
-export type StoreItem = { id: number; name: string; receipts_count: number; aliases: string[] }
+/** `default_category` — where the unsorted positions of its photo receipts count (a hypermarket: food); null — nowhere. */
+export type StoreItem = { id: number; name: string; receipts_count: number; aliases: string[]; default_category: number | null }
 /** Ids of `stores`, the one with more spends first; `similar` — names alike, `model` — the model grouped them. */
 export type StoreSuggestion = { source: 'similar' | 'model'; stores: number[] }
 export type StoresState = { can_merge: boolean; suggestions: StoreSuggestion[]; stores: StoreItem[] }
 
-const isStoreItem = object<StoreItem>({ id: isId, name: text, receipts_count: nonNegativeInteger, aliases: array(text) })
+const isStoreItem = object<StoreItem>({ id: isId, name: text, receipts_count: nonNegativeInteger, aliases: array(text), default_category: nullable(isId) })
 const isSuggestion = object<StoreSuggestion>({
   source: choice('similar', 'model'), stores: (value: unknown) => Array.isArray(value) && value.length >= 2 && value.every(isId),
 })
@@ -29,4 +30,8 @@ export function mergeStores(store: number, merged: number[], options: RequestOpt
 /** «Не то»: the group and the pairs inside it are not offered again. */
 export function dismissStores(stores: number[], options: RequestOptions = {}): Promise<LocalApiResult<StoresState>> {
   return mutate('store-merges/dismiss/', JSON.stringify({ stores }), isStoresState, options)
+}
+/** The category of the unsorted positions of a store, set for its past receipts too; `null` takes it off. Moderator only. */
+export function setStoreCategory(store: number, category: number | null, options: RequestOptions = {}): Promise<LocalApiResult<StoresState>> {
+  return mutate('store-merges/category/', JSON.stringify({ store, category }), isStoresState, options)
 }

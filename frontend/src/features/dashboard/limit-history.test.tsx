@@ -32,15 +32,15 @@ function answer(): BudgetLimitHistory {
 }
 
 describe('«История изменений» without React', () => {
-  it('says who changed which limit, old → new rounded up, and which way', () => {
+  it('says who changed which limit, old → new exactly, and which way', () => {
     const entries = historyEntries(journal())
     expect(entries.map((entry) => [entry.date, entry.who, entry.category, nb(entry.text), entry.direction, entry.badge && nb(entry.badge)])).toEqual([
       ['20.09.2026', 'Андрей', 'Продукты › Молочное', '120 000 → 150 000 ₸', 'up', '▲ 25,00 %'],
-      ['02.08.2026', '—', 'Продукты', '201 → 180 ₸', 'down', '▼ 10,18 %'],
+      ['02.08.2026', '—', 'Продукты', '200,40 → 180 ₸', 'down', '▼ 10,18 %'],
       ['03.07.2026', 'Андрей', 'Продукты › Молочное', 'новый лимит 120 000 ₸', null, null],
       ['20.09.2026', 'Андрей', 'Продукты', 'удалён, был 180 ₸', null, null],
     ])
-    expect(nb(historyChangeText({ kind: 'changed', old_amount: '0.50', new_amount: '1.00', currency: 'EUR' }))).toBe('1 → 1 €')
+    expect(nb(historyChangeText({ kind: 'changed', old_amount: '0.50', new_amount: '1.00', currency: 'EUR' }))).toBe('0,50 → 1 €')
   })
   it('filters by a category of the journal', () => {
     const entries = historyEntries(journal())

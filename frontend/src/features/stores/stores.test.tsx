@@ -12,10 +12,10 @@ const state: StoresState = {
   can_merge: true,
   suggestions: [{ source: 'similar', stores: [3, 4] }, { source: 'model', stores: [2, 1] }],
   stores: [
-    { id: 1, name: 'Anthropic Claude', receipts_count: 2, aliases: [] },
-    { id: 2, name: 'CLAUDE.AI SUBSCRIPTION', receipts_count: 4, aliases: ['Claude'] },
-    { id: 3, name: 'MAGNUM', receipts_count: 21, aliases: [] },
-    { id: 4, name: 'MAGNUM*ALMATY', receipts_count: 2, aliases: [] },
+    { id: 1, name: 'Anthropic Claude', receipts_count: 2, aliases: [], default_category: null },
+    { id: 2, name: 'CLAUDE.AI SUBSCRIPTION', receipts_count: 4, aliases: ['Claude'], default_category: null },
+    { id: 3, name: 'MAGNUM', receipts_count: 21, aliases: [], default_category: 7 },
+    { id: 4, name: 'MAGNUM*ALMATY', receipts_count: 2, aliases: [], default_category: null },
   ],
 }
 const view = (patch: Partial<StoresViewProps> = {}) => renderToStaticMarkup(<StoresView state={state} search="" selected={[]} ask={null} busy={false}
@@ -26,6 +26,17 @@ describe('«Магазины» (Vitest/SSR, not browser visual acceptance)', () 
     expect(isStoresState(state)).toBe(true)
     expect(isStoresState({ ...state, suggestions: [{ source: 'similar', stores: [3] }] })).toBe(false)
     expect(isStoresState({ ...state, can_merge: 'yes' })).toBe(false)
+  })
+
+  it('names the category of the unsorted positions of a place and lets a moderator choose it', () => {
+    const food = { id: 7, name: 'Продукты', path: [{ id: 5, name: 'Еда' }, { id: 7, name: 'Продукты' }], parent_id: 5, depth: 1,
+      children_count: 0, generic_products_count: 0, products_count: 0, products_total: 0 }
+    const html = view({ categories: [food], onCategory: noop })
+    expect(html).toContain('Неразобранное — в «Продукты»')
+    expect(html).toContain('aria-label="MAGNUM: неразобранные позиции считать в категории"')
+    expect(html).toContain('<option value="7" selected="">')
+    expect(view({ categories: [food], onCategory: noop, state: { ...state, can_merge: false } })).not.toContain('<select')
+    expect(isStoresState({ ...state, stores: [{ ...state.stores[0], default_category: 'x' }] })).toBe(false)
   })
 
   it('words and rules of the screen', () => {

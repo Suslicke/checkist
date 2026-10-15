@@ -88,7 +88,7 @@ describe('pending spends on «Чеки»', () => {
     expect(markup).toContain('такси')
     expect(markup).toContain('<time dateTime="2026-10-12">12.10.2026</time>')
     expect(markup).toMatch(/>450.₸</)
-    expect(markup).toMatch(/>1.201.₸</)
+    expect(markup).toMatch(/>1.200,50.₸</)
     expect(markup.match(/>Исправить</g)).toHaveLength(2)
     expect(markup.match(/>Удалить</g)).toHaveLength(2)
     expect(markup).toContain('>Отправить сейчас</button>')

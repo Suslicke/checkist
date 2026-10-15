@@ -102,7 +102,7 @@ describe('«Траты категории» markup (Vitest/SSR, not browser visu
     expect(html).toContain('<span class="ck-round dash-month-step dash-month-step-off" aria-hidden="true"></span>')
     expect(noIcons(view(fixture(), '2026-11'))).toContain('aria-label="Следующий месяц" href="/spends/category/51?month=2026-11"></a>')
     expect(html).toContain('<p class="dash-label">Потрачено</p>')
-    expect(html).toContain(`<p class="dash-total ck-hero-figure">${nb('24 501 ₸')}</p>`)
+    expect(html).toContain(`<p class="dash-total ck-hero-figure">${nb('24 500,40 ₸')}</p>`)
     expect(html.match(/ck-hero-figure/g)).toHaveLength(1)
   })
   it('breaks the total down by sub-category, each a link one level deeper', () => {
@@ -126,7 +126,7 @@ describe('«Траты категории» markup (Vitest/SSR, not browser visu
       setListIcons('category')
     }
     expect(html).toContain(`<time dateTime="2026-10-09">${nb('9 октября')}</time> · Выписка Kaspi Gold · Андрей`)
-    expect(html).toContain(`<span class="ck-figures">${nb('501 ₸')}</span><span class="cat-spend-whole">из ${nb('12 500 ₸')} по чеку</span>`)
+    expect(html).toContain(`<span class="ck-figures">${nb('500,40 ₸')}</span><span class="cat-spend-whole">из ${nb('12 500 ₸')} по чеку</span>`)
     expect(html).toContain('<details class="cat-spend-lines"><summary>Позиции: 2</summary>')
     expect(html).toContain(`<li class="ck-leader"><span class="cat-spend-line-name">Карты UNO<span class="cat-spend-line-category"> · Игры</span></span><span class="ck-figures">${nb('400 ₸')}</span></li>`)
     // A spend of one line from a statement needs no list of lines.

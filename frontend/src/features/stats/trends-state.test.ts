@@ -46,10 +46,10 @@ describe('«Траты по месяцам»', () => {
     expect(chart.columns).toHaveLength(12)
     const last = chart.columns.at(-1)!
     expect(last.x).toBe('2026-09-01')
-    expect(nb(last.totalText)).toBe('191 €')
+    expect(nb(last.totalText)).toBe('190,24 €')
     expect(last.href).toBe('/stats/trends?month=2026-09')
     expect(last.segments.map((segment) => [segment.key, nb(segment.valueText)])).toEqual([
-      ['6', '86 €'], ['1', '87 €'], ['5', '14 €'], [uncategorizedKey, '6 €'],
+      ['6', '85,05 €'], ['1', '86,11 €'], ['5', '13,94 €'], [uncategorizedKey, '5,14 €'],
     ])
   })
   it('keeps an empty month as a column of zero', () => {
@@ -95,7 +95,7 @@ describe('«Месяц к месяцу»', () => {
     ])
     expect(rows[1].values).toHaveLength(12)
     expect(rows[1].href).toBe('/stats/trends?months=6&category=1')
-    expect(nb(rows[1].last)).toBe('87 €')
+    expect(nb(rows[1].last)).toBe('86,11 €')
     expect(Object.values(monthRowHeadings(block)).map(nb)).toEqual(['август 2026', 'сентябрь 2026'])
   })
 })
@@ -151,11 +151,11 @@ describe('«Лимиты по месяцам»', () => {
     expect(row.key).toBe(`deleted:${base.category!.id}:EUR`)
     expect(row.cells.map((cell) => [cell.none, nb(cell.percent), nb(cell.limit), cell.over])).toEqual([
       [true, 'без лимита', 'без лимита', false], [false, '50,00 %', '200 €', false],
-      [false, '125,00 %', '120 001 €', true], [true, 'без лимита', 'без лимита', false],
+      [false, '125,00 %', '120 000,40 €', true], [true, 'без лимита', 'без лимита', false],
     ])
     expect([row.overCount, row.limitedCount]).toEqual([1, 2])
     expect(row.changes.map(nb)).toEqual([
-      'июль 2026: лимит задан: 200', 'август 2026: лимит изменён: 200 → 120 001', 'сентябрь 2026: лимит снят (был 120 001)',
+      'июль 2026: лимит задан: 200', 'август 2026: лимит изменён: 200 → 120 000,40', 'сентябрь 2026: лимит снят (был 120 000,40)',
     ])
     expect(nb(limitChangeText({ old: '120000.00', new: '150000.00' }))).toBe('лимит изменён: 120 000 → 150 000')
   })

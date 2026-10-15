@@ -43,7 +43,7 @@ describe('«Можно тратить в день» (2026-10-13)', () => {
     const html = view({ allowance })
     const hero = html.slice(html.indexOf('dash-hero'), html.indexOf('</section>', html.indexOf('dash-hero')))
     expect(hero).toContain('<div class="dash-allowance"><p class="dash-allowance-line"><span class="dash-allowance-label">Можно тратить в день</span>')
-    expect(hero).toContain(`<span class="dash-allowance-value ck-figures">${nb('20 450 ₸')}</span>`)
+    expect(hero).toContain(`<span class="dash-allowance-value ck-figures">${nb('20 449,47 ₸')}</span>`)
     expect(view({ allowance: { ...allowance, per_day: null, overspent: '100.00' } })).toContain('<div class="dash-allowance dash-allowance-over">')
     // A past month: the server sends none, and a stale one is not drawn either.
     expect(view({ allowance }, '2026-11')).not.toContain('dash-allowance')

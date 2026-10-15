@@ -43,13 +43,13 @@ describe('spending screen markup (Vitest/SSR — not what the browser shows, foc
     const plain = text(html)
     // The total of a currency is the label over the sum, like the hero card of «Главная»: the first block carries the
     // one hero sum of the screen, the second a large one.
-    expect(plain).toContain('Итого по чекам, € 13 042 € 373 чека')
-    expect(plain).toContain('Итого по чекам, ₸ 438 092 ₸')
-    expect(html).toMatch(/<p class="spending-total ck-hero-figure">13[\s\u00a0\u202f]042[\s\u00a0\u202f]€<\/p>/)
+    expect(plain).toContain('Итого по чекам, € 13 041,07 € 373 чека')
+    expect(plain).toContain('Итого по чекам, ₸ 438 091,92 ₸')
+    expect(html).toMatch(/<p class="spending-total ck-hero-figure">13[\s\u00a0\u202f]041,07[\s\u00a0\u202f]€<\/p>/)
     expect(count(html, /ck-hero-figure/g)).toBe(1)
-    expect(plain).toContain('Продукты питания 2 240 строк · 372 чека. 5 591 € 42,73 %')
+    expect(plain).toContain('Продукты питания 2 240 строк · 372 чека. 5 590,75 € 42,73 %')
     expect(plain).toContain('Суммы в разных валютах не складываются и не пересчитываются')
-    expect(plain).toContain('разница — -43 €')
+    expect(plain).toContain('разница — -42,59 €')
     expect(plain).toContain('Категорию и обобщённый продукт товару назначают в админке.')
     expect(plain).toContain('Период: всё время.')
     expect(html).not.toContain('aria-busy="true"')
@@ -84,7 +84,7 @@ describe('spending screen markup (Vitest/SSR — not what the browser shows, foc
     expect(html).not.toContain('aria-label="Разбивка"')
     expect(html).toMatch(/<h2 [^>]*data-request-focus-target[^>]*>Траты по товарам<\/h2>/)
     expect(html).toContain('<a href="/catalog/products/24">Demo Hähnchenbrust 600g</a>')
-    expect(text(html)).toContain('Прочее Ещё 25 товаров с меньшими суммами, одной строкой. Показать состав 1 201 € 73,17 %')
+    expect(text(html)).toContain('Прочее Ещё 25 товаров с меньшими суммами, одной строкой. Показать состав 1 200,33 € 73,17 %')
     expect(html).toContain('Период: <time dateTime="2026-01-01">01.01.2026</time>\u00a0— <time dateTime="2026-09-30">30.09.2026</time>, обе даты включительно.')
     expect(html).not.toContain('aria-label="Путь в тратах"')
   })
@@ -95,7 +95,7 @@ describe('spending screen markup (Vitest/SSR — not what the browser shows, foc
     expect(html).toContain('<a class="spending-up" href="/stats?currency=EUR">На уровень выше</a>')
     expect(html).toContain('<a href="/stats?currency=EUR&amp;group_by=generic&amp;category=1">Продукты питания: товары без подкатегории</a>')
     const plain = text(html)
-    expect(plain).toContain('Сумма строк товаров, € 5 591 €')
+    expect(plain).toContain('Сумма строк товаров, € 5 590,75 €')
     expect(plain).toContain('сумма чеков и её разница с суммой строк не показываются')
     expect(plain).not.toContain('Итого по чекам')
   })
@@ -110,7 +110,7 @@ describe('spending screen markup (Vitest/SSR — not what the browser shows, foc
     const plain = text(html)
     expect(plain).toContain('Положительных сумм нет, диаграмма не построена.')
     expect(plain).toContain('Сумма не положительная: в диаграмму не входит, доля не считается.')
-    expect(plain).toContain('-8 € —')
+    expect(plain).toContain('-7,14 € —')
   })
 
   it('reserves the block while the first answer loads', () => {
@@ -222,12 +222,12 @@ describe('composition of «Прочее» (Vitest/SSR — not what the browser s
     expect(html).toContain('<span class="ck-chart-hidden">В составе „Прочего“: </span><a href="/catalog/products/7">')
     const plain = text(html)
     expect(plain).toContain('Прочее 27 товаров с меньшими суммами. Скрыть состав')
-    expect(plain).toContain('131 € 7,96 %')
-    expect(plain).toContain('110 € 6,69 %')
-    expect(plain).toContain('В составе „Прочего“: Ещё 25 товаров с меньшими суммами, одной строкой Чтобы увидеть их, сузьте период или откройте обобщённый продукт. 1 201 € 73,17 %')
-    expect(plain).toContain('В составе „Прочего“: Ещё 8 товаров с меньшими суммами, одной строкой Чтобы увидеть их, сузьте период или откройте обобщённый продукт. 28 278 ₸ 41,92 %')
+    expect(plain).toContain('130,61 € 7,96 %')
+    expect(plain).toContain('109,70 € 6,69 %')
+    expect(plain).toContain('В составе „Прочего“: Ещё 25 товаров с меньшими суммами, одной строкой Чтобы увидеть их, сузьте период или откройте обобщённый продукт. 1 200,33 € 73,17 %')
+    expect(plain).toContain('В составе „Прочего“: Ещё 8 товаров с меньшими суммами, одной строкой Чтобы увидеть их, сузьте период или откройте обобщённый продукт. 28 277,93 ₸ 41,92 %')
     // The totals and the row of «Прочее» itself are those of the usual answer.
-    for (const fact of ['Итого по чекам, € 1 639 €', 'Итого по чекам, ₸ 67 313 ₸']) { expect(text(before)).toContain(fact); expect(plain).toContain(fact) }
+    for (const fact of ['Итого по чекам, € 1 638,94 €', 'Итого по чекам, ₸ 67 312,93 ₸']) { expect(text(before)).toContain(fact); expect(plain).toContain(fact) }
     // Order: regular rows, «Прочее», its composition, then the special rows.
     const order = ['Demo Hähnchenbrust 600g', '>Прочее<', 'ck-pie-child"', 'Ещё 25 товаров', 'ck-pie-child-status', '>Строки без товара<'].map((part) => html.indexOf(part))
     expect(order).toEqual([...order].sort((a, b) => a - b))

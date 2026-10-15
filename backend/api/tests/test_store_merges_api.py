@@ -48,9 +48,9 @@ class StoreMergesTests(StoresMixin, TestCase):
             "can_merge": True,
             "suggestions": [{"source": "similar", "stores": [self.magnum.pk, self.city.pk]}],
             "stores": [
-                {"id": self.magnum.pk, "name": "MAGNUM", "receipts_count": 2, "aliases": []},
-                {"id": self.city.pk, "name": "MAGNUM*ALMATY", "receipts_count": 1, "aliases": []},
-                {"id": self.cafe.pk, "name": "Демо-кафе", "receipts_count": 1, "aliases": []},
+                {"id": self.magnum.pk, "name": "MAGNUM", "receipts_count": 2, "aliases": [], "default_category": None},
+                {"id": self.city.pk, "name": "MAGNUM*ALMATY", "receipts_count": 1, "aliases": [], "default_category": None},
+                {"id": self.cafe.pk, "name": "Демо-кафе", "receipts_count": 1, "aliases": [], "default_category": None},
             ],
         })
 
@@ -60,8 +60,8 @@ class StoreMergesTests(StoresMixin, TestCase):
         self.assertEqual(response.json(), {
             "can_merge": True, "suggestions": [],
             "stores": [
-                {"id": self.magnum.pk, "name": "MAGNUM", "receipts_count": 3, "aliases": ["MAGNUM*ALMATY"]},
-                {"id": self.cafe.pk, "name": "Демо-кафе", "receipts_count": 1, "aliases": []},
+                {"id": self.magnum.pk, "name": "MAGNUM", "receipts_count": 3, "aliases": ["MAGNUM*ALMATY"], "default_category": None},
+                {"id": self.cafe.pk, "name": "Демо-кафе", "receipts_count": 1, "aliases": [], "default_category": None},
             ],
         })
         self.assertEqual(StoreMerge.objects.get().created_by, local_user())
@@ -126,7 +126,7 @@ class StoreMergesAccountsTests(StoresMixin, TwoUsers, TestCase):
         self.assertEqual(moderator.get(STATE).json(), {"can_merge": True, "suggestions": [], "stores": []})
         self.assertEqual(moderator.post(MERGE, {"store": mine.pk, "merged": [city.pk]}, format="json").status_code, 200)
         self.assertEqual(self.client_of(self.first).get(STATE).json()["stores"],
-                         [{"id": mine.pk, "name": "MAGNUM", "receipts_count": 2, "aliases": ["MAGNUM*ALMATY"]}])
+                         [{"id": mine.pk, "name": "MAGNUM", "receipts_count": 2, "aliases": ["MAGNUM*ALMATY"], "default_category": None}])
 
     def test_csrf_is_required(self):
         client = APIClient(enforce_csrf_checks=True)

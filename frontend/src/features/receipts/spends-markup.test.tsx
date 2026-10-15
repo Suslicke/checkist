@@ -34,7 +34,7 @@ describe('«Траты» on a phone (Vitest/SSR, not browser visual acceptance)'
     expect(html.match(/<h3>[^]*?<\/h3>/g)).toEqual([
       '<h3><time dateTime="2026-10-12">Сегодня</time></h3>', `<h3><time dateTime="2026-10-11">Вчера, 11${NBSP}окт</time></h3>`])
     expect(html).toContain(`<span class="spends-day-sum ck-figures">20${NBSP}000${NBSP}₸</span>`)
-    expect(html).toContain(`<span class="spends-day-sum ck-figures">3${NBSP}€</span>`)
+    expect(html).toContain(`<span class="spends-day-sum ck-figures">2,38${NBSP}€</span>`)
     expect(html.match(/<a class="spends-row" href="\/receipts\/\d+">/g)).toHaveLength(3)
     // One card per day.
     expect(html.match(/<ul class="spends-rows">/g)).toHaveLength(2)

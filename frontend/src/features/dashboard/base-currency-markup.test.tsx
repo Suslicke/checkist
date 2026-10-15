@@ -19,19 +19,19 @@ const noop = () => {}
 
 describe('money in the family base currency (2026-10-13)', () => {
   it('shows the converted twin beside an amount in another currency only', () => {
-    expect(formatApproxMoney('8978.80', 'KZT')).toBe(nb('≈ 8 979 ₸'))
-    expect(baseTwin('USD', '8978.80', 'KZT')).toBe(nb('≈ 8 979 ₸'))
+    expect(formatApproxMoney('8978.80', 'KZT')).toBe(nb('≈ 8 978,80 ₸'))
+    expect(baseTwin('USD', '8978.80', 'KZT')).toBe(nb('≈ 8 978,80 ₸'))
     expect(baseTwin('KZT', '1000.00', 'KZT')).toBeNull()
     expect(baseTwin('GBP', null, 'KZT')).toBeNull()
     expect(baseTwin('USD', '8978.80', undefined)).toBeNull()
-    expect(formatMoneyWithBase('20.00', 'USD', '8978.80', 'KZT')).toBe(`${nb('20 $')} · ${nb('≈ 8 979 ₸')}`)
+    expect(formatMoneyWithBase('20.00', 'USD', '8978.80', 'KZT')).toBe(`${nb('20 $')} · ${nb('≈ 8 978,80 ₸')}`)
     expect(formatMoneyWithBase('20.00', 'USD', null, 'KZT')).toBe(nb('20 $'))
   })
   it('names the spends without a rate instead of dropping them', () => {
     expect(excludedNote(undefined)).toBe('')
     expect(excludedNote([])).toBe('')
     expect(excludedNote([{ currency: 'GBP', receipts_count: 1, total: '5.00' }, { currency: 'RUB', receipts_count: 12, total: '1000.10' }]))
-      .toBe(`Нет курса Нацбанка на дату покупки — в итог не вошли: ${nb('5 £')} (${nb('1 трата')}), ${nb('1 001 ₽')} (${nb('12 трат')}).`)
+      .toBe(`Нет курса Нацбанка на дату покупки — в итог не вошли: ${nb('5 £')} (${nb('1 трата')}), ${nb('1 000,10 ₽')} (${nb('12 трат')}).`)
   })
 })
 
@@ -43,9 +43,9 @@ describe('«Главная» in the base currency', () => {
       recent: [{ ...fixture.recent[0], total: '20.00', currency: 'USD', base_total: '8978.80' }, fixture.recent[1]],
     }
   }
-  it('shows «20 $» with «≈ 8 979 ₸» under it, and the spends without a rate in their own card', () => {
+  it('shows «20 $» with «≈ 8 978,80 ₸» under it, and the spends without a rate in their own card', () => {
     const html = renderToStaticMarkup(<DashboardView data={data()} today="2026-10" date="2026-10-20" />)
-    expect(html).toContain(`<span class="ck-row-amount ck-figures">${nb('20 $')}<span class="dash-recent-twin">${nb('≈ 8 979 ₸')}</span></span>`)
+    expect(html).toContain(`<span class="ck-row-amount ck-figures">${nb('20 $')}<span class="dash-recent-twin">${nb('≈ 8 978,80 ₸')}</span></span>`)
     expect(html).toContain(`<span class="ck-row-amount ck-figures">${nb('4 500 ₸')}</span>`)
     expect(html).toContain('<h2 id="dash-unconverted-heading">Без курса</h2>')
     expect(html).toContain('Нет курса Нацбанка на дату покупки — не в итоге')
@@ -72,9 +72,9 @@ describe('«Траты» keep the original amount', () => {
   it('a day totals what converts in the base currency and keeps a spend without a rate apart', () => {
     expect(groupByDay(rows, '2026-10-12')[0].totals).toEqual([{ currency: 'KZT', total: '9978.80' }, { currency: 'GBP', total: '5.00' }])
   })
-  it('a row says «20 $» and «≈ 8 979 ₸»', () => {
+  it('a row says «20 $» and «≈ 8 978,80 ₸»', () => {
     const html = renderToStaticMarkup(<SpendDays receipts={rows} today="2026-10-12" showOwner={false} />)
-    expect(html).toContain(`${nb('20 $')}<span class="spends-row-twin">${nb('≈ 8 979 ₸')}</span>`)
+    expect(html).toContain(`${nb('20 $')}<span class="spends-row-twin">${nb('≈ 8 978,80 ₸')}</span>`)
     expect(html.match(/spends-row-twin/g)).toHaveLength(1)
   })
 })

@@ -39,3 +39,7 @@ label.stores-row { cursor: pointer; }
   .stores-suggestion-actions > button { flex: 1 1 0; min-width: 0; }
   .stores-actions { margin-inline: calc(50% - 50vw); padding-inline: 16px; }
 }
+
+/* «Неразобранное считать в» under a place (2026-10-15): a quiet line of the moderator. */
+.stores-category-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 0 0 12px 44px; color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
+.stores-category-pick select { flex: 1 1 200px; min-width: 0; max-width: 100%; }

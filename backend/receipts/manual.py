@@ -41,7 +41,7 @@ from catalog.models import Category, GenericProduct, Product
 from catalog.units import BaseUnit, Unit
 from receipts.decimal_math import price_context, round_decimal
 from receipts.dedup import name_key
-from receipts import service_charges
+from receipts import service_charges, store_category
 from receipts.models import ProductAlias, Receipt, ReceiptDiscount, ReceiptLine
 from stores.models import Country, Currency, Merchant, Store
 
@@ -555,6 +555,8 @@ def _apply_lines(receipt, rows, current):
             line.raw_name = row.name
             line.position = position
             line.quantity, line.unit, line.unit_price = row.quantity, row.unit, row.unit_price
+            if line.extra.get(store_category.SOURCE_KEY) and row.category != line.category_id:
+                line.extra.pop(store_category.SOURCE_KEY)  # the person chose the category: no longer the shop's
             line.amount, line.discount_amount, line.category_id = row.amount, row.discount, row.category
             if not fresh and before != (line.amount, line.discount_amount):
                 changed = True

@@ -111,7 +111,7 @@ describe('the preview line', () => {
     ])
     expect(isExportPreview(data)).toBe(true)
     const text = previewText(data).map((part) => part.text).join('')
-    expect(text).toBe('Будет выгружено: 3 чека, 21 строка, сумма 13 € · 125 000 ₸')
+    expect(text).toBe('Будет выгружено: 3 чека, 21 строка, сумма 12,30 € · 125 000 ₸')
     expect(previewText(data).filter((part) => part.figure)).toHaveLength(4)
   })
 

@@ -35,7 +35,7 @@ class DraftFixture:
     def setUpTestData(cls):
         super().setUpTestData()
         cls.owner = local_user()
-        cls.food = Category.objects.create(name="Еда и напитки")
+        cls.food = Category.objects.create(name="Супермаркет")
         cls.transport = Category.objects.create(name="Транспорт")
         cls.cafe = Category.objects.create(name="Кафе и рестораны")
         cls.bank = Category.objects.create(name="Банк и комиссии")

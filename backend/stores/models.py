@@ -106,6 +106,10 @@ class Store(models.Model):
     merged_into = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.PROTECT, related_name="aliases",
     )
+    # Категория неразобранных позиций чеков этого магазина (receipts.store_category): у гипермаркета — продукты.
+    default_category = models.ForeignKey(
+        "catalog.Category", null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+    )
 
     class Meta:
         constraints = [

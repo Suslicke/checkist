@@ -78,8 +78,8 @@ describe('receipt line rows (Vitest/SSR of the phone view, not browser visual ac
     const [row] = rows(table([milk]))
     const [card] = items(cards([milk]))
     // The fixture line has two pieces and a discount, so no fact is left out.
-    expect(card.facts).toEqual([['Количество и цена', '2\u00a0шт × 1,29\u00a0€'], ['Сумма', '3\u00a0€'], ['Скидка', '1\u00a0€'], ['Оплачено', '3\u00a0€']])
-    expect(row.cells).toEqual(['2\u00a0шт', '1,29\u00a0€', '3\u00a0€', '1\u00a0€', '3\u00a0€'])
+    expect(card.facts).toEqual([['Количество и цена', '2\u00a0шт × 1,29\u00a0€'], ['Сумма', '2,58\u00a0€'], ['Скидка', '0,20\u00a0€'], ['Оплачено', '2,38\u00a0€']])
+    expect(row.cells).toEqual(['2\u00a0шт', '1,29\u00a0€', '2,58\u00a0€', '0,20\u00a0€', '2,38\u00a0€'])
     // The words of the quantity and the price are read by a screen reader only.
     expect(cards([milk])).toContain('<dt class="receipt-visually-hidden">Количество и цена</dt><dd class="receipt-number">2\u00a0шт × 1,29\u00a0€</dd>')
   })
@@ -139,16 +139,16 @@ describe('receipt line rows (Vitest/SSR of the phone view, not browser visual ac
     expect(labels(one({ amount: '2.5', paid_amount: '2.50' }))).not.toContain('Оплачено')
     expect(labels(one({ amount: '-0.25', paid_amount: '-0.25' }))).not.toContain('Оплачено')
     expect(labels(one({ amount: '0.00', paid_amount: '-0.00' }))).not.toContain('Оплачено')
-    // Both read "3 €", but the values differ: the fact stays.
+    // Both read "2,58 €" (2.584 is shown to kopecks), but the values differ: the fact stays.
     const close = one({ amount: '2.58', paid_amount: '2.584' })
-    expect(close.filter(([label]) => label === 'Сумма' || label === 'Оплачено')).toEqual([['Сумма', '3\u00a0€'], ['Оплачено', '3\u00a0€']])
+    expect(close.filter(([label]) => label === 'Сумма' || label === 'Оплачено')).toEqual([['Сумма', '2,58\u00a0€'], ['Оплачено', '2,58\u00a0€']])
     expect(labels(one({ amount: '0.25', paid_amount: '-0.25' }))).toContain('Оплачено')
   })
 
   it('leaves out the quantity and the price of a single piece: the price is the amount itself', () => {
-    expect(one({ amount: '2.58', discount_amount: '0.00', paid_amount: '2.58' })).toEqual([['Количество и цена', '2\u00a0шт × 1,29\u00a0€'], ['Сумма', '3\u00a0€']])
+    expect(one({ amount: '2.58', discount_amount: '0.00', paid_amount: '2.58' })).toEqual([['Количество и цена', '2\u00a0шт × 1,29\u00a0€'], ['Сумма', '2,58\u00a0€']])
     for (const quantity of ['1', '1.000', '01.0']) {
-      expect(one({ quantity, amount: '1.29', discount_amount: '0.00', paid_amount: '1.29' }), quantity).toEqual([['Сумма', '2\u00a0€']])
+      expect(one({ quantity, amount: '1.29', discount_amount: '0.00', paid_amount: '1.29' }), quantity).toEqual([['Сумма', '1,29\u00a0€']])
     }
     // Nothing to say under the name: no empty list of facts.
     expect(cards([{ ...milk, quantity: '1.000', discount_amount: '0.00', paid_amount: milk.amount }])).not.toContain('receipt-leader-facts')
@@ -167,7 +167,7 @@ describe('receipt line rows (Vitest/SSR of the phone view, not browser visual ac
     const html = renderToStaticMarkup(<ReceiptLines lines={[milk]} />)
     expect(html).toContain('Валюта: Не распознано')
     expect(html.indexOf('«Оплачено» учитывает скидку строки')).toBeLessThan(html.indexOf('class="receipt-leaders"'))
-    expect(items(html)[0].facts).toEqual([['Количество и цена', '2\u00a0шт × 1,29'], ['Сумма', '3'], ['Скидка', '1'], ['Оплачено', '3']])
+    expect(items(html)[0].facts).toEqual([['Количество и цена', '2\u00a0шт × 1,29'], ['Сумма', '2,58'], ['Скидка', '0,20'], ['Оплачено', '2,38']])
   })
 
   it('shows a spend typed by hand without the printed order, the numbers of its lines or an unmatched mark', () => {

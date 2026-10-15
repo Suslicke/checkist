@@ -28,7 +28,7 @@ class Categories:
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.food = Category.objects.create(name="Еда и напитки")
+        cls.food = Category.objects.create(name="Супермаркет")
         cls.transport = Category.objects.create(name="Транспорт")
         cls.cafe = Category.objects.create(name="Кафе и рестораны")
         cls.home = Category.objects.create(name="Жильё")
@@ -65,8 +65,8 @@ class StatementApiTests(Categories, TestCase):
         magnum = rows[0]
         self.assertEqual((magnum["kind"], magnum["state"], magnum["amount"], magnum["spend"], magnum["store_name"]),
                          ("spend", "spend", "-18450.00", "18450.00", "MAGNUM"))
-        self.assertEqual(magnum["category"], {"id": self.food.pk, "name": "Еда и напитки",
-                                              "path": [{"id": self.food.pk, "name": "Еда и напитки"}]})
+        self.assertEqual(magnum["category"], {"id": self.food.pk, "name": "Супермаркет",
+                                              "path": [{"id": self.food.pk, "name": "Супермаркет"}]})
         incomes = [row for row in rows if row["kind"] == "income"]
         self.assertEqual([row["merchant"] for row in incomes], ["Дмитрий С.", "Kaspi Бонус: кэшбэк"])
         listed = self.client.get(LIST).json()

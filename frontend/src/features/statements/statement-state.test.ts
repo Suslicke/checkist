@@ -82,7 +82,7 @@ describe('the draft of a statement', () => {
     ])
     expect(reasonText(rowFixture({ reason: 'refunded' }))).toBe('Покупку вернули полностью')
     expect(reasonText(rowFixture({ reason: 'bill', duplicate_of: { id: 1, purchased_on: '2026-10-02', total: '7700.72', currency: 'KZT', store_name: null } })))
-      .toBe('Похоже на квитанцию: 2 окт. · 7 701 ₸')
+      .toBe('Похоже на квитанцию: 2 окт. · 7 700,72 ₸')
   })
 
   it('tells what a questionable row waits for, until the person touches it', () => {

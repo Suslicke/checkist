@@ -55,7 +55,7 @@ describe('words of a goal', () => {
     expect(paceText(goal({ pace: null }))).toBe('За последние три месяца взносов не было — прогноза пока нет.')
     expect(paceText(goal({ pace: null, contributions_count: 0 }))).toBeNull()
     expect(paceText(goal({ reached: true }))).toBeNull()
-    expect(plain(deadlineText(goal()) ?? '')).toBe('Чтобы успеть к 30 апр. 2027, нужно 49 715 ₸ в месяц.')
+    expect(plain(deadlineText(goal()) ?? '')).toBe('Чтобы успеть к 30 апр. 2027, нужно 49 714,29 ₸ в месяц.')
     expect(plain(deadlineText(goal({ overdue: true, need_per_month: null })) ?? '')).toBe('Срок 30 апр. 2027 прошёл — осталось 348 000 ₸.')
     expect(deadlineText(goal({ deadline: null, need_per_month: null }))).toBeNull()
     expect(plain(excludedText(goal({ excluded: [{ currency: 'USD', amount: '20.00' }] })) ?? '')).toContain('20 $')
@@ -97,16 +97,16 @@ describe('words of a deposit', () => {
     expect(plain(depositTerms(deposit()) ?? '')).toBe('Депозит · 14,5 % годовых · капитализация ежемесячно')
     expect(plain(depositTerms(deposit({ capitalization: 'none' })) ?? '')).toContain('без капитализации')
     expect(depositTerms(goal())).toBeNull()
-    expect(plain(deadlineText(deposit()) ?? '')).toBe('Чтобы к 30 июн. 2027 было 1 200 000 ₸, вносите по 82 114 ₸ в месяц — с процентами.')
+    expect(plain(deadlineText(deposit()) ?? '')).toBe('Чтобы к 30 июн. 2027 было 1 200 000 ₸, вносите по 82 113,07 ₸ в месяц — с процентами.')
     const self = deposit({ need_per_month: '0.00', deposit: { ...deposit().deposit!, by_interest: true } })
     expect(plain(deadlineText(self) ?? '')).toBe('К 30 июн. 2027 цель будет достигнута процентами — без новых взносов.')
     expect(depositLines(deposit()).map(plain)).toEqual([
-      'При нынешнем темпе к 30 июн. 2027 будет 1 012 346 ₸, из них проценты 62 346 ₸.',
-      'Если больше не вносить — через год будет 425 211 ₸.',
+      'При нынешнем темпе к 30 июн. 2027 будет 1 012 345,67 ₸, из них проценты 62 345,67 ₸.',
+      'Если больше не вносить — через год будет 425 210,40 ₸.',
     ])
     expect(depositLines(goal())).toEqual([])
-    expect(plain(contributionTitle(deposit().contributions[0]))).toBe('Сверка с банком: +116 ₸')
-    expect(plain(contributionTitle({ ...deposit().contributions[0], amount: '-84.60' }))).toBe('Сверка с банком: -85 ₸')
+    expect(plain(contributionTitle(deposit().contributions[0]))).toBe('Сверка с банком: +115,40 ₸')
+    expect(plain(contributionTitle({ ...deposit().contributions[0], amount: '-84.60' }))).toBe('Сверка с банком: -84,60 ₸')
     expect(plain(contributionTitle(deposit().contributions[1]))).toBe('+100 000 ₸')
   })
 
@@ -148,7 +148,7 @@ describe('goal screens', () => {
     expect(page).toContain('<span class="ck-hero-figure">252 000 ₸</span>')
     expect(page).toContain('role="img" aria-label="Накоплено 42 %"')
     expect(page).toContain('В среднем откладываете 40 000 ₸ в месяц — до цели ~9 месяцев.')
-    expect(page).toContain('Чтобы успеть к 30 апр. 2027, нужно 49 715 ₸ в месяц.')
+    expect(page).toContain('Чтобы успеть к 30 апр. 2027, нужно 49 714,29 ₸ в месяц.')
     expect(page).toContain('+100 000 ₸')
     expect(page).toContain('3 окт. 2026 · Лиза · Выписка Kaspi Gold')
     expect(page).toContain('Добавить взнос')
@@ -158,14 +158,14 @@ describe('goal screens', () => {
   it('shows a deposit: the approximate sum, the interest, the growth chart and «Сверить с банком»', () => {
     const page = html(<GoalView goal={deposit()} />)
     expect(page).toContain('Общая · Депозит · 14,5 % годовых · капитализация ежемесячно')
-    expect(page).toContain('<span class="ck-hero-figure">≈ 371 485 ₸</span>')
-    expect(page).toContain('≈ заработано процентами <span class="ck-figures">1 485 ₸</span>')
+    expect(page).toContain('<span class="ck-hero-figure">≈ 371 484,60 ₸</span>')
+    expect(page).toContain('≈ заработано процентами <span class="ck-figures">1 484,60 ₸</span>')
     expect(page).toContain('Рост депозита')
     expect(page).toContain('<dd class="ck-figures">370 000 ₸</dd>')
     expect(page).toContain('Сверить с банком')
-    expect(page).toContain('Сверка с банком: +116 ₸')
+    expect(page).toContain('Сверка с банком: +115,40 ₸')
     expect(page).toContain('goal-interest')
-    expect(page).toContain('Если больше не вносить — через год будет 425 211 ₸.')
+    expect(page).toContain('Если больше не вносить — через год будет 425 210,40 ₸.')
     expect(html(<GoalView goal={deposit({ series: [] })} />)).toContain('График появится после первого взноса.')
     expect(html(<GoalView goal={detail()} />)).not.toContain('Рост депозита')
     const form = html(<GoalForm goal={deposit()} currency="KZT" household busy={false} onSubmit={noop} />)

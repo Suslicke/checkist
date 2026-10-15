@@ -83,7 +83,7 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
     // Without a limit: below the limited ones, under «Без лимита», one line each, no bar.
     const plain = between(limits, 'dash-plain-block', '</ul>')
     expect(plain).toContain('<h3 class="dash-plain-title">Без лимита</h3>')
-    expect(plain).toContain(`<li class="dash-plain dash-cat-5"><a class="dash-plain-head dash-limit-link" href="/spends/category/11?month=2026-10"><span class="dash-dot" aria-hidden="true"></span><span class="dash-plain-name">Транспорт</span><span class="dash-plain-value ck-figures">${nb('21 501 ₸')}</span></a></li>`)
+    expect(plain).toContain(`<li class="dash-plain dash-cat-5"><a class="dash-plain-head dash-limit-link" href="/spends/category/11?month=2026-10"><span class="dash-dot" aria-hidden="true"></span><span class="dash-plain-name">Транспорт</span><span class="dash-plain-value ck-figures">${nb('21 500,50 ₸')}</span></a></li>`)
     expect(plain).toContain('Не разобрано')
     expect(plain).not.toContain('dash-bar')
     expect(limits.indexOf('Дом')).toBeLessThan(limits.indexOf('Транспорт'))
