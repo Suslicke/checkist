@@ -108,6 +108,15 @@ class McpTests(TwoUsers, TestCase):
         self.assertEqual(self.post(token, rpc("tools/list")).status_code, 401)
         self.assertEqual(APIClient().get("/api/auth/tokens/").status_code, 401)
 
+    def test_a_password_change_revokes_the_tokens(self):
+        from .accounts_helpers import make_user, signed_in
+        account = make_user("synthetic-password-change", password="synthetic-password")
+        _, token = mcp.issue(account, "до смены", "write")
+        changed = signed_in(account, csrf=True).post("/api/auth/password/", {
+            "current_password": "synthetic-password", "new_password": "Gx7-violet-harbor-91"}, format="json")
+        self.assertEqual(changed.status_code, 200, changed.content)
+        self.assertEqual(self.post(token, rpc("tools/list")).status_code, 401)
+
 
 @tag("integration")
 @local_single_mode()

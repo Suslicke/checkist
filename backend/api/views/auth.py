@@ -8,6 +8,7 @@ from django.contrib.auth import authenticate, get_user_model, login, logout, upd
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.middleware.csrf import get_token
+from django.utils import timezone
 from rest_framework.exceptions import ParseError, UnsupportedMediaType
 from rest_framework.permissions import SAFE_METHODS, AllowAny, BasePermission
 from rest_framework.response import Response
@@ -16,7 +17,7 @@ from accounts import profile
 from accounts.access import (
     LOCAL_SINGLE, LocalOrSignedIn, SignedIn, household, is_head, is_moderator, mode, request_user,
 )
-from accounts.models import Membership
+from accounts.models import ApiToken, Membership
 from accounts.people import display_name, household_people
 from config.exceptions import AuthApiError, InvalidParameter, InvalidRequest, ObjectNotFound, PasswordRejected
 from push import services as push
@@ -247,6 +248,8 @@ class PasswordView(AuthMutationView):
             raise PasswordRejected({"new_password": messages}, issues) from None
         account.set_password(data["new_password"])
         account.save(update_fields=["password"])
+        # A changed password may mean a leak: the MCP tokens of the person stop working too.
+        ApiToken.objects.filter(user=account, revoked_at__isnull=True).update(revoked_at=timezone.now())
         # Эта сессия остаётся, остальные сессии пользователя перестают действовать.
         session_key = request._request.session.session_key
         update_session_auth_hash(request._request, account)
