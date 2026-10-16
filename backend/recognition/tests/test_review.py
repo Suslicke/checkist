@@ -630,7 +630,8 @@ class ConfirmServiceTests(TestCase):
              {("missing_required", "/lines/0/quantity"), ("missing_required", "/lines/0/unit_price"),
               ("missing_required", "/lines/0/amount")}),
             (fixed_body(currency=None), {("missing_required", "/currency_code")}),
-            (fixed_body(address=None), {("missing_required", "/store/address_raw")}),
+            # Without an address a shop is found by its name (_named_store); without both it is refused.
+            (fixed_body(address=None, store_name=None), {("missing_required", "/store/address_raw")}),
             (self.edited(lambda body: body["lines"][3].update(kind="deposit_return", parent_position=None)),
              {("invalid_value", "/lines/3/amount")}),
         )
@@ -746,6 +747,21 @@ class ConfirmServiceTests(TestCase):
         second.refresh_from_db()
         self.assertEqual((second.status, second.receipt_id), ("reused", receipt.pk))
         self.assertIn(("receipt_conflict", "/store"), [(item["code"], item["field"]) for item in second.issues])
+
+    def test_a_shop_without_an_address_is_the_one_of_its_name(self):
+        # An OZON e-receipt: no address, no branch. The person confirms it by the name, as a spend without a receipt.
+        merchant = Merchant.objects.create(country_id="KZ", legal_name="OZON", brand_name="OZON")
+        ozon = Store.objects.create(merchant=merchant, country_id="KZ", name="OZON", address_raw="", timezone="Asia/Almaty")
+        image = review_image()
+        review.confirm(image.pk, fixed_body(store_name="OZON", address=None))
+        self.assertEqual(Receipt.objects.get().store_id, ozon.pk)
+        # A new name without an address: a new shop by that name, not a refusal.
+        second = review_image(another("needs_review"))
+        stores = Store.objects.count()
+        review.confirm(second.pk, fixed_body(store_name="Демо-маркетплейс", address=None))
+        second.refresh_from_db()
+        self.assertEqual(Store.objects.count(), stores + 1)
+        self.assertTrue(Store.objects.filter(name="Демо-маркетплейс", address_raw="").exists())
 
     def test_ambiguous_store_is_refused_until_a_store_is_chosen(self):
         first = Merchant.objects.create(country_id="DE", legal_name="TESTMARKT GmbH")

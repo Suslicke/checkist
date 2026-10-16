@@ -663,6 +663,7 @@ def _confirm(image, store, digest, normalized, effective, notices, derived, inde
     stamp = db_now().astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     try:
         with transaction.atomic():
+            store = store or _named_store(effective)
             receipt, effect, issues = _import_domain(
                 effective, derived, owner_id=owner_id, store=store, confirmed={"image_id": image.pk, "at": stamp})
     except ResolutionError as problem:
@@ -700,3 +701,16 @@ def _confirm(image, store, digest, normalized, effective, notices, derived, inde
     job.version += 1
     job.save()
     return ConfirmResult(image.pk, job.pk, False)
+
+
+def _named_store(observation):
+    """The shop a person confirmed only by its name (2026-10-15: an OZON e-receipt has no address and no branch):
+    found or created by that name as for a spend without a receipt (``receipts.manual.find_or_create_store``),
+    inside the import transaction, so a refused confirmation leaves no shop. ``None`` — the import resolves it."""
+    from receipts.manual import find_or_create_store
+
+    shop, merchant = observation.store, observation.merchant
+    name = (merchant.brand_name or shop.name or "").strip()
+    if (shop.address_raw or "").strip() or shop.branch_code or not name:
+        return None
+    return find_or_create_store(name[:100], observation.currency_code or "KZT")
