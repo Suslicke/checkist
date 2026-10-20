@@ -83,6 +83,9 @@ describe('«Главная» and «Лимиты» styles (text of the rules, not
     expect(body('.dash-column')).toContain('display: contents;')
     expect(body('.dash-column-side > *')).toContain('order: 1;')
     expect(body('.dash-recent')).toContain('order: 2;')
+    // On a wide screen «Лимиты» stay the first card of the side column: the income line and the recurring cards follow.
+    const wide = css.slice(css.indexOf('@media (min-width: 960px)'), css.indexOf('@media (max-width: 540px)'))
+    expect(wide).toContain('.dash-column-side > .dash-limits { order: 0; }')
   })
   it('sizes text only by the tokens of the type scale, a field never under 16 px', () => {
     const sizes = [...css.matchAll(/font-size:\s*([^;]+);/g)].map((match) => match[1].trim())

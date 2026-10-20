@@ -8,6 +8,7 @@ import { HeaderSlot } from '../../components/PageHeader'
 import { usePageTitle } from '../../components/page-header'
 import RequestState from '../../components/RequestState'
 import type { Person } from '../../lib/people'
+import { useCoarsePointer } from '../../lib/cards'
 import { Link } from '../../navigation'
 import { useQuickShot } from '../recognition/QuickShot'
 import RecurringDue from '../recurring/RecurringDue'
@@ -156,13 +157,16 @@ function Unconverted({ items }: { items: ExcludedSpends[] }) {
 }
 
 /** The two big actions of the artifact: the camera of «Снять чек» and «＋ Добавить» — the form that opens on «Трата» with
- * «Доход» beside it. Not pinned: they stand in the page under the total, the «＋» of the bottom bar is always at hand. */
+ * «Доход» beside it. Not pinned: they stand in the page under the total, the «＋» of the bottom bar is always at hand.
+ * A mouse gets the file dialog from the same button, so there the word is «Загрузить чек» (a Node render keeps the
+ * touch word). */
 function Actions() {
   // Without `capture` the system offers everything at once: iOS «Снять фото · Медиатека · Выбрать файлы», Android its
   // chooser with the camera, a computer the file dialog — a photo or a PDF.
   const shot = useQuickShot('gallery')
+  const coarse = useCoarsePointer()
   return <div className="dash-actions">
-    <button type="button" className="dash-action dash-action-shot" onClick={shot.open}><Icon name="camera" />Снять чек</button>
+    <button type="button" className="dash-action dash-action-shot" onClick={shot.open}><Icon name="camera" />{coarse ? 'Снять чек' : 'Загрузить чек'}</button>
     {shot.field}
     <Link className="dash-action dash-action-spend" to="/receipts/new"><Icon name="plus" />Добавить</Link>
   </div>
@@ -332,8 +336,9 @@ export function DashboardView({ data, today = deviceMonth(), family = data.membe
   const budget = !empty && hero && data.budget?.currency === hero.currency ? null : data.budget
   // The main currency always gets its limits card; another one only when it has limits (its spends are in «Другие валюты»).
   const limits = data.currencies.filter((block, index) => block.limit_total !== null || (index === 0 && block.categories.length))
-  // Two columns on a wide screen: the month and the spends, the limits beside them. A phone reads them as one column:
-  // the money, the actions, the limits, the latest spends (the order of Dashboard.css).
+  // Two columns on a wide screen: the month, the spends and the latest spends at the left; the limits, the income of
+  // the month and the recurring payments at the right. A phone reads them as one column in today's order — the money,
+  // the actions, the income, the payments, the limits, the latest spends (the `order` rules of Dashboard.css).
   return <div className={`dash${slide ? ` dash-slide-${slide}` : ''}`}>
     <MonthHeader month={data.month} today={today} people={dashboardPeople(data)} family={family} />
     <div className="dash-column dash-column-main">
@@ -347,8 +352,6 @@ export function DashboardView({ data, today = deviceMonth(), family = data.membe
       {!empty && others.length > 0 && <OtherCurrencies blocks={others} data={data} />}
       {unconverted.length > 0 && <Unconverted items={unconverted} />}
       <Actions />
-      <IncomeSummary month={data.month} />
-      <RecurringDue month={data.month} />
       <section className="ck-panel dash-card dash-recent" aria-labelledby="dash-recent-heading">
         <div className="ck-panel-head">
           <h2 id="dash-recent-heading">Последние траты</h2>
@@ -361,6 +364,8 @@ export function DashboardView({ data, today = deviceMonth(), family = data.membe
       </section>
     </div>
     <div className="dash-column dash-column-side">
+      <IncomeSummary month={data.month} />
+      <RecurringDue month={data.month} />
       {limits.map((block) => <LimitsCard key={block.currency} block={block} several={several} month={data.month} fold={fold} budget={budget} />)}
       {(!data.currencies.length || (budget && !limits.length)) && <section className="ck-panel dash-card dash-limits" aria-label="Лимиты">
         <div className="ck-panel-head"><h2>Лимиты</h2><Link className="dash-card-link" to="/budget/limits">Изменить</Link></div>

@@ -68,9 +68,9 @@ describe('words of regular payments', () => {
 })
 
 describe('«Осталось оплатить» on «Главная» (Vitest/SSR, not browser visual acceptance)', () => {
-  it('is one line of the dashboard, right after the two big actions', () => {
+  it('is one line of the dashboard, in the side column right after the income of the month (a phone reads it after the two big actions by the order rules of Dashboard.css)', () => {
     const source = readFileSync(new URL('../dashboard/DashboardPage.tsx', import.meta.url), 'utf8')
-    expect(source).toContain('      <Actions />\n      <IncomeSummary month={data.month} />\n      <RecurringDue month={data.month} />\n')
+    expect(source).toContain('    <div className="dash-column dash-column-side">\n      <IncomeSummary month={data.month} />\n      <RecurringDue month={data.month} />\n')
   })
   it('draws nothing without payments and suggestions, a quiet line with suggestions alone', () => {
     const empty = recurringFixture({ payments: [], questions: [], suggestions: [], totals: [] })

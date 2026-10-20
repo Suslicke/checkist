@@ -201,6 +201,24 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
     const back = renderToStaticMarkup(<DashboardView data={dashboardFixture()} today="2026-10" slide="back" />)
     expect(back).toContain('<div class="dash dash-slide-back">')
   })
+  it('keeps the income line and the recurring cards in the side column, under the limits on a wide screen', () => {
+    // IncomeSummary and RecurringDue render nothing until their request answers, so a server render never holds them:
+    // the place of the two is read from the source of the view.
+    const source = readFileSync(new URL('./DashboardPage.tsx', import.meta.url), 'utf8')
+    const side = source.indexOf('dash-column dash-column-side')
+    const income = source.indexOf('<IncomeSummary')
+    const recurring = source.indexOf('<RecurringDue')
+    expect(side).toBeGreaterThan(0)
+    expect(income).toBeGreaterThan(side)
+    expect(recurring).toBeGreaterThan(income)
+    expect(income).toBeLessThan(source.indexOf('{limits.map('))
+    expect(recurring).toBeLessThan(source.indexOf('{limits.map('))
+    expect(source.indexOf('dash-recent')).toBeLessThan(side)
+    // A mouse gets the file dialog from the same button, so the word says what happens; a Node render keeps «Снять чек».
+    expect(source).toContain("{coarse ? 'Снять чек' : 'Загрузить чек'}")
+    expect(view()).toContain('Снять чек</button>')
+    expect(view()).not.toContain('Загрузить чек')
+  })
   it('keeps the limits of a month with zero spends', () => {
     const data = dashboardFixture()
     const html = view({ ...data, currencies: [{ ...data.currencies[0], spent: '0.00', categories: [data.currencies[0].categories[4]] }] })

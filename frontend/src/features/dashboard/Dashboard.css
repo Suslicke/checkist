@@ -253,10 +253,12 @@
 .limits-history-up { color: var(--ck-over-text); }
 .limits-history-down { color: var(--ck-success-text); }
 
-/* A wide screen: the month and the spends on the left, the limits beside them. */
+/* A wide screen: the month and the spends on the left, the limits beside them — first in the side column, the income of
+   the month and the recurring payments under them. */
 @media (min-width: 960px) {
   .dash { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; max-width: none; }
   .dash-column { display: grid; gap: 16px; min-width: 0; }
+  .dash-column-side > .dash-limits { order: 0; }
 }
 
 @media (max-width: 540px) {
