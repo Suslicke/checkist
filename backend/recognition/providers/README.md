@@ -149,6 +149,25 @@ No POSIX watchdog is implemented, per the human's simplified v1 decision;
 children deliberately escaping with setsid and a killed POSIX worker remain
 outside this guarantee. Process returncode does not determine cancellation.
 
+## Claude Code CLI
+
+`RECEIPT_OCR_PROVIDER=claude_cli` selects `claude_cli.ClaudeCLIProvider`, the same
+contract (`detect`, `recognize`, `run_text`) over the `claude` executable. One call is
+one `claude -p --output-format stream-json --input-format stream-json` process with
+the verified flag set of `build_argv` (`--json-schema` from the schema file as one
+string, `--tools ""`, `--no-session-persistence`, `--disable-slash-commands`,
+`--strict-mcp-config`, a fixed short `--system-prompt`, `--effort`, `--max-budget-usd`);
+`--bare` is never used because it forbids the subscription sign-in. The prompt and the
+base64 image travel as one JSONL user message on stdin (`build_stdin`); the answer is
+the `structured_output` of the single `result` event (`validate_events`: `system init`
+first, only the `StructuredOutput` tool, `result` last, errors inside the event are
+mapped like Codex failures plus the sign-in, budget and usage-limit texts). Settings:
+`RECEIPT_OCR_CLAUDE_EXECUTABLE`, `RECEIPT_OCR_CLAUDE_EFFORT` (low|medium|high),
+`RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD`; the model default is `claude-opus-5-5`. The child
+environment is the Codex allowlist plus `CLAUDE_CONFIG_DIR`, `CLAUDE_CODE_OAUTH_TOKEN`
+(from `claude setup-token`) and `ANTHROPIC_API_KEY`, with auto-update, telemetry and
+non-essential traffic disabled. Tests never run the real CLI.
+
 Technical sources: [OpenAI CLI reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli),
 [Microsoft Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects).
 

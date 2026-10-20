@@ -69,17 +69,22 @@ class CodexConfig:
         )
 
 
+# Lower-case names of the OS/runtime, auth directory and network variables a CLI child may see.
+ALLOWED_ENVIRONMENT = frozenset({
+    "path", "pathext", "systemroot", "windir", "comspec", "temp", "tmp", "home",
+    "userprofile", "appdata", "localappdata", "username", "user", "logname",
+    "homedrive", "homepath", "lang", "lc_all", "codex_home", "xdg_config_home",
+    "http_proxy", "https_proxy", "all_proxy", "no_proxy", "ssl_cert_file", "ssl_cert_dir",
+})
+
+
 def child_environment(codex_home=None):
     """Allow only OS/runtime, service auth directory and network configuration.
 
     ChatGPT auth is reused. No DB/Redis/ORCA variables or unused API keys.
     The caller's os.environ and Codex auth/config are never modified.
     """
-    allowed = {"path", "pathext", "systemroot", "windir", "comspec", "temp", "tmp", "home",
-               "userprofile", "appdata", "localappdata", "username", "user", "logname",
-               "homedrive", "homepath", "lang", "lc_all", "codex_home", "xdg_config_home",
-               "http_proxy", "https_proxy", "all_proxy", "no_proxy", "ssl_cert_file", "ssl_cert_dir"}
-    env = {k: v for k, v in os.environ.items() if k.lower() in allowed}
+    env = {k: v for k, v in os.environ.items() if k.lower() in ALLOWED_ENVIRONMENT}
     if codex_home:
         env["CODEX_HOME"] = str(codex_home)
     return env
