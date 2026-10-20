@@ -247,3 +247,72 @@ describe('«Платежи» at ≥ 960 (T8): questions, suggestions and the mon
       .toEqual(['.rec-main', '.rec-page', '.rec-page > .rec-intro', '.rec-side'])
   })
 })
+
+describe('«Цели», «Доходы», «Магазины» at ≥ 960 (T9): two columns by CSS only, the page of one goal untouched', () => {
+  const base = (path: string) => rules(read(path).replace(/\/\*[\s\S]*?\*\//g, '').replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, ''))
+  const goals = base('features/goals/Goals.css')
+  const incomes = base('features/incomes/Incomes.css')
+  const stores = base('features/stores/Stores.css')
+  const tokens = base('theme/tokens.css')
+  const list = '.goals:has(> .goal-add)'
+  const tracks = (body: string) => value(body, 'grid-template-columns').split(/\s+(?=minmax)/)
+
+  it('puts the groups of goals side by side only on the list (the root with «Новая цель»), one group alone at the cap', () => {
+    const page = rule(list)
+    expect(value(page, 'display')).toBe('grid')
+    expect(tracks(page)).toEqual(['minmax(0, 1fr)', 'minmax(0, 1fr)'])
+    expect(value(page, 'gap')).toBe(value(rule(':where(.ck-stack)', tokens), 'gap'))
+    expect(value(page, 'align-items')).toBe('start')
+    expect(value(page, 'max-width')).toBe('none')
+    for (const alone of [`${list} > .goal-empty`, `${list} > section:only-of-type`]) {
+      expect(value(rule(alone), 'grid-column'), alone).toBe('1 / -1')
+      expect(value(rule(alone), 'max-width'), alone).toBe(value(rule('.goals', goals), 'max-width'))
+    }
+    const add = rule(`${list} > .goal-add`)
+    expect(value(add, 'grid-column')).toBe('1 / -1')
+    expect(value(add, 'width')).toBe('auto')
+    expect(value(add, 'min-width')).toMatch(/^\d+px$/)
+    expect(value(add, 'justify-self')).toBe('start')
+    // Goals.css keeps the 720 px cap and the page-wide button below 960; /goals/{id} shares .goals and has no .goal-add,
+    // so every desktop rule of the screen is scoped by :has(> .goal-add) and nothing about goals sits outside the block.
+    expect(value(rule('.goals', goals), 'max-width')).toBe('720px')
+    expect(value(rule('.goal-add', goals), 'width')).toBe('100%')
+    for (const item of desktop.filter((item) => /\.goal/.test(item.selector))) expect(item.selector).toMatch(/^\.goals:has\(> \.goal-add\)/)
+    expect(rules(outside).filter((item) => /\.goal|\.inc-|\.stores-/.test(item.selector))).toEqual([])
+  })
+
+  it('puts the month of incomes at the left (three fifths) and the categories at the right, the notice across both', () => {
+    const page = rule('.inc-page')
+    expect(value(page, 'display')).toBe('grid')
+    expect(tracks(page)).toEqual(['minmax(0, 3fr)', 'minmax(0, 2fr)'])
+    expect(value(page, 'gap')).toBe(value(rule(':where(.ck-stack)', tokens), 'gap'))
+    expect(value(page, 'align-items')).toBe('start')
+    expect(value(page, 'max-width')).toBe('none')
+    expect(value(rule('.inc-page > .inc-notice'), 'grid-column')).toBe('1 / -1')
+    expect(value(rule('.inc-page', incomes), 'max-width')).toBe('760px')
+    expect([...new Set(desktop.filter((item) => /\.inc-/.test(item.selector)).map((item) => item.selector))].sort())
+      .toEqual(['.inc-page', '.inc-page > .inc-notice'])
+  })
+
+  it('puts all the places at the left and the suggestions at the right of the same row, the intro, notices and the bar across', () => {
+    const page = rule('.stores-page')
+    expect(value(page, 'display')).toBe('grid')
+    expect(tracks(page)).toEqual(['minmax(0, 3fr)', 'minmax(0, 2fr)'])
+    expect(value(page, 'grid-auto-flow')).toBe('row dense')
+    expect(value(page, 'gap')).toBe(value(rule('.stores-page', stores), 'gap'))
+    expect(value(page, 'align-items')).toBe('start')
+    expect(value(page, 'max-width')).toBe('none')
+    for (const across of ['.stores-page > .stores-intro', '.stores-page > .stores-notice', '.stores-page > .stores-failure', '.stores-page > .stores-actions']) {
+      expect(value(rule(across), 'grid-column'), across).toBe('1 / -1')
+    }
+    expect(value(rule('.stores-page > .stores-intro'), 'max-width')).toBe('760px')
+    expect(value(rule('.stores-page > .stores-suggestions'), 'grid-column')).toBe('2')
+    expect(value(rule('.stores-page > .ck-panel:not(.stores-suggestions)'), 'grid-column')).toBe('1')
+    // Stores.css keeps the flex column at 720 px below 960 (its 540 block and the action bar pinning are untouched).
+    expect(value(rule('.stores-page', stores), 'display')).toBe('flex')
+    expect(value(rule('.stores-page', stores), 'max-width')).toBe('720px')
+    expect([...new Set(desktop.filter((item) => /\.stores-|\.ck-panel:not/.test(item.selector)).map((item) => item.selector))].sort())
+      .toEqual(['.stores-page', '.stores-page > .ck-panel:not(.stores-suggestions)', '.stores-page > .stores-actions', '.stores-page > .stores-failure',
+        '.stores-page > .stores-intro', '.stores-page > .stores-notice', '.stores-page > .stores-suggestions'])
+  })
+})

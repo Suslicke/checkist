@@ -110,4 +110,28 @@
   .rec-main, .rec-side { display: grid; gap: 16px; min-width: 0; }
   .rec-main { grid-column: 1; }
   .rec-side { grid-column: 2; }
+
+  /* «Цели» (features/goals GoalsPage.tsx — the list only: the page of one goal shares the .goals root and has no
+     .goal-add, so :has(> .goal-add) (0,2,0) leaves it at the 720 px cap of Goals.css): the family's at the left, the
+     personal ones at the right; one group alone (or the empty card) keeps today's width — section:only-of-type counts
+     <section> siblings only, the button is not one; «Новая цель» is not a page-wide button (> .goal-add (0,3,0) beats
+     width: 100 % of Goals.css). The gap repeats the one of the .ck-stack brick. */
+  .goals:has(> .goal-add) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; max-width: none; }
+  .goals:has(> .goal-add) > .goal-empty, .goals:has(> .goal-add) > section:only-of-type { grid-column: 1 / -1; max-width: 720px; }
+  .goals:has(> .goal-add) > .goal-add { grid-column: 1 / -1; width: auto; min-width: 280px; justify-self: start; }
+  /* «Доходы» (features/incomes IncomesPage.tsx): the month at the left (three fifths), the categories at the right of
+     the same row by auto-placement; the notice, when there is one, spans the row above. .inc-page (0,1,0) later in
+     cascade beats the 760 px cap of Incomes.css and the flex of the .ck-stack brick (weight 0). */
+  .inc-page { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; max-width: none; }
+  .inc-page > .inc-notice { grid-column: 1 / -1; }
+  /* «Магазины» (features/stores StoresPage.tsx): all the places at the left (three fifths), «Похоже на одного получателя»
+     at the right of the same row — dense flow lets the later «Все магазины» fill column 1 of the suggestions' row; without
+     suggestions (a member) the list sits alone in the 60 % column. The intro, the notices and the bar «Склеить выбранные»
+     span both columns. The merge sheet is a portal (null when closed), never a grid child. The phone rules of Stores.css
+     (the 540 block, the bar's margin-inline) are untouched. */
+  .stores-page { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-auto-flow: row dense; gap: 16px; align-items: start; max-width: none; }
+  .stores-page > .stores-intro, .stores-page > .stores-notice, .stores-page > .stores-failure, .stores-page > .stores-actions { grid-column: 1 / -1; }
+  .stores-page > .stores-intro { max-width: 760px; }
+  .stores-page > .stores-suggestions { grid-column: 2; }
+  .stores-page > .ck-panel:not(.stores-suggestions) { grid-column: 1; }
 }
