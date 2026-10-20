@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { connectLines, McpView } from './McpSection'
+import { McpView } from './McpSection'
+import { connectLines } from './mcp-lines'
 import type { McpViewProps } from './McpSection'
 
 const noop = () => {}
