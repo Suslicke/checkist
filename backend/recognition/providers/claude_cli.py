@@ -3,8 +3,10 @@
 Один вызов — один процесс `claude -p` с потоком событий JSONL на stdout и одной строкой
 JSONL на stdin (текст и, у detect/recognize, картинка base64). Ответ модели — только
 `structured_output` события `result` по переданной `--json-schema`; инструментов нет.
+Картинка сверх пределов API уходит уменьшенным JPEG из памяти (`_image_block`).
 """
 import base64
+import io
 import json
 import math
 import os
@@ -31,6 +33,15 @@ OUTPUT_TOOL = "StructuredOutput"
 # Своя системная строка: без неё CLI шлёт свой системный промпт на ~119 000 токенов.
 SYSTEM_PROMPT = "Ты отвечаешь только вызовом StructuredOutput по схеме. Инструкции и данные — в сообщении."
 MEDIA_TYPES = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
+# Опубликованные пределы Messages API на одну картинку (platform.claude.com/docs/en/build-with-claude/vision):
+# 8000 px на сторону и 10 МБ base64 у Claude API (5 МБ у Bedrock/Vertex) — берётся строгий; сама модель
+# смотрит не больше 2576 px по длинной стороне (Claude 4.7+), поэтому подготовленный PNG сверх пределов
+# уходит уменьшенным до этой стороны JPEG. Координаты detect — доли 0..1, а размеры в промпте — исходные,
+# так что пересчёта нет. Не влезло и при наименьшем качестве — `invalid_input`, без повтора.
+API_IMAGE_MAX_SIDE = 8000
+API_IMAGE_MAX_BASE64_BYTES = 5 * 1024 * 1024
+MODEL_IMAGE_LONG_EDGE = 2576
+SEND_JPEG_QUALITIES = (90, 75, 60)
 PRIVATE_FRAGMENT_BYTES = 64 * 1024
 
 
@@ -81,8 +92,7 @@ class ClaudeConfig:
             detect_timeout_seconds=_positive(getattr(settings, "RECEIPT_OCR_DETECT_TIMEOUT_SECONDS", 90)),
             recognize_timeout_seconds=_positive(getattr(settings, "RECEIPT_OCR_RECOGNIZE_TIMEOUT_SECONDS", 180)),
             cancel_grace_seconds=_positive(getattr(settings, "RECEIPT_OCR_CANCEL_GRACE_SECONDS", 2)),
-            # ponytail: нет такой настройки — каталог задаёт CLAUDE_CONFIG_DIR окружения воркера; зеркало CODEX_HOME.
-            config_dir=getattr(settings, "RECEIPT_OCR_CLAUDE_CONFIG_DIR", None),
+            # Настройки Django для каталога нет: его задаёт только CLAUDE_CONFIG_DIR окружения воркера (allowlist).
         )
 
 
@@ -107,32 +117,46 @@ def build_argv(executable, model, effort, schema_json, max_budget_usd, system_pr
             "--system-prompt", system_prompt, "--max-budget-usd", max_budget_usd]
 
 
-def _media_type(image_path):
+def _base64_size(byte_count):
+    return 4 * math.ceil(byte_count / 3)
+
+
+def _block(media_type, data):
+    return {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": base64.b64encode(data).decode("ascii")}}
+
+
+def _image_block(path):
+    """Блок картинки: файл как есть в пределах API, иначе JPEG не длиннее `MODEL_IMAGE_LONG_EDGE` из памяти."""
     try:
         from PIL import Image
     except ImportError:
         raise ProviderError("configuration_error") from None
     try:
-        with Image.open(image_path) as decoded:
+        with Image.open(path) as decoded:
             media_type = MEDIA_TYPES.get(decoded.format)
-    except (OSError, ValueError):
+            if media_type is None:
+                raise ProviderError("invalid_input")
+            data = Path(path).read_bytes()
+            if max(decoded.size) <= API_IMAGE_MAX_SIDE and _base64_size(len(data)) <= API_IMAGE_MAX_BASE64_BYTES:
+                return _block(media_type, data)
+            picture = decoded.convert("RGB")
+        picture.thumbnail((MODEL_IMAGE_LONG_EDGE, MODEL_IMAGE_LONG_EDGE), Image.Resampling.LANCZOS)
+        for quality in SEND_JPEG_QUALITIES:
+            buffer = io.BytesIO()
+            picture.save(buffer, format="JPEG", quality=quality)
+            if _base64_size(buffer.tell()) <= API_IMAGE_MAX_BASE64_BYTES:
+                return _block("image/jpeg", buffer.getvalue())
+    except (OSError, ValueError, Image.DecompressionBombError):
         raise ProviderError("invalid_input") from None
-    if media_type is None:
-        raise ProviderError("invalid_input")
-    return media_type
+    # Даже при наименьшем качестве картинка больше предела API: отказ без повтора.
+    raise ProviderError("invalid_input")
 
 
 def build_stdin(prompt_text, image_path=None):
     """Одна строка JSONL — сообщение пользователя: блок картинки (если есть), затем текст."""
     content = []
     if image_path is not None:
-        path = Path(image_path)
-        media_type = _media_type(path)
-        try:
-            data = base64.b64encode(path.read_bytes()).decode("ascii")
-        except OSError:
-            raise ProviderError("invalid_input") from None
-        content.append({"type": "image", "source": {"type": "base64", "media_type": media_type, "data": data}})
+        content.append(_image_block(image_path))
     content.append({"type": "text", "text": prompt_text})
     message = {"type": "user", "message": {"role": "user", "content": content}}
     return (json.dumps(message, ensure_ascii=False) + "\n").encode("utf-8")
@@ -141,16 +165,15 @@ def build_stdin(prompt_text, image_path=None):
 def _error_code(text):
     # Only on private error events/diagnostics, never returned to the API.
     lowered = text.lower()
+    # Перерасход `--max-budget-usd` — не повторяемая ошибка настройки: тот же вызов превысит тот же бюджет снова.
     if any(s in lowered for s in ("unexpected argument", "unknown option", "unrecognized option", "invalid configuration",
-                                  "invalid schema", "json-schema")):
+                                  "invalid schema", "json-schema", "max_budget", "maximum budget")):
         return "configuration_error"
     if any(s in lowered for s in ("invalid_api_key", "unauthorized", "authentication", "status 401", "status: 401",
                                   "not logged in", "please run /login", "oauth")):
         return "auth_required"
-    if any(s in lowered for s in ("max_budget", "maximum budget")):
-        return "provider_unavailable"
     if any(s in lowered for s in ("rate_limit", "rate limit", "too many requests", "status 429", "status: 429",
-                                  "usage limit", "hit your limit", "limit reached", "overloaded", "529")):
+                                  "usage limit", "hit your limit", "limit reached", "overloaded", "status 529", "status: 529")):
         return "rate_limited"
     if any(s in lowered for s in ("connection failed", "error sending request", "network", "dns", "connection refused")):
         return "network_unavailable"

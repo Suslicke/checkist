@@ -5,6 +5,7 @@ Python-скрипт-заменитель, печатающий поток соб
 """
 import base64
 import hashlib
+import io
 import json
 import os
 import subprocess
@@ -23,7 +24,8 @@ from recognition.dto import PreparedImage, PreparedReceiptImage
 from recognition.process_supervisor import ProcessResult
 from recognition.providers import ProviderError, RunContext, get_provider
 from recognition.providers.claude_cli import (
-    SYSTEM_PROMPT, ClaudeCLIProvider, ClaudeConfig, build_argv, build_stdin, claude_child_environment, validate_events,
+    API_IMAGE_MAX_BASE64_BYTES, MODEL_IMAGE_LONG_EDGE, SYSTEM_PROMPT, ClaudeCLIProvider, ClaudeConfig, build_argv, build_stdin,
+    claude_child_environment, validate_events,
 )
 from recognition.providers.fake import detection_payload, receipt_payload
 
@@ -54,6 +56,18 @@ def events_for(payload):
 
 def stream(events):
     return b"\n".join(json.dumps(e).encode("utf-8") for e in events)
+
+
+def noise_png(path, size=(1500, 1100)):
+    # Несжимаемый PNG: 1500 x 1100 x 3 байта — больше предела API в base64, сторона в пределах.
+    Image.frombytes("RGB", size, os.urandom(size[0] * size[1] * 3)).save(path, format="PNG")
+    return path
+
+
+def sent_image(block):
+    data = base64.b64decode(block["source"]["data"])
+    with Image.open(io.BytesIO(data)) as decoded:
+        return decoded.format, decoded.size, len(block["source"]["data"])
 
 
 class StubProcess:
@@ -119,6 +133,34 @@ class ArgvStdinEnvironmentTests(SimpleTestCase):
         with self.assertRaises(ProviderError) as raised:
             build_stdin("x", broken)
         self.assertEqual(raised.exception.code, "invalid_input")
+
+    def test_images_over_the_api_limits_are_sent_as_a_bounded_jpeg(self):
+        # Over the byte limit, within the side limit: same dimensions, JPEG, base64 within the limit.
+        heavy = noise_png(self.root / "heavy.png")
+        self.assertGreater(len(base64.b64encode(heavy.read_bytes())), API_IMAGE_MAX_BASE64_BYTES)
+        image, text = json.loads(build_stdin("Промпт", heavy).decode("utf-8"))["message"]["content"]
+        self.assertEqual(image["source"]["media_type"], "image/jpeg")
+        fmt, size, encoded = sent_image(image)
+        self.assertEqual((fmt, size), ("JPEG", (1500, 1100)))
+        self.assertLessEqual(encoded, API_IMAGE_MAX_BASE64_BYTES)
+        self.assertEqual(text, {"type": "text", "text": "Промпт"})
+        # Over the side limit: downscaled to the model's long edge, aspect kept.
+        wide = self.root / "wide.png"
+        Image.new("L", (8001, 10), "white").save(wide, format="PNG")
+        image, _ = json.loads(build_stdin("x", wide).decode("utf-8"))["message"]["content"]
+        self.assertEqual(image["source"]["media_type"], "image/jpeg")
+        fmt, size, _ = sent_image(image)
+        self.assertEqual((fmt, size), ("JPEG", (MODEL_IMAGE_LONG_EDGE, 3)))
+        # Exactly at the side limit and small: sent as is.
+        edge = self.root / "edge.png"
+        Image.new("L", (8000, 2), "white").save(edge, format="PNG")
+        image, _ = json.loads(build_stdin("x", edge).decode("utf-8"))["message"]["content"]
+        self.assertEqual(image["source"]["media_type"], "image/png")
+        self.assertEqual(base64.b64decode(image["source"]["data"]), edge.read_bytes())
+        # Not even the lowest quality fits: fail closed, never retry.
+        with patch("recognition.providers.claude_cli.API_IMAGE_MAX_BASE64_BYTES", 64), self.assertRaises(ProviderError) as raised:
+            build_stdin("x", heavy)
+        self.assertEqual((raised.exception.code, raised.exception.retryable), ("invalid_input", False))
 
     def test_child_environment_allowlist_passes_sign_in_and_drops_secrets(self):
         with patch.dict(os.environ, {"CLAUDE_CODE_OAUTH_TOKEN": "sk-ant-oat01-token", "ANTHROPIC_API_KEY": "key",
@@ -212,13 +254,18 @@ class ValidateEventsTests(SimpleTestCase):
             ({"subtype": "error_during_execution", "terminal_reason": "api_error", "result": "OAuth token has expired private"},
              "auth_required"),
             ({"subtype": "error_max_budget_usd", "terminal_reason": "budget_exhausted", "result": "",
-              "errors": ["Reached maximum budget ($0.05) private"]}, "provider_unavailable"),
+              "errors": ["Reached maximum budget ($0.05) private"]}, "configuration_error"),
             ({"subtype": "error_during_execution", "terminal_reason": "api_error", "result": "You've hit your limit · resets 3pm private"},
              "rate_limited"),
             ({"subtype": "error_during_execution", "terminal_reason": "api_error", "result": "API Error: 429 rate_limit_error private"},
              "rate_limited"),
             ({"subtype": "error_during_execution", "terminal_reason": "api_error", "result": "API Error: 529 overloaded_error private"},
              "rate_limited"),
+            ({"subtype": "error_during_execution", "terminal_reason": "api_error", "result": "API Error: status 529 private"},
+             "rate_limited"),
+            # Bare digits are not a status: a request id or a cost is not a rate limit.
+            ({"subtype": "error_during_execution", "terminal_reason": "api_error", "result": "req_0529 failed, cost $0.0529 private"},
+             "provider_unavailable"),
             ({"subtype": "error_during_execution", "terminal_reason": "api_error", "result": "Connection failed: error sending request private"},
              "network_unavailable"),
             ({"subtype": "error_during_execution", "terminal_reason": "api_error", "result": "Invalid --json-schema private"},
@@ -227,6 +274,9 @@ class ValidateEventsTests(SimpleTestCase):
              "provider_unavailable"),
             ({"is_error": True, "result": "unknown upstream private"}, "provider_unavailable"),
             ({"terminal_reason": "interrupted", "result": "private"}, "provider_unavailable"),
+            # Each condition alone, with is_error false: a non-success subtype, a non-completed terminal reason.
+            ({"is_error": False, "subtype": "error_during_execution", "result": "private"}, "provider_unavailable"),
+            ({"is_error": False, "terminal_reason": "interrupted", "result": "private"}, "provider_unavailable"),
         )
         for overrides, expected in cases:
             final = result_event(self.payload, **overrides)
@@ -328,6 +378,23 @@ class ProviderTests(SimpleTestCase):
             provider.recognize(self.crop, self.run_context())
         self.assertEqual(raised.exception.code, "invalid_output")
 
+    def test_oversized_prepared_image_is_sent_bounded_and_checked_against_its_own_dimensions(self):
+        path = noise_png(self.root / "heavy.png")
+        image = PreparedImage(path, hashlib.sha256(path.read_bytes()).hexdigest(), 1500, 1100)
+        provider, stub = self.provider(payload=detection_payload(image))
+        self.assertEqual(provider.detect(image, self.run_context()).receipt_count, 2)
+        block, text = self.message(stub)
+        self.assertEqual(block["source"]["media_type"], "image/jpeg")
+        fmt, size, encoded = sent_image(block)
+        self.assertEqual((fmt, size), ("JPEG", (1500, 1100)))
+        self.assertLessEqual(encoded, API_IMAGE_MAX_BASE64_BYTES)
+        self.assertIn("1500 x 1100", text["text"])
+        self.assertEqual(list(self.config.temp_root.iterdir()), [])
+        provider, stub = self.provider(payload=detection_payload(image))
+        with patch("recognition.providers.claude_cli.API_IMAGE_MAX_BASE64_BYTES", 64), self.assertRaises(ProviderError) as raised:
+            provider.detect(image, self.run_context())
+        self.assertEqual((raised.exception.code, raised.exception.retryable, stub.calls), ("invalid_input", False, []))
+
     def test_too_many_receipts_has_fixed_domain_hint(self):
         for payload in (detection_payload(self.image, 11), {**detection_payload(self.image, 0), "warnings": ["too_many_receipts"]}):
             provider, _ = self.provider(payload=payload)
@@ -397,6 +464,7 @@ class ProviderTests(SimpleTestCase):
         self.assertEqual((provider.config.executable, provider.config.model, provider.config.effort, provider.config.max_budget_usd),
                          ("nonexistent-checkist-claude", "sonnet", "high", "0.75"))
         self.assertEqual(provider.config.temp_root, Path(settings.RECEIPT_OCR_TEMP_ROOT))
+        self.assertIsNone(provider.config.config_dir)  # only CLAUDE_CONFIG_DIR of the worker environment
         with self.assertRaises(ProviderError) as raised:
             provider.detect(self.image, self.run_context())
         self.assertEqual(raised.exception.code, "configuration_error")
@@ -507,7 +575,8 @@ class TextCallTests(SimpleTestCase):
         provider, _ = self.provider(events=[init_event(), budget])
         with self.assertRaises(ProviderError) as raised:
             self.call(provider)
-        self.assertEqual((raised.exception.code, raised.exception.retryable), ("provider_unavailable", True))
+        # The same call would overrun the same budget again: never retried.
+        self.assertEqual((raised.exception.code, raised.exception.retryable), ("configuration_error", False))
         provider, _ = self.provider(events=[], code=2, stderr=b"error: unknown option private text")
         with self.assertRaises(ProviderError) as raised:
             self.call(provider)

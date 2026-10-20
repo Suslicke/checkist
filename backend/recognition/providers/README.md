@@ -161,12 +161,18 @@ string, `--tools ""`, `--no-session-persistence`, `--disable-slash-commands`,
 base64 image travel as one JSONL user message on stdin (`build_stdin`); the answer is
 the `structured_output` of the single `result` event (`validate_events`: `system init`
 first, only the `StructuredOutput` tool, `result` last, errors inside the event are
-mapped like Codex failures plus the sign-in, budget and usage-limit texts). Settings:
+mapped like Codex failures plus the sign-in and usage-limit texts; a `--max-budget-usd`
+overrun is `configuration_error`, not retried, because the same call would overrun the
+same budget again). A prepared image over the published per-image limits of the Messages
+API (8000 px per side, 5 MB base64 as the stricter platform figure) is sent as a JPEG
+downscaled to the model's 2576 px long edge from memory; detect coordinates are 0..1
+fractions and the prompt names the original dimensions, so nothing is rescaled, and an
+image that does not fit even at the lowest quality is `invalid_input`. Settings:
 `RECEIPT_OCR_CLAUDE_EXECUTABLE`, `RECEIPT_OCR_CLAUDE_EFFORT` (low|medium|high),
 `RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD`; the model default is `claude-opus-5-5`. The child
-environment is the Codex allowlist plus `CLAUDE_CONFIG_DIR`, `CLAUDE_CODE_OAUTH_TOKEN`
-(from `claude setup-token`) and `ANTHROPIC_API_KEY`, with auto-update, telemetry and
-non-essential traffic disabled. Tests never run the real CLI.
+environment is the Codex allowlist plus `CLAUDE_CONFIG_DIR` (there is no Django setting
+for it), `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) and `ANTHROPIC_API_KEY`,
+with auto-update, telemetry and non-essential traffic disabled. Tests never run the real CLI.
 
 Technical sources: [OpenAI CLI reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli),
 [Microsoft Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects).
