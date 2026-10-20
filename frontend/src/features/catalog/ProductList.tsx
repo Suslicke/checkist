@@ -10,6 +10,17 @@ import type { PendingMark } from '../merges/state'
 import { MANUAL_MARK, NO_PLACE } from '../product/state'
 
 type Marks = { merges?: ReadonlyMap<number, PendingMark>; classifications?: ReadonlyMap<number, ClassificationMark> }
+type Price = Product['prices'][number]
+
+/** The last purchase of one place and currency: the price in the figures font, then the place, the date and the manual
+ * mark in a note — the same two spans in the cards, the rows and the table. `place` is how the place reads (the cards
+ * say «Страна: DE», the rows and the table just «DE»); a purchase without a place reads NO_PLACE everywhere. */
+function LastPurchase({ price: { country, currency, last }, place = country ?? NO_PLACE }: { price: Price; place?: string }) {
+  return <>
+    <span className="ck-catalog-price">{formatPrice(last.paid_unit_price, currency)}</span>
+    <span className="ck-catalog-note">{place} · <time dateTime={last.purchased_on}>{formatPurchasedOn(last.purchased_on)}</time>{last.manual && ` · ${MANUAL_MARK}`}</span>
+  </>
+}
 
 /** A phone: one row per product — the name is the link of the whole row, brand and package under it, the last price at
  * the right in the figures font. Marks stay links of their own above the row link. */
@@ -27,10 +38,7 @@ export function ProductRows({ products, merges, classifications }: { products: P
         </div>
         <div className="ck-catalog-row-prices">
           {product.prices.length === 0 ? <p className="ck-catalog-note">Покупок нет</p>
-            : product.prices.map(({ country, currency, last }) => <p key={`${country}/${currency}`}>
-              <span className="ck-catalog-price">{formatPrice(last.paid_unit_price, currency)}</span>
-              <span className="ck-catalog-note">{country ?? NO_PLACE} · <time dateTime={last.purchased_on}>{formatPurchasedOn(last.purchased_on)}</time>{last.manual && ` · ${MANUAL_MARK}`}</span>
-            </p>)}
+            : product.prices.map((price) => <p key={`${price.country}/${price.currency}`}><LastPurchase price={price} /></p>)}
         </div>
       </li>
     })}
@@ -59,10 +67,7 @@ export function ProductTable({ products, merges, classifications }: { products: 
         </th>
         <td>{product.generic.name}</td>
         <td className="ck-catalog-table-last">{product.prices.length === 0 ? <span className="ck-catalog-note">Покупок нет</span>
-          : <ul>{product.prices.map(({ country, currency, last }) => <li key={`${country}/${currency}`}>
-            <span className="ck-catalog-price">{formatPrice(last.paid_unit_price, currency)}</span>
-            <span className="ck-catalog-note">{country ?? NO_PLACE} · <time dateTime={last.purchased_on}>{formatPurchasedOn(last.purchased_on)}</time>{last.manual && ` · ${MANUAL_MARK}`}</span>
-          </li>)}</ul>}</td>
+          : <ul>{product.prices.map((price) => <li key={`${price.country}/${price.currency}`}><LastPurchase price={price} /></li>)}</ul>}</td>
       </tr>
     })}</tbody>
   </table>
@@ -100,9 +105,8 @@ export default function ProductList({ products, merges, classifications, view: c
         <p className="ck-catalog-price-label">Последняя покупка</p>
         {product.prices.length === 0 ? <p className="ck-catalog-note">Покупок пока нет</p>
           : <ul>
-            {product.prices.map(({ country, currency, last }) => <li key={`${country}/${currency}`}>
-              <span className="ck-catalog-price">{formatPrice(last.paid_unit_price, currency)}</span>
-              <span className="ck-catalog-note">{country ? `Страна: ${country}` : NO_PLACE} · <time dateTime={last.purchased_on}>{formatPurchasedOn(last.purchased_on)}</time>{last.manual && ` · ${MANUAL_MARK}`}</span>
+            {product.prices.map((price) => <li key={`${price.country}/${price.currency}`}>
+              <LastPurchase price={price} place={price.country ? `Страна: ${price.country}` : undefined} />
             </li>)}
           </ul>}
       </div>

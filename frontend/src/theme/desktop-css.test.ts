@@ -189,7 +189,12 @@ describe('the catalog at ≥ 960 (T6): a 280 px rail at the left, the products a
     const widths = ['name', 'generic', 'last'].map((column) => Number(value(rule(`.ck-catalog-col-${column}`), 'width').replace('%', '')))
     expect(widths.every((width) => width > 0)).toBe(true)
     expect(widths.reduce((sum, width) => sum + width, 0)).toBe(100)
-    expect(value(rule('.ck-catalog-table thead th'), 'white-space')).toBe('nowrap')
+    // The headers fit on one line in the narrowest main (584 px at 960): «Обобщённый продукт» ≈ 141 px in Manrope
+    // 700 / 13 px needs ≥ 30 % (175 − 32 of padding), «Последняя покупка» ≈ 127 px needs ≥ 28 % (163 − 32).
+    expect(widths[1]).toBeGreaterThanOrEqual(30)
+    expect(widths[2]).toBeGreaterThanOrEqual(28)
+    // A header a pixel wider than its cell wraps its second word; pinned nowrap would run it into the next heading.
+    expect(value(rule('.ck-catalog-table thead th'), 'white-space')).toBe('')
     // The price stays whole through the base rule of Catalog.css; the desktop sheet does not touch it.
     expect(value(rule('.ck-catalog-price', base), 'white-space')).toBe('nowrap')
     expect(desktop.filter((item) => item.selector.includes('.ck-catalog-price'))).toEqual([])

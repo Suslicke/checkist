@@ -1,7 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Product } from '../../api/types'
+import * as api from '../../api/catalog'
+import type { ApiResult, Product } from '../../api/types'
 import { category, categoryDetail, pageOf, product } from '../../api/test-support'
+import type { CatalogRequestState } from './catalog-request'
 import { CatalogPage } from './CatalogPage'
 import { CategoryPage } from './CategoryPage'
 import ProductList, { ProductTable } from './ProductList'
@@ -11,6 +13,22 @@ const noop = () => {}
 const loading = { kind: 'loading' as const }
 const empty: Product = { ...product, id: 10, brand: null, package: null, prices: [] }
 afterEach(() => vi.restoreAllMocks())
+
+type Answers = Partial<Record<'categories' | 'category' | 'products', CatalogRequestState<unknown>>>
+/** Answers the requests of a page by name, whatever their order in the page: a page wraps each loader in useCallback,
+ * so the loader has no identity to key on; instead the loader is called once against the mocked API, and each API call
+ * returns its own name in place of a promise. A request without an answer fails the test by name. */
+function answer(answers: Answers) {
+  vi.spyOn(api, 'getCategories').mockReturnValue('categories' as never)
+  vi.spyOn(api, 'getCategory').mockReturnValue('category' as never)
+  vi.spyOn(api, 'getProducts').mockReturnValue('products' as never)
+  vi.spyOn(catalogRequests, 'useCatalogRequest').mockImplementation(<T,>(load: (signal: AbortSignal) => Promise<ApiResult<T>>) => {
+    const name = load(new AbortController().signal) as unknown as keyof Answers
+    const state = answers[name]
+    if (!state) throw new Error(`the test gives no answer to the ${name} request`)
+    return { state: state as CatalogRequestState<T>, retry: noop }
+  })
+}
 
 describe('desktop view of the catalog (SSR markup; the table itself is drawn from 960 px by useDesktop)', () => {
   it('draws the products as a table: name with its meta and marks, generic product, last purchase per place', () => {
@@ -38,9 +56,7 @@ describe('desktop view of the catalog (SSR markup; the table itself is drawn fro
   })
 
   it('wraps the catalog page into a rail (search, categories) and a main (products) in the order of today', () => {
-    vi.spyOn(catalogRequests, 'useCatalogRequest')
-      .mockReturnValueOnce({ state: { kind: 'ok', data: pageOf([category]) }, retry: noop })
-      .mockReturnValueOnce({ state: loading, retry: noop })
+    answer({ categories: { kind: 'ok', data: pageOf([category]) }, products: loading })
     const html = renderToStaticMarkup(<CatalogPage query={{ page: 1 }} />)
     expect(html).toMatch(/^<div class="ck-catalog"><div class="ck-catalog-side"><form/)
     expect(html).toMatch(/<\/form><section[^>]*aria-labelledby="ck-catalog-categories-heading"/)
@@ -50,9 +66,7 @@ describe('desktop view of the catalog (SSR markup; the table itself is drawn fro
   })
 
   it('wraps the category page as head, then the rail beside the products; before the category loads the head stands alone', () => {
-    vi.spyOn(catalogRequests, 'useCatalogRequest')
-      .mockReturnValueOnce({ state: { kind: 'ok', data: { ...categoryDetail, children: [{ ...category, id: 3, name: 'Сыры' }] } }, retry: noop })
-      .mockReturnValueOnce({ state: loading, retry: noop })
+    answer({ category: { kind: 'ok', data: { ...categoryDetail, children: [{ ...category, id: 3, name: 'Сыры' }] } }, products: loading })
     const html = renderToStaticMarkup(<CategoryPage categoryId={2} query={{ page: 1 }} />)
     // The icon picker (a moderator only) renders nothing here: the head wrapper closes right after the category section.
     const order = ['<div class="ck-catalog"><div class="ck-catalog-main"><nav', 'ck-catalog-category"', '</section></div><div class="ck-catalog-side"><section',
@@ -62,7 +76,7 @@ describe('desktop view of the catalog (SSR markup; the table itself is drawn fro
     expect([...at].sort((a, b) => a - b)).toEqual(at)
     expect(html.match(/ck-catalog-main"/g)).toHaveLength(2)
     expect(html.match(/ck-catalog-side"/g)).toHaveLength(1)
-    vi.spyOn(catalogRequests, 'useCatalogRequest').mockReturnValue({ state: loading, retry: noop })
+    answer({ category: loading, products: loading })
     const waiting = renderToStaticMarkup(<CategoryPage categoryId={2} query={{ page: 1 }} />)
     expect(waiting).toMatch(/^<div class="ck-catalog"><div class="ck-catalog-main"><section[^>]*class="ck-catalog-category"[\s\S]*<\/section><\/div><\/div>$/)
     expect(waiting).not.toContain('ck-catalog-side')

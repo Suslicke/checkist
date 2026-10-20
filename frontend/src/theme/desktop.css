@@ -71,9 +71,12 @@
      (first in DOM) and the head of a category page (a main, first in DOM) auto-place into row 1; the rail that FOLLOWS a
      main gets a definite row 1 / span 2 (placed before the auto-placed mains), so the products main lands in row 2 of
      column 2. Weights: .ck-catalog-main (0,1,0) < .ck-catalog-main ~ .ck-catalog-side (0,2,0) < :only-child (0,3,0).
-     The table: fixed columns of 44 / 24 / 32 % that add up to the width, so names and generic names wrap by words
-     (overflow-wrap of .ck-catalog) and nothing scrolls; the price stays whole through Catalog.css. The rail's search
-     controls go one under the other inside the 280 px card. */
+     The table: fixed columns of 42 / 30 / 28 % that add up to the width, so names and generic names wrap by words
+     (overflow-wrap of .ck-catalog) and nothing scrolls; the price stays whole through Catalog.css. The split comes from
+     the narrowest main (584 px at a 960 window) and the headers in Manrope 700 / 13 px: «Обобщённый продукт» ≈ 141 px
+     needs ≥ 30 % (175 − 32 of padding = 143), «Последняя покупка» ≈ 127 px needs ≥ 28 % (163 − 32 = 131). The headers
+     are not nowrap: a browser that draws them a pixel wider wraps the second word instead of running into the next
+     heading. The rail's search controls go one under the other inside the 280 px card. */
   .ck-catalog { grid-template-columns: 280px minmax(0, 1fr); gap: 20px 24px; align-items: start; }
   .ck-catalog-side, .ck-catalog-main { display: grid; gap: 20px; min-width: 0; }
   .ck-catalog-side { grid-column: 1; }
@@ -82,11 +85,11 @@
   .ck-catalog > .ck-catalog-main:only-child { grid-column: 1 / -1; }
   .ck-catalog-side .ck-catalog-search-controls { grid-template-columns: minmax(0, 1fr); }
   .ck-catalog-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
-  .ck-catalog-col-name { width: 44%; }
-  .ck-catalog-col-generic { width: 24%; }
-  .ck-catalog-col-last { width: 32%; }
+  .ck-catalog-col-name { width: 42%; }
+  .ck-catalog-col-generic { width: 30%; }
+  .ck-catalog-col-last { width: 28%; }
   .ck-catalog-table th, .ck-catalog-table td { padding: 12px 16px; text-align: left; vertical-align: top; }
-  .ck-catalog-table thead th { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; white-space: nowrap; }
+  .ck-catalog-table thead th { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; }
   .ck-catalog-table tbody th, .ck-catalog-table tbody td { border-top: 1px solid var(--ck-divider); }
   .ck-catalog-table th[scope="row"] { font-weight: 400; }
   .ck-catalog-table h3 a { display: inline-block; min-height: 44px; padding-block: 6px; color: var(--ck-link); text-decoration: none; }
