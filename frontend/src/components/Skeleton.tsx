@@ -6,9 +6,11 @@
  *  - `home`   — «Главная»: the card of the month with its figure and bar, the two actions, the latest spends; the
  *               limits beside them on a wide screen;
  *  - `spends` — «Траты»: two days, each a header line over a card of rows;
+ *  - `columns` — a list screen in two columns on a desktop (limits, payments, goals, incomes, stores): the `page` card
+ *               plus an aside of a side card, hidden below 960 px (Skeleton.css);
  *  - compact (inside a card) — two small rows.
  */
-export type SkeletonShape = 'page' | 'home' | 'spends'
+export type SkeletonShape = 'page' | 'home' | 'spends' | 'columns'
 
 function Row() {
   return <div className="ck-skel-row">
@@ -83,6 +85,19 @@ export default function Skeleton({ shape = 'page', compact = false }: { shape?: 
         <div className="ck-skel-day-head"><div className="ck-skel-line ck-skel-small ck-skel-w30" /><div className="ck-skel-line ck-skel-small ck-skel-amount" /></div>
         <div className="ck-skel-card ck-skel-list"><Rows count={count} /></div>
       </div>)}
+    </div>
+  }
+  if (shape === 'columns') {
+    return <div className="ck-skel ck-skel-columns" data-skeleton="columns" aria-hidden="true">
+      <div className="ck-skel-line ck-skel-w35" />
+      <div className="ck-skel-figure ck-skel-w55" />
+      <Rows count={3} />
+      <div className="ck-skel-aside">
+        <div className="ck-skel-line ck-skel-w35" />
+        <div className="ck-skel-line ck-skel-small ck-skel-w60" />
+        <div className="ck-skel-line ck-skel-small ck-skel-w45" />
+        <div className="ck-skel-line ck-skel-small ck-skel-w55" />
+      </div>
     </div>
   }
   return <div className="ck-skel ck-skel-page" data-skeleton="page" aria-hidden="true">

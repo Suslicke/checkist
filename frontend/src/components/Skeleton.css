@@ -43,6 +43,8 @@
 .ck-skel-action { height: 64px; border-radius: var(--ck-radius-button); }
 .ck-skel-limit { display: grid; gap: 8px; padding-block: 4px; }
 .ck-skel-limit-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* The aside of a list screen in columns: only from 960 px (the second block below). */
+.ck-skel-aside { display: none; }
 @media (min-width: 960px) {
   .ck-skel-home { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; max-width: none; }
   .ck-skel-column { display: grid; gap: 16px; min-width: 0; }
@@ -74,6 +76,21 @@
 }
 @media (min-width: 541px) {
   .ck-skel-chip { width: 160px; }
+}
+
+/* A wide screen (960 px, as desktop.css): the two columns of a list screen; «Траты» as wide as the page with its one-line
+   filters and 52 px rows. A second block of the same width on purpose: it must follow the rules above it. */
+@media (min-width: 960px) {
+  .ck-skel-columns { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  .ck-skel-columns > * { grid-column: 1; }
+  .ck-skel-columns > .ck-skel-aside { display: grid; gap: 16px; grid-column: 2; grid-row: 1 / span 3; }
+  .ck-skel-spends { max-width: none; }
+  .ck-skel-spends .ck-skel-row { min-height: 52px; padding: 8px 0; }
+  .ck-skel-filters { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; gap: 8px 12px; padding: 12px 16px; }
+  .ck-skel-filters > .ck-skel-w30 { display: none; }
+  .ck-skel-filters > .ck-skel-pair { display: contents; }
+  .ck-skel-filters > .ck-skel-small { grid-column: 1 / -1; order: 9; }
+  .ck-skel-filters > .ck-skel-button { grid-column: 5; }
 }
 
 /* Inside a card: two small lines. */

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { PHONE_MAX_WIDTH, createNarrowStore, narrowQuery, useNarrow } from './narrow'
+import { DESKTOP_MIN_WIDTH, PHONE_MAX_WIDTH, coarsePointerQuery, createCoarsePointerStore, createNarrowStore, desktopQuery, narrowQuery, useCoarsePointer, useDesktop, useNarrow } from './narrow'
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
 
@@ -33,6 +33,22 @@ describe('phone threshold', () => {
   it('equals the width in the media query of the action bar', () => {
     const widths = [...read('../../components/ActionBar.css').matchAll(/@media[^{]*\(max-width:\s*(\d+)px\)/g)].map((match) => Number(match[1]))
     expect(widths).toEqual([PHONE_MAX_WIDTH])
+  })
+})
+
+describe('desktop threshold', () => {
+  it('is the one width of two columns', () => {
+    expect(DESKTOP_MIN_WIDTH).toBe(960)
+    expect(desktopQuery).toBe('(min-width: 960px)')
+    expect(coarsePointerQuery).toBe('(pointer: coarse)')
+  })
+
+  it('equals the width of every desktop media query', () => {
+    // Skeleton.css also holds a (min-width: 541px) block of the phone boundary and two 960 blocks: values, not count.
+    for (const path of ['../../theme/desktop.css', '../../features/dashboard/Dashboard.css', '../../components/Skeleton.css']) {
+      const widths = [...read(path).matchAll(/@media[^{]*\(min-width:\s*(\d+)px\)/g)].map((match) => Number(match[1])).filter((width) => width > PHONE_MAX_WIDTH + 1)
+      expect([...new Set(widths)], path).toEqual([DESKTOP_MIN_WIDTH])
+    }
   })
 })
 
@@ -96,5 +112,38 @@ describe('useNarrow without a browser', () => {
     const matchMedia = vi.fn(() => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }))
     vi.stubGlobal('window', { matchMedia })
     expect(renderToStaticMarkup(createElement(Probe))).toBe('table')
+  })
+})
+
+describe('useDesktop without a browser', () => {
+  const Probe = () => (useDesktop() ? 'table' : 'cards')
+
+  it('has no window in this test run and never renders the desktop view', () => {
+    expect(typeof window).toBe('undefined')
+    expect(renderToStaticMarkup(createElement(Probe))).toBe('cards')
+  })
+
+  it('keeps the server render off the desktop view whatever matchMedia says', () => {
+    const matchMedia = vi.fn(() => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }))
+    vi.stubGlobal('window', { matchMedia })
+    expect(renderToStaticMarkup(createElement(Probe))).toBe('cards')
+  })
+})
+
+describe('useCoarsePointer without a browser', () => {
+  const Probe = () => (useCoarsePointer() ? 'Снять чек' : 'Загрузить чек')
+
+  it('takes a finger for the pointer of a server render', () => {
+    expect(renderToStaticMarkup(createElement(Probe))).toBe('Снять чек')
+    const matchMedia = vi.fn(() => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }))
+    vi.stubGlobal('window', { matchMedia })
+    expect(renderToStaticMarkup(createElement(Probe))).toBe('Снять чек')
+  })
+
+  it('follows the environment in the browser and the finger on the server', () => {
+    const coarse = (matches: boolean) => createCoarsePointerStore({ matches: () => matches, listen: () => () => {} })
+    expect(coarse(false).getServerSnapshot()).toBe(true)
+    expect(coarse(false).getSnapshot()).toBe(false)
+    expect(coarse(true).getSnapshot()).toBe(true)
   })
 })

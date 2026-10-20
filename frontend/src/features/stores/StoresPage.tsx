@@ -155,7 +155,7 @@ export default function StoresPage() {
     return () => current.abort()
   }, [attempt])
 
-  if (load.kind === 'loading') return <RequestState kind="loading" message="Загружаем магазины…" />
+  if (load.kind === 'loading') return <RequestState kind="loading" message="Загружаем магазины…" shape="columns" />
   if (load.kind === 'error') return <RequestState kind="error" message={load.message} onRetry={() => { setLoad({ kind: 'loading' }); setAttempt((value) => value + 1) }} />
   const state = load.data
 

@@ -301,7 +301,7 @@ export default function RecurringPage() {
     })
   }
 
-  if (!load) return <RequestState kind="loading" message="Загружаем регулярные платежи…" />
+  if (!load) return <RequestState kind="loading" message="Загружаем регулярные платежи…" shape="columns" />
   if (load.kind === 'error') return <RequestState kind="error" message={load.message} onRetry={() => setAttempt((value) => value + 1)} />
   // The month of the payment being changed, read again after every answer: «Оплатил» and the history of a year.
   const monthRow = editing?.payment ? load.data.payments.find((row) => row.id === editing.payment?.id) : undefined

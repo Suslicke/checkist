@@ -331,7 +331,7 @@ export default function LimitsPage() {
     return () => running.forEach((controller) => controller.abort())
   }, [])
 
-  if (load.kind === 'loading') return <RequestState kind="loading" message="Загружаем лимиты…" />
+  if (load.kind === 'loading') return <RequestState kind="loading" message="Загружаем лимиты…" shape="columns" />
   if (load.kind === 'error') return <RequestState kind="error" message={load.message}
     onRetry={() => { setLoad({ kind: 'loading' }); setAttempt((value) => value + 1) }} />
 
