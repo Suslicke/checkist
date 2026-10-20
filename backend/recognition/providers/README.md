@@ -156,7 +156,7 @@ contract (`detect`, `recognize`, `run_text`) over the `claude` executable. One c
 one `claude -p --output-format stream-json --input-format stream-json` process with
 the verified flag set of `build_argv` (`--json-schema` from the schema file as one
 string, `--tools ""`, `--no-session-persistence`, `--disable-slash-commands`,
-`--strict-mcp-config`, a fixed short `--system-prompt`, `--effort`, `--max-budget-usd`);
+`--strict-mcp-config`, `--setting-sources local` (no host hooks or plugins), a fixed short `--system-prompt`, `--effort`, `--max-budget-usd`);
 `--bare` is never used because it forbids the subscription sign-in. The prompt and the
 base64 image travel as one JSONL user message on stdin (`build_stdin`); the answer is
 the `structured_output` of the single `result` event (`validate_events`: `system init`

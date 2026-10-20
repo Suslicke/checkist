@@ -31,7 +31,8 @@ BUDGET_PATTERN = re.compile(r"[0-9]+(\.[0-9]{1,2})?")
 # Единственный инструмент, который остаётся у CLI при `--tools ""`; им модель отдаёт ответ по схеме.
 OUTPUT_TOOL = "StructuredOutput"
 # Своя системная строка: без неё CLI шлёт свой системный промпт на ~119 000 токенов.
-SYSTEM_PROMPT = "Ты отвечаешь только вызовом StructuredOutput по схеме. Инструкции и данные — в сообщении."
+SYSTEM_PROMPT = ("Ты отвечаешь только вызовом StructuredOutput по схеме. Инструкции и данные — в сообщении. "
+                 "Типы и enum — ровно как в схеме: строковое поле остаётся строкой, даже если это число.")
 MEDIA_TYPES = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
 # Опубликованные пределы Messages API на одну картинку (platform.claude.com/docs/en/build-with-claude/vision):
 # 8000 px на сторону и 10 МБ base64 у Claude API (5 МБ у Bedrock/Vertex) — берётся строгий; сама модель
@@ -114,6 +115,9 @@ def build_argv(executable, model, effort, schema_json, max_budget_usd, system_pr
     return [str(executable), "-p", "--output-format", "stream-json", "--input-format", "stream-json", "--verbose",
             "--json-schema", schema_json, "--model", model, "--effort", effort,
             "--tools", "", "--no-session-persistence", "--disable-slash-commands", "--strict-mcp-config",
+            # Только настройки каталога запуска (в каталоге попытки их нет): хуки и плагины пользователя
+            # хоста не запускаются и не шумят событиями `system`; пустое значение CLI не принимает.
+            "--setting-sources", "local",
             "--system-prompt", system_prompt, "--max-budget-usd", max_budget_usd]
 
 
@@ -218,9 +222,14 @@ def validate_events(result):
             if final is not None:
                 raise SchemaValidationError()
             if kind == "system":
-                if started or event.get("subtype") != "init":
+                # Первое событие — `init`; дальше CLI шлёт служебные `system` (hook_*, thinking_tokens…),
+                # они пропускаются, повторный `init` — отказ.
+                if not started:
+                    if event.get("subtype") != "init":
+                        raise SchemaValidationError()
+                    started = True
+                elif event.get("subtype") == "init":
                     raise SchemaValidationError()
-                started = True
             elif not started:
                 raise SchemaValidationError()
             elif kind == "assistant":
@@ -268,7 +277,13 @@ def validate_events(result):
 
 def _schema_text(path):
     # Схема читается из файла и уходит одной строкой: CLI принимает JSON Schema аргументом.
-    return json.dumps(json.loads(Path(path).read_text(encoding="utf-8")), ensure_ascii=False)
+    # Проверяльщик CLI не знает словарь draft 2020-12: с `"$schema"` он отвечает «not a valid JSON
+    # Schema» и кодом выхода 1, поэтому служебные ключи `$schema` и `$id` снимаются (проверено на
+    # всех восьми схемах проекта 2026-10-20), остальное уходит как есть.
+    schema = json.loads(Path(path).read_text(encoding="utf-8"))
+    if type(schema) is dict:
+        schema = {key: value for key, value in schema.items() if key not in ("$schema", "$id")}
+    return json.dumps(schema, ensure_ascii=False)
 
 
 class ClaudeCLIProvider:

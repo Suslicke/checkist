@@ -22,7 +22,7 @@ claude -p --output-format stream-json --input-format stream-json --verbose \
 - `--tools ""` оставляет единственный внутренний инструмент `StructuredOutput` (видно в `system init`: `"tools": ["StructuredOutput"]`). Никаких Read/Bash.
 - Без `--system-prompt` CLI шлёт свой системный промпт на ~119 000 токенов (один вызов стоил 0,12 $ на haiku и упёрся в бюджет). С `--system-prompt` — 1 300–6 000 токенов, 0,0003–0,0013 $ на haiku.
 - `--bare` НЕ использовать: он запрещает OAuth (подписку) и требует `ANTHROPIC_API_KEY`.
-- `--setting-sources ""` ломает запуск (пустой stdout) — не передавать.
+- `--setting-sources ""` ломает запуск (пустой stdout); `--setting-sources local` работает и не запускает хуки/плагины пользователя хоста (иначе с `--verbose` в потоке десятки служебных `system` событий `hook_started`/`hook_response`; `thinking_tokens` приходят всегда). Проверено 2026-10-20 на настоящем вызове: первые два ответа модели нарушили схему (`schema_version` числом), CLI сам переспросил, третий прошёл — поэтому системная строка напоминает про типы.
 - Вход на сервере: `claude setup-token` на ноутбуке выдаёт долгоживущий токен подписки → переменная `CLAUDE_CODE_OAUTH_TOKEN` в окружении воркера. Альтернатива — `ANTHROPIC_API_KEY`. Каталог настроек/сессий — `CLAUDE_CONFIG_DIR` (аналог `CODEX_HOME`).
 - Проверка входа без вызова модели: `claude auth status` печатает JSON `{"loggedIn": true, "authMethod": "claude.ai", "subscriptionType": "max", …}`, код выхода 0. Версия: `claude --version` → `2.1.304 (Claude Code)`.
 - Без входа `-p` отдаёт событие `result` с `is_error: true`, `terminal_reason: "api_error"`, `result: "Not logged in · Please run /login"`, код выхода 0 — отказ надо читать из события, не из кода выхода.

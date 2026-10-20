@@ -104,10 +104,13 @@ class ArgvStdinEnvironmentTests(SimpleTestCase):
             ["/usr/local/bin/claude", "-p", "--output-format", "stream-json", "--input-format", "stream-json", "--verbose",
              "--json-schema", '{"type":"object"}', "--model", "claude-opus-5-5", "--effort", "high",
              "--tools", "", "--no-session-persistence", "--disable-slash-commands", "--strict-mcp-config",
+             "--setting-sources", "local",
              "--system-prompt", "системная строка", "--max-budget-usd", "0.50"],
         )
         self.assertNotIn("--bare", build_argv("claude", "m", "low", "{}", "1", "s"))
-        self.assertNotIn("--setting-sources", build_argv("claude", "m", "low", "{}", "1", "s"))
+        argv = build_argv("claude", "m", "low", "{}", "1", "s")
+        # Пустой `--setting-sources` ломает запуск, `user` вернул бы хуки хоста.
+        self.assertEqual(argv[argv.index("--setting-sources") + 1], "local")
 
     def test_stdin_is_one_jsonl_line_with_the_image_before_the_text(self):
         for suffix, fmt, media_type in (("png", "PNG", "image/png"), ("jpg", "JPEG", "image/jpeg"), ("webp", "WEBP", "image/webp")):
@@ -197,6 +200,11 @@ class ValidateEventsTests(SimpleTestCase):
                   tool_use(), result_event(self.payload)]
         self.assertEqual(self.check(chatty), self.payload)
         self.assertEqual(self.check([init_event(), result_event(self.payload)]), self.payload)
+        # Служебные `system` после `init` (хуки, счётчик размышлений) — не ошибка; `init` остаётся первым.
+        service = [init_event(), {"type": "system", "subtype": "hook_started", "hook_name": "SessionStart"},
+                   tool_use(), {"type": "system", "subtype": "thinking_tokens", "estimated_tokens": 50},
+                   result_event(self.payload)]
+        self.assertEqual(self.check(service), self.payload)
 
     def test_malformed_streams_are_invalid_output(self):
         cases = {
@@ -519,6 +527,22 @@ class TextCallTests(SimpleTestCase):
         kwargs.setdefault("payload", {"answer": [1, "два", None]})
         stub = StubProcess(self, **kwargs)
         return ClaudeCLIProvider(config=self.config, supervisor=stub), stub
+
+    def test_schema_goes_to_the_cli_without_the_draft_keys(self):
+        # Проверяльщик CLI отвергает `"$schema"` draft 2020-12 («not a valid JSON Schema»); остальное — как в файле.
+        self.schema.write_text(
+            '{"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "x", "type": "object",\n'
+            ' "properties": {"n": {"type": "integer"}}, "required": ["n"], "additionalProperties": false}',
+            encoding="utf-8",
+        )
+        provider, stub = self.provider()
+        self.call(provider)
+        argv = stub.calls[0][0]
+        sent = json.loads(argv[argv.index("--json-schema") + 1])
+        self.assertNotIn("$schema", sent)
+        self.assertNotIn("$id", sent)
+        self.assertEqual(sent["required"], ["n"])
+        self.assertEqual(sent["properties"], {"n": {"type": "integer"}})
 
     def test_text_call_argv_stdin_schema_string_isolation_and_cleanup(self):
         stages = []
