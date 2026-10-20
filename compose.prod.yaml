@@ -138,11 +138,16 @@ services:
     build:
       context: .
       target: recognition
+    # The shared file of the anchor, then the recognition-only file: the Claude token of
+    # `claude setup-token` lives in .env.recognition (deploy/docker/checkist.recognition.env.example)
+    # and reaches this service alone, never web, celery or a `ck manage` container. Missing with Codex.
+    env_file:
+      - ${CHECKIST_ENV_FILE:-.env.prod}
+      - path: ${CHECKIST_RECOGNITION_ENV_FILE:-.env.recognition}
+        required: false
     environment:
       CODEX_HOME: /home/checkist/.codex
       CLAUDE_CONFIG_DIR: /home/checkist/.claude
-      # The subscription token of `claude setup-token`, from the environment file; empty with Codex.
-      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     command: ["python", "manage.py", "recognition_worker"]
     # The worker gives its job back to the queue only on KeyboardInterrupt.
     init: true

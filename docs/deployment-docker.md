@@ -185,10 +185,10 @@ grep -cE '^(DJANGO_SECRET_KEY|POSTGRES_PASSWORD)=.{64}$' .env.prod
 | `CHECKIST_HTTP_BIND`, `CHECKIST_HTTPS_BIND` | `80`, `443` | только для локальной проверки, например `127.0.0.1:18080` |
 | `CHECKIST_BACKUP_DIR` | `/var/backups/checkist` | другой каталог копий на сервере (владелец UID 10001, `0700`) |
 | `COMPOSE_PROFILES` | нет | `recognition` — [раздел 9](#9-распознавание-codex-в-контейнере) |
-| `CLAUDE_CODE_OAUTH_TOKEN` | нет | токен подписки для `RECEIPT_OCR_PROVIDER=claude_cli` — [Claude в разделе 9](#claude-code-cli-вместо-codex-claude_cli) |
+| `CLAUDE_CODE_OAUTH_TOKEN` | нет | **не в `.env.prod`**, а в `.env.recognition` рядом с ним (образец `deploy/docker/checkist.recognition.env.example`, режим `0600`): `.env.prod` читают `web`, `celery` и контейнеры `ck manage`, второй файл — один `recognition`. Токен подписки для `RECEIPT_OCR_PROVIDER=claude_cli` — [Claude в разделе 9](#claude-code-cli-вместо-codex-claude_cli) |
 | `COMPOSE_PROJECT_NAME` | `checkist` | **на сервере не менять**: имя — приставка томов, другое имя означает другой, пустой набор томов. QA задаёт своё имя именно этой переменной, а не флагом `-p`: скрипты вызывают `docker compose` сами |
 
-Путь к файлу окружения можно сменить переменной оболочки `CHECKIST_ENV_FILE` (абсолютный либо от корня репозитория); на сервере это не нужно.
+Путь к файлу окружения можно сменить переменной оболочки `CHECKIST_ENV_FILE` (абсолютный либо от корня репозитория), путь ко второму файлу `recognition` — `CHECKIST_RECOGNITION_ENV_FILE`; на сервере это не нужно.
 
 ### Шаг 7 (необязательный). Перенос данных из dev
 
@@ -397,7 +397,7 @@ sed -i -e 's/^POSTGRES_DB=.*/POSTGRES_DB=checkist_r2/' -e 's|^MEDIA_ROOT=.*|MEDI
 
 Копии старше 14 суток удаляются после каждого успешного запуска; последняя успешная не удаляется никогда; сбой запуска прежние копии не трогает.
 
-**Не копируются:** `.env.prod`, вход Codex (том `codex_home`), сертификаты Caddy (том `caddy_data` — Caddy получит их заново). `.env.prod` сохраните отдельно.
+**Не копируются:** `.env.prod` и `.env.recognition`, вход Codex (том `codex_home`), сертификаты Caddy (том `caddy_data` — Caddy получит их заново). `.env.prod` сохраните отдельно.
 
 **Когда снимается.** Перед каждым обновлением — сама (`deploy.sh`). Ежедневно — строкой cron того пользователя, под которым вы работаете на сервере:
 
@@ -543,14 +543,19 @@ sed -i -e 's/^POSTGRES_DB=.*/POSTGRES_DB=checkist_r2/' -e 's|^MEDIA_ROOT=.*|MEDI
    claude setup-token
    ```
 
-2. На сервере впишите его в `.env.prod` и переключите провайдера (модель без `RECEIPT_OCR_MODEL` — `claude-opus-5-5`; строка `RECEIPT_OCR_MODEL=opus|sonnet|haiku|claude-…` — по желанию):
+2. На сервере положите токен в `.env.recognition` рядом с `.env.prod` и переключите провайдера в `.env.prod`:
 
    ```bash
-   sed -i 's/^# CLAUDE_CODE_OAUTH_TOKEN=$/CLAUDE_CODE_OAUTH_TOKEN=<токен>/' .env.prod
+   cp deploy/docker/checkist.recognition.env.example .env.recognition
+   chmod 600 .env.recognition
+   sed -i 's/^# CLAUDE_CODE_OAUTH_TOKEN=$/CLAUDE_CODE_OAUTH_TOKEN=<токен>/' .env.recognition
    sed -i 's/^RECEIPT_OCR_PROVIDER=codex_cli$/RECEIPT_OCR_PROVIDER=claude_cli/' .env.prod
+   grep ^RECEIPT_OCR_MODEL .env.prod
    ```
 
-   Токен — секрет уровня пароля: только `.env.prod` (режим `0600`), не git и не журнал. `.env.prod` читают целиком все сервисы приложения (`env_file`), поэтому переменная есть и в окружении `web` и `celery`, как `POSTGRES_PASSWORD`; но дочернему процессу её передаёт только `recognition_worker` — по allowlist провайдера, и больше никому. Настройки CLI живут в томе `claude_home` (`/home/checkist/.claude`, `CLAUDE_CONFIG_DIR`), который смонтирован только в `recognition`; сессии не сохраняются (`--no-session-persistence`), автообновление и телеметрия выключены переменными окружения воркера.
+   Строку `RECEIPT_OCR_MODEL` в `.env.prod`, если `grep` её нашёл, до `up` удалите либо поставьте `opus|sonnet|haiku|claude-…`: значение по умолчанию `claude-opus-5-5` действует только при не заданной переменной, а имя модели Codex провалит каждый вызов.
+
+   Токен — секрет уровня пароля: только `.env.recognition` (режим `0600`; git его не берёт — правило `.env.*` в `.gitignore`, в образы он не попадает — `.dockerignore`), не журнал. **В `.env.prod` токена быть не должно:** этот файл целиком читают `web`, `celery` и каждый одноразовый контейнер `ck manage`, то есть он оказался бы в процессе Django, смотрящем в интернет. `.env.recognition` — второй `env_file` одного сервиса `recognition` (`required: false`: без файла сервис стартует, просто Claude без входа — так при Codex), и дочернему процессу токен передаёт только `recognition_worker` — по allowlist провайдера, и больше никому. Настройки CLI живут в томе `claude_home` (`/home/checkist/.claude`, `CLAUDE_CONFIG_DIR`), который смонтирован только в `recognition`; сессии не сохраняются (`--no-session-persistence`), автообновление и телеметрия выключены переменными окружения воркера.
 
 3. Проверьте то же, что проверяет воркер при запуске (образ соберётся при первом вызове):
 
@@ -559,11 +564,13 @@ sed -i -e 's/^POSTGRES_DB=.*/POSTGRES_DB=checkist_r2/' -e 's|^MEDIA_ROOT=.*|MEDI
    ./deploy/docker/ck compose run --rm recognition claude auth status; echo "exit $?"
    ```
 
-   Ожидается `2.1.304 (Claude Code)` и JSON с `"loggedIn": true`, `exit 0`. **Дальше — только после этого.**
+   Ожидается `2.1.304 (Claude Code)` и JSON с `"loggedIn": true`, `exit 0` (`run --rm` берёт оба `env_file` сервиса, так что `.env.recognition` здесь уже действует). **Дальше — только после этого.**
 
-4. Включите профиль и примените — шаг 3 раздела выше. В журнале — `Recognition worker ready.`; сообщения отказа этого провайдера: `Claude executable is unavailable…` (неверный `RECEIPT_OCR_CLAUDE_EXECUTABLE`), `Claude authentication is unavailable: run \`claude setup-token\` and set CLAUDE_CODE_OAUTH_TOKEN.` (нет входа или токен отозван), `Claude startup capability check failed.` (`claude --version` завершился с ошибкой), `Claude startup probe failed or timed out.` (10 с на проверку истекли), `Claude CLI version could not be determined.`; общие — `Recognition MEDIA/staging/scratch storage is unavailable.`, `Recognition worker is already running…`. Модель на старте не вызывается.
+   **`claude auth status` токен не проверяет.** С любым непустым `CLAUDE_CODE_OAUTH_TOKEN` он отвечает `"loggedIn": true, "authMethod": "oauth_token"` — опечатка в токене или отозванный токен проходят и эту команду, и стартовую проверку воркера; откажет только первый настоящий вызов: попытка `auth_required` без повтора, задание остаётся с отказом. Поэтому после переключения дождитесь первого задания и посмотрите его исход — «Обработка чеков» в клиенте либо `./deploy/docker/ck compose logs recognition`.
 
-Вернуться к Codex — `RECEIPT_OCR_PROVIDER=codex_cli` в `.env.prod` и `./deploy/docker/ck compose --profile recognition up -d recognition`; токен можно оставить закомментированным. Один вызов ограничен `RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD` (образец — `2.00`), перерасход — отказ `configuration_error` без повтора; лимитов на пользователя по-прежнему нет.
+4. Включите профиль и примените — шаг 3 раздела выше. В журнале — `Recognition worker ready.`; сообщения отказа этого провайдера: `Claude executable is unavailable…` (неверный `RECEIPT_OCR_CLAUDE_EXECUTABLE`), `Claude authentication is unavailable: run \`claude setup-token\` and set CLAUDE_CODE_OAUTH_TOKEN.` (нет ни входа, ни токена; неверный токен сюда не попадает — см. шаг 3), `Claude startup capability check failed.` (`claude --version` завершился с ошибкой), `Claude startup probe failed or timed out.` (10 с на проверку истекли), `Claude CLI version could not be determined.`; общие — `Recognition MEDIA/staging/scratch storage is unavailable.`, `Recognition worker is already running…`. Модель на старте не вызывается.
+
+Вернуться к Codex — `RECEIPT_OCR_PROVIDER=codex_cli` в `.env.prod` и `./deploy/docker/ck compose --profile recognition up -d recognition`; `.env.recognition` можно оставить, с Codex он не используется. Один вызов ограничен `RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD` (образец — `2.00`), перерасход — отказ `configuration_error` без повтора; лимитов на пользователя по-прежнему нет.
 
 ## 10. Тома и чего нельзя делать
 
@@ -576,7 +583,7 @@ sed -i -e 's/^POSTGRES_DB=.*/POSTGRES_DB=checkist_r2/' -e 's|^MEDIA_ROOT=.*|MEDI
 | `checkist_redis_data` | `redis` | очередь Celery и кэш | ничего ценного |
 | `checkist_ocr_scratch` | `recognition` | временные файлы попыток модели | ничего ценного |
 | `checkist_codex_home` | `recognition` | вход Codex | войти заново |
-| `checkist_claude_home` | `recognition` | настройки Claude Code CLI (`CLAUDE_CONFIG_DIR`; вход — токен в `.env.prod`) | ничего ценного |
+| `checkist_claude_home` | `recognition` | настройки Claude Code CLI (`CLAUDE_CONFIG_DIR`; вход — токен в `.env.recognition`) | ничего ценного |
 | `checkist_caddy_data`, `checkist_caddy_config` | `proxy` | сертификаты | Caddy получит заново; у центра сертификации есть лимит выдач в неделю |
 | `/var/backups/checkist` (каталог сервера) | `web` → `/backups` | копии | все копии |
 

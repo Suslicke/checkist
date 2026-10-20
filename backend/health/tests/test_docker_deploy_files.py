@@ -21,6 +21,7 @@ FILES = {
     "Dockerfile": ROOT / "Dockerfile", ".dockerignore": ROOT / ".dockerignore",
     "compose.prod.yaml": ROOT / "compose.prod.yaml", "Caddyfile": DOCKER / "Caddyfile",
     "checkist.env.example": DOCKER / "checkist.env.example", "ck": DOCKER / "ck", "deploy.sh": DOCKER / "deploy.sh",
+    "checkist.recognition.env.example": DOCKER / "checkist.recognition.env.example",
     "compose.observability.yaml": ROOT / "compose.observability.yaml",
 }
 SITE = "{$CHECKIST_SITE_ADDRESS}"
@@ -43,11 +44,13 @@ VOLUMES = {"postgres_data", "redis_data", "data", "ocr_scratch", "codex_home", "
 # Read by Compose, the proxy or the scripts; Django settings never see them.
 COMPOSE_ONLY = {
     "COMPOSE_PROJECT_NAME", "COMPOSE_PROFILES", "CHECKIST_SITE_ADDRESS", "CHECKIST_HTTP_BIND",
-    "CHECKIST_HTTPS_BIND", "CHECKIST_BACKUP_DIR", "CHECKIST_ENV_FILE", "CODEX_HOME",
-    "CHECKIST_OBSERVABILITY", "CHECKIST_COMMIT",
+    "CHECKIST_HTTPS_BIND", "CHECKIST_BACKUP_DIR", "CHECKIST_ENV_FILE", "CHECKIST_RECOGNITION_ENV_FILE",
+    "CODEX_HOME", "CHECKIST_OBSERVABILITY", "CHECKIST_COMMIT",
     # Read by the worker's child-environment allowlist (recognition/providers/claude_cli.py), not by the settings.
     "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN",
 }
+# The recognition-only environment file: the Claude token never enters the shared one.
+RECOGNITION_ENV_FILE = ".env.recognition"
 
 
 def text(name):
@@ -136,6 +139,11 @@ class DockerDeployFilesTests(SimpleTestCase):
         ignored = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
         self.assertIn(".deploy-previous", ignored)
         self.assertIn(".env.prod", ignored)
+        # .env.recognition falls under the `.env.*` rule; only the sample `.env.example` is excepted.
+        self.assertIn(".env.*", ignored)
+        self.assertEqual([line for line in ignored if line.startswith("!")], ["!.env.example"])
+        self.assertTrue(RECOGNITION_ENV_FILE.startswith(".env."))
+        self.assertFalse(FILES["checkist.recognition.env.example"].name.startswith(".env"))
 
     # Environment sample
 
@@ -173,7 +181,7 @@ class DockerDeployFilesTests(SimpleTestCase):
         self.assertEqual(
             set(commented),
             {"CHECKIST_HTTP_BIND", "CHECKIST_HTTPS_BIND", "CHECKIST_BACKUP_DIR", "COMPOSE_PROFILES",
-             "COMPOSE_PROJECT_NAME", "CHECKIST_OBSERVABILITY", "CLAUDE_CODE_OAUTH_TOKEN"},
+             "COMPOSE_PROJECT_NAME", "CHECKIST_OBSERVABILITY"},
         )
         for name in (*env_example(), *commented):
             with self.subTest(name=name):
@@ -353,12 +361,40 @@ class DockerDeployFilesTests(SimpleTestCase):
         self.assertGreater(int(grace.group(1)), settings.RECEIPT_OCR_CANCEL_GRACE_SECONDS)
         self.assertIn(f"      CODEX_HOME: {CODEX_HOME}\n", service)
         self.assertIn(f"      CLAUDE_CONFIG_DIR: {CLAUDE_HOME}\n", service)
-        # The subscription token of `claude setup-token` comes from the environment file; empty is allowed.
-        self.assertIn("      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}\n", service)
         self.assertEqual(
             sum(len(re.findall(r"^    profiles:", body, flags=re.MULTILINE)) for body in compose_services().values()),
             1,
         )
+
+    def test_claude_token_is_read_by_the_recognition_service_only(self):
+        # The shared environment file reaches web, celery and every `ck manage` container, so the
+        # long-lived subscription token lives in a second file that only the recognition service lists;
+        # the YAML merge replaces the anchor's env_file, hence the shared file is repeated first.
+        services = compose_services()
+        self.assertIn(
+            "    env_file:\n      - ${CHECKIST_ENV_FILE:-.env.prod}\n"
+            f"      - path: ${{CHECKIST_RECOGNITION_ENV_FILE:-{RECOGNITION_ENV_FILE}}}\n        required: false\n",
+            services["recognition"] + "\n",
+        )
+        for name in SERVICES - {"recognition"}:
+            with self.subTest(name=name):
+                self.assertNotIn("env_file", services[name])
+        for name in ("web", "celery"):
+            with self.subTest(name=name):
+                self.assertNotIn("claude", services[name].lower())
+        for name in ("compose.prod.yaml", "checkist.env.example"):
+            with self.subTest(name=name):
+                self.assertNotIn("CLAUDE_CODE_OAUTH_TOKEN", text(name))
+        # The sample of the second file: comments and the one commented assignment, nothing live.
+        sample = text("checkist.recognition.env.example")
+        self.assertEqual(code("checkist.recognition.env.example"), "")
+        self.assertTrue(all(line.startswith("# ") for line in sample.splitlines()), sample)
+        self.assertEqual(re.findall(r"^# ([A-Z][A-Z0-9_]*)=.*$", sample, flags=re.MULTILINE), ["CLAUDE_CODE_OAUTH_TOKEN"])
+        self.assertIn("# CLAUDE_CODE_OAUTH_TOKEN=\n", sample)
+        for word in (RECOGNITION_ENV_FILE, "claude setup-token", "0600"):
+            self.assertIn(word, sample)
+        # Relative paths of env_file resolve from the directory of compose.prod.yaml; ck runs there.
+        self.assertIn('cd "$root"', code("ck"))
 
     def test_web_and_celery_commands(self):
         services = compose_services()
