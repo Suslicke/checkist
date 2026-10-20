@@ -166,6 +166,12 @@ class PipelineEnvironment(TransactionTestCase):
 
 @tag("integration")
 class PipelineTests(PipelineEnvironment):
+    def test_attempts_record_the_model_of_any_real_provider_and_none_of_the_fake(self):
+        for provider, recorded in (("fake", ""), ("codex_cli", "demo-model"), ("claude_cli", "demo-model")):
+            with self.subTest(provider=provider), override_settings(RECEIPT_OCR_PROVIDER=provider, RECEIPT_OCR_MODEL="demo-model"):
+                result = self.process()
+            self.assertEqual(set(result.attempts.values_list("provider", "model")), {(provider, recorded)})
+
     def test_two_receipts_lines_files_and_attempts(self):
         result = self.process()
         self.assertEqual((result.status, result.detected_count, result.completed_count, result.imported_count), ("succeeded", 2, 2, 2))

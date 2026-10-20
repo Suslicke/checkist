@@ -16,4 +16,7 @@ def get_provider(*, scenario=None):
     if name == "codex_cli":
         from .codex_cli import CodexCLIProvider
         return CodexCLIProvider()
+    if name == "claude_cli":
+        from .claude_cli import ClaudeCLIProvider
+        return ClaudeCLIProvider()
     raise ProviderError("configuration_error")

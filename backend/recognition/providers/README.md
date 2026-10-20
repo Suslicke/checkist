@@ -149,6 +149,36 @@ No POSIX watchdog is implemented, per the human's simplified v1 decision;
 children deliberately escaping with setsid and a killed POSIX worker remain
 outside this guarantee. Process returncode does not determine cancellation.
 
+## Claude Code CLI
+
+`RECEIPT_OCR_PROVIDER=claude_cli` selects `claude_cli.ClaudeCLIProvider`, the same
+contract (`detect`, `recognize`, `run_text`) over the `claude` executable. One call is
+one `claude -p --output-format stream-json --input-format stream-json` process with
+the verified flag set of `build_argv` (`--json-schema` from the schema file as one
+string, `--tools ""`, `--no-session-persistence`, `--disable-slash-commands`,
+`--strict-mcp-config`, `--setting-sources local` (no host hooks or plugins), a fixed short `--system-prompt`, `--effort`, `--max-budget-usd`);
+`--bare` is never used because it forbids the subscription sign-in. The prompt and the
+base64 image travel as one JSONL user message on stdin (`build_stdin`); the answer is
+the `structured_output` of the single `result` event (`validate_events`: `system init`
+first, only the `StructuredOutput` tool, `result` last, errors inside the event are
+mapped like Codex failures plus the sign-in and usage-limit texts; a `--max-budget-usd`
+overrun is `configuration_error`, not retried, because the same call would overrun the
+same budget again). A prepared image over the published per-image limits of the Messages
+API (8000 px per side, 5 MB base64 as the stricter platform figure) is sent as a JPEG
+downscaled to the model's 2576 px long edge from memory; detect coordinates are 0..1
+fractions and the prompt names the original dimensions, so nothing is rescaled, and an
+image that does not fit even at the lowest quality is `invalid_input`. Settings:
+`RECEIPT_OCR_CLAUDE_EXECUTABLE`, `RECEIPT_OCR_CLAUDE_EFFORT` (low|medium|high),
+`RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD`; the model default is `claude-opus-5-5`. The child
+environment is the Codex allowlist plus `CLAUDE_CONFIG_DIR` (there is no Django setting
+for it), `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) and `ANTHROPIC_API_KEY`,
+with auto-update, telemetry and non-essential traffic disabled. The five text-only
+callers (manual parse, classification, insights, store grouping, statement asks) keep
+their one wrapper class and take the provider from `factory.get_provider()`, so the
+wrapper's `name` is the configured provider; `recognition_worker` starts only after
+`claude --version` and `claude auth status` (JSON with `"loggedIn": true`) succeed within
+10 s each, without calling the model. Tests never run the real CLI.
+
 Technical sources: [OpenAI CLI reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli),
 [Microsoft Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects).
 

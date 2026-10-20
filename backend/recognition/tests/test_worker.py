@@ -1,6 +1,8 @@
 import hashlib
 import io
+import json
 import os
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -18,8 +20,11 @@ from PIL import Image
 from receipts.models import Receipt
 from recognition import queue
 from recognition.demo import DemoError, seed_demo
-from recognition.management.commands.recognition_worker import LeaseHeartbeat, probe_codex, validate_startup, worker_slot
+from recognition.management.commands.recognition_worker import (
+    LeaseHeartbeat, probe_claude, probe_codex, validate_startup, worker_slot,
+)
 from recognition.process_supervisor.supervisor import ProcessResult
+from recognition.providers.claude_cli import ClaudeCLIProvider
 from recognition.providers.codex_cli import CodexCLIProvider
 from recognition.models import ProcessingJob
 from recognition.pipeline import JobPipeline, process_job
@@ -237,6 +242,57 @@ class WorkerConfigurationTests(SimpleTestCase):
     def test_fake_scenario_is_not_allowed_for_real_provider(self):
         with self.assertRaisesMessage(CommandError, "requires RECEIPT_OCR_PROVIDER=fake"):
             validate_startup(fake_scenario="success2")
+
+    @override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_CLAUDE_EXECUTABLE="nonexistent-checkist-claude")
+    def test_missing_claude_is_rejected_without_starting_it(self):
+        with patch("recognition.management.commands.recognition_worker.ProcessSupervisor.run") as run, \
+                self.assertRaisesMessage(CommandError, "Claude executable is unavailable"):
+            validate_startup()
+        run.assert_not_called()
+        with self.assertRaisesMessage(CommandError, "requires RECEIPT_OCR_PROVIDER=fake"):
+            validate_startup(fake_scenario="success2")
+
+    @override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_CLAUDE_EXECUTABLE=sys.executable)
+    def test_claude_startup_probes_version_and_sign_in_without_model(self):
+        # sys.executable only satisfies shutil.which: every launch is replaced, the real CLI never runs.
+        signed_in = json.dumps({"loggedIn": True, "authMethod": "claude.ai", "subscriptionType": "max"}).encode("utf-8")
+        with patch("recognition.management.commands.recognition_worker.ProcessSupervisor.run", side_effect=[
+            ProcessResult(0, b"2.1.304 (Claude Code)"), ProcessResult(0, signed_in),
+        ]) as run:
+            provider = validate_startup()
+        self.assertIsInstance(provider, ClaudeCLIProvider)
+        self.assertEqual(provider.cli_version, "2.1.304")
+        self.assertEqual([call.args[0] for call in run.call_args_list],
+                         [[sys.executable, "--version"], [sys.executable, "auth", "status"]])
+        for call in run.call_args_list:
+            self.assertEqual(call.kwargs["stdin"], b"")
+            self.assertEqual(call.kwargs["env"]["DISABLE_AUTOUPDATER"], "1")
+            self.assertNotIn("POSTGRES_PASSWORD", call.kwargs["env"])
+            self.assertTrue(Path(call.kwargs["cwd"]).name.startswith("startup-"))
+        self.assertEqual(list(Path(settings.RECEIPT_OCR_TEMP_ROOT).iterdir()), [])  # probe directories are removed
+
+    @override_settings(RECEIPT_OCR_PROVIDER="claude_cli")
+    def test_claude_startup_rejects_sign_out_bad_status_and_unknown_version(self):
+        provider = ClaudeCLIProvider()
+        Path(provider.config.temp_root).mkdir(parents=True, exist_ok=True)
+        version = ProcessResult(0, b"2.1.304 (Claude Code)")
+        for status in (ProcessResult(0, b'{"loggedIn": false, "authMethod": null}'), ProcessResult(1, b'{"loggedIn": true}'),
+                       ProcessResult(0, b"Not logged in"), ProcessResult(0, b'["loggedIn"]'), ProcessResult(0, b'{"loggedIn": 1}')):
+            with self.subTest(status=status), patch(
+                    "recognition.management.commands.recognition_worker.ProcessSupervisor.run", side_effect=[version, status]), \
+                    self.assertRaisesMessage(CommandError, "Claude authentication is unavailable: run `claude setup-token`"):
+                probe_claude(provider, "mock-claude")
+        with patch("recognition.management.commands.recognition_worker.ProcessSupervisor.run", side_effect=[
+            ProcessResult(0, b"Claude Code"), ProcessResult(0, b'{"loggedIn": true}'),
+        ]), self.assertRaisesMessage(CommandError, "Claude CLI version could not be determined"):
+            probe_claude(provider, "mock-claude")
+        with patch("recognition.management.commands.recognition_worker.ProcessSupervisor.run", side_effect=[ProcessResult(1)]), \
+                self.assertRaisesMessage(CommandError, "Claude startup capability check failed"):
+            probe_claude(provider, "mock-claude")
+        with patch("recognition.management.commands.recognition_worker.ProcessSupervisor.run", side_effect=ProviderError("timeout")), \
+                self.assertRaisesMessage(CommandError, "Claude startup probe failed or timed out"):
+            probe_claude(provider, "mock-claude")
+        self.assertFalse(hasattr(provider, "cli_version"))
 
     def test_invalid_fake_environment_has_no_fallback(self):
         with patch.dict(os.environ, {"RECEIPT_OCR_FAKE_SCENARIO": "typo"}):

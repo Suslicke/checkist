@@ -292,15 +292,17 @@ class FakeTextParser:
 
 
 class CodexTextParser:
-    """Один текстовый вызов Codex CLI со схемой ответа, как у предположений категорий."""
+    """Один текстовый вызов CLI (Codex либо Claude) со схемой ответа, как у предположений категорий."""
 
     name = "codex_cli"
 
     def __init__(self, provider=None):
         if provider is None:
-            from recognition.providers.codex_cli import CodexCLIProvider
+            from recognition.providers.factory import get_provider
 
-            provider = CodexCLIProvider()
+            provider = get_provider()  # codex_cli либо claude_cli — тот же текстовый вызов
+            self.name = settings.RECEIPT_OCR_PROVIDER
+        # ponytail: с переданным провайдером имя остаётся «codex_cli» — так его строят только тесты.
         self.provider = provider
 
     def parse(self, payload, run):
@@ -319,7 +321,7 @@ def get_parser(*, scenario=None):
     """Исполнитель настроенного провайдера; сбой Codex никогда не выбирает fake."""
     if settings.RECEIPT_OCR_PROVIDER == "fake":
         return FakeTextParser(scenario or os.environ.get(FAKE_SCENARIO_ENV) or "simple")
-    if settings.RECEIPT_OCR_PROVIDER == "codex_cli":
+    if settings.RECEIPT_OCR_PROVIDER in ("codex_cli", "claude_cli"):
         return CodexTextParser()
     raise ProviderError("configuration_error")
 

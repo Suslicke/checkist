@@ -299,10 +299,19 @@ RECEIPT_OCR_TEMP_ROOT = env_directory(
 if MEDIA_ROOT.is_relative_to(RECEIPT_OCR_TEMP_ROOT) or RECEIPT_OCR_TEMP_ROOT.is_relative_to(MEDIA_ROOT):
     raise ImproperlyConfigured("MEDIA_ROOT and RECEIPT_OCR_TEMP_ROOT must be separate directories.")
 RECEIPT_OCR_PROVIDER = env_text("RECEIPT_OCR_PROVIDER", "codex_cli")
-if RECEIPT_OCR_PROVIDER not in {"codex_cli", "fake"}:
-    raise ImproperlyConfigured("RECEIPT_OCR_PROVIDER: expected codex_cli or fake.")
-RECEIPT_OCR_MODEL = env_text("RECEIPT_OCR_MODEL", "gpt-6.1-sol")
+if RECEIPT_OCR_PROVIDER not in {"codex_cli", "claude_cli", "fake"}:
+    raise ImproperlyConfigured("RECEIPT_OCR_PROVIDER: expected codex_cli, claude_cli or fake.")
+# Одна модель на все вызовы; умолчание зависит от провайдера (Codex либо Claude Code CLI).
+RECEIPT_OCR_MODEL = env_text("RECEIPT_OCR_MODEL", "claude-opus-5-5" if RECEIPT_OCR_PROVIDER == "claude_cli" else "gpt-6.1-sol")
 RECEIPT_OCR_CODEX_EXECUTABLE = env_text("RECEIPT_OCR_CODEX_EXECUTABLE", "codex")
+# Claude Code CLI подпроцессом: исполняемый файл, усилие рассуждения и предел стоимости одного вызова.
+RECEIPT_OCR_CLAUDE_EXECUTABLE = env_text("RECEIPT_OCR_CLAUDE_EXECUTABLE", "claude")
+RECEIPT_OCR_CLAUDE_EFFORT = env_text("RECEIPT_OCR_CLAUDE_EFFORT", "medium")
+if RECEIPT_OCR_CLAUDE_EFFORT not in {"low", "medium", "high"}:
+    raise ImproperlyConfigured("RECEIPT_OCR_CLAUDE_EFFORT: expected low, medium or high.")
+RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD = env_text("RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD", "2.00")
+if not re.fullmatch(r"[0-9]+(\.[0-9]{1,2})?", RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD) or float(RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD) <= 0:
+    raise ImproperlyConfigured("RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD: expected a number above 0 with at most 2 decimals.")
 RECEIPT_OCR_PREPARE_TIMEOUT_SECONDS = env_integer("RECEIPT_OCR_PREPARE_TIMEOUT_SECONDS", 30, 1, 300)
 RECEIPT_OCR_CROP_TIMEOUT_SECONDS = env_integer("RECEIPT_OCR_CROP_TIMEOUT_SECONDS", 30, 1, 300)
 RECEIPT_OCR_DETECT_TIMEOUT_SECONDS = env_integer("RECEIPT_OCR_DETECT_TIMEOUT_SECONDS", 90, 1, 2400)

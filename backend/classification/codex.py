@@ -1,4 +1,4 @@
-"""Codex CLI classifier: the prompt file, the input document and one text-only call.
+"""CLI classifier (Codex or Claude): the prompt file, the input document and one text-only call.
 
 No ORM and no fake fallback: a failure is a ``ProviderError`` of the shared
 provider codes. The answer goes through the same ``validate_response`` as the
@@ -28,9 +28,11 @@ class CodexClassifier:
 
     def __init__(self, provider=None):
         if provider is None:
-            from recognition.providers.codex_cli import CodexCLIProvider
+            from recognition.providers.factory import get_provider
 
-            provider = CodexCLIProvider()
+            provider = get_provider()  # codex_cli or claude_cli: the same text-only call
+            self.name = settings.RECEIPT_OCR_PROVIDER
+        # ponytail: with an injected provider the name stays "codex_cli" — only tests build it that way.
         self.provider = provider
         self.model = provider.config.model
 

@@ -177,9 +177,12 @@ API и OCR-worker должны использовать **одни и те же*
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | Точные локальные origins с портом; образец включает Vite 5173/15173. Другой порт добавлять явно. Не локальный origin принимается только как `https://<хост из DJANGO_ALLOWED_HOSTS>` без порта и пути |
 | `MEDIA_ROOT`, `MEDIA_URL` | `<worktree>/media`, `/media/`; абсолютный root, URL в v1 фиксирован строго `/media/` |
 | `RECEIPT_OCR_TEMP_ROOT` | Приватный worktree-specific каталог системного temp; абсолютный путь, не пересекается с MEDIA |
-| `RECEIPT_OCR_PROVIDER` | `codex_cli` либо явно `fake`; fallback после ошибки отсутствует |
-| `RECEIPT_OCR_MODEL` | `gpt-6.1-sol` |
+| `RECEIPT_OCR_PROVIDER` | `codex_cli`, `claude_cli` ([Claude Code CLI](#claude-code-cli-вместо-codex-claude_cli-2026-10-20)) либо явно `fake`; fallback после ошибки отсутствует |
+| `RECEIPT_OCR_MODEL` | `gpt-6.1-sol`; при `claude_cli` и не заданной переменной — `claude-opus-5-5` (`opus` / `sonnet` / `haiku` и полные имена `claude-…` тоже принимаются). В `.env.example` строка задана — для Claude её сменить либо закомментировать |
 | `RECEIPT_OCR_CODEX_EXECUTABLE` | `codex`; на Windows для worker нужен **native .exe**, не .cmd/.ps1 и не строка shell-команды |
+| `RECEIPT_OCR_CLAUDE_EXECUTABLE` | `claude`; те же правила, что у Codex: путь к исполняемому файлу, не shell-команда |
+| `RECEIPT_OCR_CLAUDE_EFFORT` | `medium`; `low` / `medium` / `high` — флаг `--effort` каждого вызова |
+| `RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD` | `2.00`; число больше 0 с не более чем двумя знаками — предел `--max-budget-usd` одного вызова, перерасход — `configuration_error` без повтора |
 | `RECEIPT_OCR_FAKE_SCENARIO` | Команда читает server environment, default success2; `--fake-scenario` выше по приоритету. Не задан в `.env.example` |
 | `RECEIPT_OCR_PREPARE_TIMEOUT_SECONDS`, `RECEIPT_OCR_CROP_TIMEOUT_SECONDS` | 30/30, допустимо 1..300; проверки между шагами, hard deadline синхронного Pillow отсутствует |
 | `RECEIPT_OCR_DETECT_TIMEOUT_SECONDS`, `RECEIPT_OCR_RECOGNIZE_TIMEOUT_SECONDS` | 90/180 на вызов, 1..2400 |
@@ -522,6 +525,33 @@ $env:RECEIPT_OCR_CODEX_EXECUTABLE=Join-Path $env:LOCALAPPDATA 'Programs/OpenAI/C
 ```
 
 Для одного измеряемого прогона сначала загрузить новое demo single.png при остановленном worker, затем запустить `recognition_worker --once`; замерить wall time и GET Job/images/receipts. Если этот файл уже обработан fake, точный upload переиспользует его job: для реального прогона нужна новая QA-среда/новое исходное изображение, а succeeded job не retryable. Синтетический smoke и итог С6 — в verification.md; качество реальных фото проверяет человек по эталону. После приёмки Ctrl+C только своих host-процессов и `docker compose -p checkist_qa down`, без `-v`.
+
+### Claude Code CLI вместо Codex (`claude_cli`, 2026-10-20)
+
+Второй провайдер — `recognition/providers/claude_cli.py` (ветка `feature/claude-cli-provider`, план — [plans/2026-10-20-claude-cli-provider.md](plans/2026-10-20-claude-cli-provider.md)): тот же контракт `detect` / `recognize` / `run_text` и та же дисциплина подпроцесса, что у Codex, исполняемый файл `claude` — Claude Code CLI (проверено с 2.1.304). Один вызов — один процесс `claude -p --output-format stream-json --input-format stream-json --json-schema … --tools "" --system-prompt … --effort … --max-budget-usd …`; промпт и base64 картинки уходят одной строкой JSONL на stdin, ответ — `structured_output` единственного события `result` (разбор потока и коды ошибок — `backend/recognition/providers/README.md`, раздел «Claude Code CLI»). Вход — подписка claude.ai (Max) либо `ANTHROPIC_API_KEY`; `--bare` не используется, так как запрещает вход по подписке. Картинка сверх опубликованных пределов API (8000 px по стороне, 5 МБ base64) уходит JPEG, уменьшенным до 2576 px по длинной стороне из памяти; координаты детекта — доли 0..1, поэтому ничего не пересчитывается.
+
+Установка и вход на своей машине (подписка; на сервере без браузера входят токеном):
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash   # либо уже установленный claude
+claude --version                                  # 2.1.304 (Claude Code)
+claude auth status                                # JSON с "loggedIn": true
+claude setup-token                                # долгоживущий токен подписки для воркера на другой машине или в контейнере
+```
+
+Dev-запуск воркера (терминал worker; API не меняется; bash — macOS / Linux, в PowerShell те же имена через `$env:` и `claude.exe`):
+
+```bash
+export RECEIPT_OCR_PROVIDER=claude_cli
+export RECEIPT_OCR_MODEL=sonnet            # не задано — claude-opus-5-5; в .env.example стоит gpt-6.1-sol, его переопределить
+export RECEIPT_OCR_CLAUDE_EXECUTABLE=claude
+# export CLAUDE_CODE_OAUTH_TOKEN=…        # только если CLI этого пользователя не вошёл сам (~/.claude либо CLAUDE_CONFIG_DIR); на сервере — .env.recognition
+backend/.venv/bin/python backend/manage.py recognition_worker
+```
+
+Стартовая проверка воркера не вызывает модель: `claude --version` (semver в `provider.cli_version`) и `claude auth status` (JSON с `"loggedIn": true`), каждая не дольше 10 с, во временном каталоге `startup-` под `RECEIPT_OCR_TEMP_ROOT`. **`auth status` токен не проверяет:** при любом непустом `CLAUDE_CODE_OAUTH_TOKEN` CLI отвечает `"loggedIn": true, "authMethod": "oauth_token"`, так что опечатка или отозванный токен проходят старт, а отказывает первый настоящий вызов — попытка `auth_required` без повтора; после смены токена смотрите исход первого задания. Отказы: `Claude executable is unavailable…` (нет файла — `RECEIPT_OCR_CLAUDE_EXECUTABLE`), `Claude authentication is unavailable: run \`claude setup-token\` and set CLAUDE_CODE_OAUTH_TOKEN.` (нет входа), `Claude startup capability check failed.` (`--version` завершился с ошибкой), `Claude startup probe failed or timed out.`, `Claude CLI version could not be determined.`. Ребёнок получает allowlist Codex плюс `CLAUDE_CONFIG_DIR`, `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` и всегда `DISABLE_AUTOUPDATER=1`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, `DISABLE_TELEMETRY=1`; секреты БД не передаются; настройки Django для `CLAUDE_CONFIG_DIR` нет — переменная окружения воркера проходит как есть.
+
+Деньги: `RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD` — предел одного вызова (`--max-budget-usd`); перерасход — `configuration_error` без повтора, потому что тот же вызов превысил бы тот же предел. Короткий постоянный `--system-prompt` держит вызов в 1 300–6 000 токенов; без него CLI шлёт свой системный промпт на ~119 000 токенов (0,12 $ на haiku за один вызов). Пять текстовых вызовов — трата словами, предположения категорий, разбор месяца и вопросы к ИИ, склейка магазинов, вопросы выписок — берут провайдера из `factory.get_provider()`, `name` обёртки = `RECEIPT_OCR_PROVIDER`; модель пишется в `RecognitionAttempt` и `ClassificationRun` для любого провайдера, кроме `fake`. Тесты настоящий CLI не вызывают: у воркера `RECEIPT_OCR_CLAUDE_EXECUTABLE="nonexistent-checkist-claude"`, у провайдера `sys.executable` и подменённый supervisor (`recognition/tests/test_claude_cli.py`, `test_worker.py`). Сервер — [deployment-docker.md](deployment-docker.md#claude-code-cli-вместо-codex-claude_cli); что проверено — [verification.md](verification.md#фактические-результаты-провайдер-claude_cli-2026-10-20).
 
 ## Админка
 

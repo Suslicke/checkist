@@ -128,8 +128,9 @@ services:
     restart: unless-stopped
     logging: *logging
 
-  # Recognition worker next to Codex CLI. Off by default: add COMPOSE_PROFILES=recognition to the
-  # environment file only after `codex login status` succeeds in this service.
+  # Recognition worker next to Codex CLI and Claude Code CLI (RECEIPT_OCR_PROVIDER chooses). Off by
+  # default: add COMPOSE_PROFILES=recognition to the environment file only after `codex login status`
+  # or `claude auth status` succeeds in this service.
   recognition:
     <<: *app
     profiles: ["recognition"]
@@ -137,8 +138,16 @@ services:
     build:
       context: .
       target: recognition
+    # The shared file of the anchor, then the recognition-only file: the Claude token of
+    # `claude setup-token` lives in .env.recognition (deploy/docker/checkist.recognition.env.example)
+    # and reaches this service alone, never web, celery or a `ck manage` container. Missing with Codex.
+    env_file:
+      - ${CHECKIST_ENV_FILE:-.env.prod}
+      - path: ${CHECKIST_RECOGNITION_ENV_FILE:-.env.recognition}
+        required: false
     environment:
       CODEX_HOME: /home/checkist/.codex
+      CLAUDE_CONFIG_DIR: /home/checkist/.claude
     command: ["python", "manage.py", "recognition_worker"]
     # The worker gives its job back to the queue only on KeyboardInterrupt.
     init: true
@@ -148,6 +157,7 @@ services:
       - data:/var/lib/checkist
       - ocr_scratch:/var/lib/checkist-scratch
       - codex_home:/home/checkist/.codex
+      - claude_home:/home/checkist/.claude
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,5 +168,6 @@ volumes:
   data:
   ocr_scratch:
   codex_home:
+  claude_home:
   caddy_data:
   caddy_config:
