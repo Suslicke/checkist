@@ -32,6 +32,8 @@
 .dash-column { display: contents; }
 .dash-column-side > * { order: 1; }
 .dash-recent { order: 2; }
+/* «Лимиты»: the currency, the budget, the list and its save bar — one column of a wide screen, boxless otherwise. */
+.limits-main { display: contents; }
 
 /* The header row of the shell: «‹ Октябрь 2026 ›» and the family on the right; the new month slides in from its
    side (only without reduced motion). */
@@ -253,10 +255,22 @@
 .limits-history-up { color: var(--ck-over-text); }
 .limits-history-down { color: var(--ck-success-text); }
 
-/* A wide screen: the month and the spends on the left, the limits beside them. */
+/* A wide screen: the month and the spends on the left, the limits beside them — first in the side column, the income of
+   the month and the recurring payments under them. */
 @media (min-width: 960px) {
   .dash { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; max-width: none; }
   .dash-column { display: grid; gap: 16px; min-width: 0; }
+  .dash-column-side > .dash-limits { order: 0; }
+  /* «Лимиты»: the currency, the budget, the list and its save bar at the left (three fifths), the history at the right;
+     a row of the list is one line. The budget card (the same form markup) keeps its stacked layout. */
+  .limits { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  .limits > .limits-intro, .limits > .limits-back { grid-column: 1 / -1; max-width: 760px; }
+  .limits-main { display: grid; gap: 16px; min-width: 0; grid-column: 1; }
+  .limits > .limits-history { grid-column: 2; }
+  .limits-list .limits-form { grid-template-columns: minmax(0, 1fr) minmax(0, 16rem); align-items: center; column-gap: 16px; }
+  .limits-list .limits-form > .limits-row-head { grid-column: 1; }
+  .limits-list .limits-form > .limits-controls { grid-column: 2; }
+  .limits-list .limits-form > .receipt-field-error, .limits-list .limits-form > .limits-done { grid-column: 1 / -1; }
 }
 
 @media (max-width: 540px) {

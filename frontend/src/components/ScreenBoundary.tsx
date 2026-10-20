@@ -7,9 +7,12 @@ import { SpendsTopSkeleton } from './Skeleton'
 import type { SkeletonShape } from './Skeleton'
 
 /** The skeleton of the screen of an address: the same shape as while its data loads, so the waits before it (the check of
- * the sign-in, the script of the screen) and its own look like one. «Траты» keeps the room of its search and filters. */
+ * the sign-in, the script of the screen) and its own look like one. «Траты» keeps the room of its search and filters;
+ * the list screens that stand in two columns on a desktop (`columns`) show their aside there. The receipt, the spend
+ * form and the catalog keep `page` on purpose: their screens draw their own section cards or one form card. */
 export function ScreenSkeleton({ kind, message }: { kind: Route['kind']; message: string }) {
-  const shape: SkeletonShape = kind === 'dashboard' ? 'home' : kind === 'receipts' ? 'spends' : 'page'
+  const shape: SkeletonShape = kind === 'dashboard' ? 'home' : kind === 'receipts' ? 'spends'
+    : ['limits', 'recurring', 'goals', 'incomes', 'stores'].includes(kind) ? 'columns' : 'page'
   const state = <RequestState kind="loading" message={message} shape={shape} />
   return kind === 'receipts' ? <div className="ck-skel-screen"><SpendsTopSkeleton />{state}</div> : state
 }

@@ -45,6 +45,18 @@ describe('loading skeletons (components/Skeleton.tsx through RequestState, serve
     expect(count(html, 'class="ck-skel-row"')).toBe(5)
   })
 
+  it('draws the two columns of a list screen as the page card with an aside', () => {
+    const html = renderToStaticMarkup(<RequestState kind="loading" message="Загружаем лимиты…" shape="columns" />)
+    // In the card of the state, as `page`: 541–959 px look exactly as today; the aside shows only from 960 px.
+    expect(html).toContain('class="request-state request-state-loading"')
+    expect(html).not.toContain('request-state-bare')
+    expect(html).toContain('data-skeleton="columns"')
+    expect(count(html, 'class="ck-skel-figure ')).toBe(1)
+    expect(count(html, 'class="ck-skel-row"')).toBe(3)
+    expect(count(html, 'class="ck-skel-aside"')).toBe(1)
+    expect(words(html)).toBe('Загружаем лимиты…')
+  })
+
   it('draws two small lines inside a card (compact), whatever the shape', () => {
     const html = renderToStaticMarkup(<RequestState kind="loading" compact shape="home" />)
     expect(html).toContain('class="request-state request-state-loading request-state-compact"')
@@ -67,7 +79,8 @@ describe('the fallback of a screen whose script is on its way (components/Screen
     expect(spends.indexOf('data-skeleton="spends-top"')).toBeGreaterThan(-1)
     expect(spends.indexOf('data-skeleton="spends-top"')).toBeLessThan(spends.indexOf('data-skeleton="spends"'))
     expect(spends).toContain('aria-busy="true"')
-    expect(renderToStaticMarkup(<ScreenFallback kind="goals" />)).toContain('data-skeleton="page"')
+    expect(renderToStaticMarkup(<ScreenFallback kind="goals" />)).toContain('data-skeleton="columns"')
+    expect(renderToStaticMarkup(<ScreenFallback kind="account" />)).toContain('data-skeleton="page"')
   })
 
   it('shows «Экран не загрузился» with «Повторить» for a script that did not come, and passes any other error on', () => {
@@ -127,6 +140,13 @@ describe('rules of the skeletons (text of Skeleton.css, not rendering)', () => {
   it('keeps the layout of «Главная»: one column of a phone, two from 960 px', () => {
     expect(css).toContain('.ck-skel-column { display: contents; }')
     expect(css).toContain('@media (min-width: 960px) {')
+  })
+
+  it('hides the aside of the columns shape below 960 px and widens the list skeletons in a second 960 block', () => {
+    expect(css).toContain('.ck-skel-aside { display: none; }')
+    // Two blocks of the same width on purpose: the first (the columns of «Главная») precedes the base rules of «Трат»
+    // and the filters, so the rules that must beat them by order live in a second block after them.
+    expect(css.match(/@media \(min-width: 960px\) \{/g)).toHaveLength(2)
   })
 
   it('takes the skeleton colour and the network bar from tokens.css in both themes', () => {

@@ -69,7 +69,7 @@ export default function GoalsPage() {
     })
     return () => controller.abort()
   }, [attempt])
-  if (!load) return <RequestState kind="loading" message="Загружаем цели…" />
+  if (!load) return <RequestState kind="loading" message="Загружаем цели…" shape="columns" />
   if (load.kind === 'error') return <RequestState kind="error" message={load.message} onRetry={() => setAttempt((value) => value + 1)} />
   const { data } = load
   const save = (draft: GoalDraft) => {

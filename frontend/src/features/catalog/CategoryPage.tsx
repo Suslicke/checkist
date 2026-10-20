@@ -24,24 +24,31 @@ export function CategoryPage({ categoryId, query }: CategoryPageProps) {
   const categoryBlock = useLocalRequestFocus(category.state)
   const node = category.state.kind === 'ok' ? category.state.data : undefined
   const narrow = useNarrow()
+  // The wrappers have no box below 960 px (display: contents, desktop.css): one column in today's order. From 960 the
+  // head takes column 2, the rail (subcategories, search) column 1 beside the head and the products; while the category
+  // loads the head alone spans the page (:only-child).
   return <div className="ck-catalog">
-    {node && <CategoryBreadcrumbs path={node.path} />}
-    <section ref={categoryBlock} className="ck-catalog-category" aria-labelledby="ck-catalog-category-heading" aria-busy={category.state.kind === 'loading'}>
-      <h2 id="ck-catalog-category-heading" data-request-focus-target tabIndex={-1}>{node?.name ?? 'Категория'}</h2>
-      {category.state.kind === 'loading' && <RequestState kind="loading" message="Загружаем категорию…" />}
-      {category.state.kind === 'error' && <CatalogError error={category.state} route={route} onRetry={category.retry} />}
-      {node && <p className="ck-catalog-note">Товаров в этой ветви: {node.products_total.toLocaleString('ru-RU')}</p>}
-    </section>
-    {node && <>
-      <CategoryIconPicker categoryId={categoryId} root={node.parent_id === null} />
+    <div className="ck-catalog-main">
+      {node && <CategoryBreadcrumbs path={node.path} />}
+      <section ref={categoryBlock} className="ck-catalog-category" aria-labelledby="ck-catalog-category-heading" aria-busy={category.state.kind === 'loading'}>
+        <h2 id="ck-catalog-category-heading" data-request-focus-target tabIndex={-1}>{node?.name ?? 'Категория'}</h2>
+        {category.state.kind === 'loading' && <RequestState kind="loading" message="Загружаем категорию…" />}
+        {category.state.kind === 'error' && <CatalogError error={category.state} route={route} onRetry={category.retry} />}
+        {node && <p className="ck-catalog-note">Товаров в этой ветви: {node.products_total.toLocaleString('ru-RU')}</p>}
+      </section>
+      {node && <CategoryIconPicker categoryId={categoryId} root={node.parent_id === null} />}
+    </div>
+    {node && <div className="ck-catalog-side">
       {node.children.length > 0 && <section aria-labelledby="ck-catalog-subcategories-heading">
         <h2 id="ck-catalog-subcategories-heading">Подкатегории</h2>
         {narrow ? <CategoryChips categories={node.children} label="Подкатегории" />
           : <div className="ck-catalog-panel"><CategoryLinks categories={node.children} /></div>}
       </section>}
       <CatalogSearch route={route} generics={node.generic_products} error={products.state.kind === 'error' ? products.state : undefined} />
+    </div>}
+    {node && <div className="ck-catalog-main">
       <ProductsSection state={products.state} route={route} onRetry={products.retry} childrenCount={node.children.length} />
-    </>}
+    </div>}
   </div>
 }
 

@@ -104,7 +104,7 @@ export default function IncomesPage({ month: asked }: { month?: string }) {
       } else if (result.kind === 'error') setFailure(result.reason === 'invalid_parameter' ? 'Название — от 1 до 60 символов.' : dashboardErrorMessage(result))
     })
   }
-  if (!load) return <RequestState kind="loading" message="Загружаем доходы…" />
+  if (!load) return <RequestState kind="loading" message="Загружаем доходы…" shape="columns" />
   if (load.kind === 'error') return <RequestState kind="error" message={load.message} onRetry={() => setAttempt((value) => value + 1)} />
   return <IncomesView data={load.data} categories={load.categories} notice={notice} busy={busy} failure={failure} onAddCategory={addCategory} />
 }

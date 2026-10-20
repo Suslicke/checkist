@@ -22,7 +22,8 @@ export default function RequestState(props: RequestStateProps) {
   if (props.kind === 'loading') {
     const shape = props.shape ?? 'page'
     // «Главная» and «Траты» draw cards of their own: their skeleton stands on the page, not in one more card.
-    const bare = !props.compact && shape !== 'page'
+    // `columns` stays in the card of the state, as `page`: below 960 px it looks exactly like it.
+    const bare = !props.compact && (shape === 'home' || shape === 'spends')
     return (
       <div className={`request-state request-state-loading${props.compact ? ' request-state-compact' : ''}${bare ? ' request-state-bare' : ''}`} aria-live="polite" aria-busy="true">
         <p className="ck-skel-message">{props.message ?? 'Загружаем данные…'}</p>

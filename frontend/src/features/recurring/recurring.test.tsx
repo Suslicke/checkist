@@ -68,9 +68,9 @@ describe('words of regular payments', () => {
 })
 
 describe('«Осталось оплатить» on «Главная» (Vitest/SSR, not browser visual acceptance)', () => {
-  it('is one line of the dashboard, right after the two big actions', () => {
+  it('is one line of the dashboard, in the side column right after the income of the month (a phone reads it after the two big actions by the order rules of Dashboard.css)', () => {
     const source = readFileSync(new URL('../dashboard/DashboardPage.tsx', import.meta.url), 'utf8')
-    expect(source).toContain('      <Actions />\n      <IncomeSummary month={data.month} />\n      <RecurringDue month={data.month} />\n')
+    expect(source).toContain('    <div className="dash-column dash-column-side">\n      <IncomeSummary month={data.month} />\n      <RecurringDue month={data.month} />\n')
   })
   it('draws nothing without payments and suggestions, a quiet line with suggestions alone', () => {
     const empty = recurringFixture({ payments: [], questions: [], suggestions: [], totals: [] })
@@ -131,6 +131,20 @@ describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
     expect(page).toContain('<h2 id="rec-off-heading">Выключены</h2>')
     expect(page).toContain('Регулярных платежей пока нет.')
     expect(page).not.toContain('rec-history')
+  })
+  it('wraps the questions, the suggestions and the month in one boxless column, the income and the off ones in another (T8)', () => {
+    const data = recurringFixture({ payments: [...recurringFixture().payments, monthPaymentFixture({ id: 99, state: 'inactive', active: false, paid: null })] })
+    const page = html(<RecurringView data={data} />)
+    // The intro stays first; the main column opens right after it with the question card.
+    expect(page).toContain('Сам я ничего не добавляю.</p><div class="rec-main"><section class="ck-panel rec-card rec-ask"')
+    // The side column opens right after the month card and holds the income first, the off ones last; the page ends with it.
+    expect(page).toContain('Добавить платёж</button></section></div><div class="rec-side"><section class="ck-panel rec-card" aria-labelledby="rec-income-heading">')
+    expect(page).toMatch(/<h2 id="rec-off-heading">Выключены<\/h2>.*<\/section><\/div><\/div>$/)
+    const at = (text: string) => { const index = page.indexOf(text); expect(index, text).toBeGreaterThan(-1); return index }
+    const order = ['class="rec-intro"', 'class="rec-main"', 'rec-ask-heading', 'rec-suggest-heading', 'rec-list-heading', 'class="rec-side"', 'rec-income-heading', 'rec-off-heading']
+    expect(order.map(at)).toEqual([...order.map(at)].sort((a, b) => a - b))
+    expect(page.match(/class="rec-main"/g)).toHaveLength(1)
+    expect(page.match(/class="rec-side"/g)).toHaveLength(1)
   })
   it('draws the form as rows, the deletion behind one more question', () => {
     const categories = [

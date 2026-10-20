@@ -1,0 +1,137 @@
+/* Компьютер (от 960 px — DESKTOP_MIN_WIDTH в lib/cards/narrow.ts): раскладка экранов в колонки. Один медиа-блок на весь
+   файл; вне блока — только обёртки колонок без коробки (display: contents) и их order, которые повторяют нынешний порядок
+   телефона. Телефон (≤ 540 px) и 541–959 px не меняются. Цвета — токены, размеры текста — только шкала --ck-text-*.
+   Файл идёт в styles.ts после всех CSS экранов и до Skeleton.css: при равном весе правило отсюда побеждает правило экрана;
+   App.css и ActionBar.css идут ПОСЛЕ — на их правила равного веса здесь не рассчитывать. Страж — theme/desktop-css.test.ts. */
+
+/* The catalog (features/catalog CatalogPage.tsx, CategoryPage.tsx): the rail and the main have no box below 960 px, so
+   both pages render today's one column in today's DOM order. */
+.ck-catalog-side, .ck-catalog-main { display: contents; }
+/* «Платежи» (features/recurring RecurringPage.tsx): the two columns have no box below 960 px — today's one column in
+   today's DOM order, no order rules needed (each wrapper holds a contiguous group). */
+.rec-main, .rec-side { display: contents; }
+
+@media (min-width: 960px) {
+  /* Правила экранов добавляют свои задачи: Траты, Чек, Новая трата, Каталог, Платежи, Цели, Доходы, Магазины. */
+
+  /* «Траты» (features/receipts): the whole page, the filters as one line of four fields and the buttons, 52 px rows.
+     The two .receipt-filter-grid wrappers dissolve, so the four fields are columns 1–4 of the first row and the buttons
+     column 5; the help line, the note «Фильтры из ссылки» and the form error go under them (order: 9). The heading
+     stays for aria-labelledby, hidden by position and clip (not overflow) — out of flow, so the panel has one item and
+     no gap. The date tracks keep 150 px (a Chrome date field with its picker at 16 px; at 960 the four tracks would be
+     ≈ 142 px), the selects shrink. Fields align at the top, so a field error under one of them does not push the other
+     labels down; only the buttons sit at the bottom, on the line of the inputs. The phone sheet is a portal outside
+     .spends-toolbar, so these rules never reach it. A row: badge | title | meta | amount on one line. The skeleton of
+     the screen (Skeleton.css, second 960 block) mirrors the tracks, the gap and the row height — the guard compares them. */
+  .spends-page { max-width: none; }
+  .spends-toolbar > .receipt-panel { padding: 12px 16px; }
+  .spends-toolbar > .receipt-panel > h2 { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); white-space: nowrap; }
+  .spends-toolbar > .receipt-panel > form { grid-template-columns: repeat(2, minmax(150px, 1fr)) repeat(2, minmax(0, 1fr)) auto; align-items: start; gap: 8px 12px; }
+  .spends-toolbar > .receipt-panel > form > .receipt-filter-grid { display: contents; }
+  .spends-toolbar > .receipt-panel > form > .receipt-note, .spends-toolbar > .receipt-panel > form > .receipt-field-error { grid-column: 1 / -1; order: 9; margin: 0; }
+  .spends-toolbar > .receipt-panel > form > .receipt-actions { grid-column: 5; align-self: end; flex-wrap: nowrap; gap: 8px; }
+  .spends-toolbar > .receipt-panel > form > .receipt-actions > button { white-space: nowrap; }
+  .spends-row { display: grid; grid-template-columns: 40px minmax(0, 1.2fr) minmax(0, 1fr) auto; column-gap: 12px; align-items: center; min-height: 52px; padding: 8px 16px; }
+  .spends-row-main { display: contents; }
+  .spends-row-amount { justify-self: end; text-align: right; }
+
+  /* The page of a receipt (features/receipts ReceiptPage.tsx): the header beside its images, the lines table across the
+     whole width (no scroll from 1024 px, WRAP_ACCEPTANCE step 5), discounts beside taxes; a spend by hand (no
+     #receipt-images) keeps one header at the 760 px cap of the narrower screen. Sparse auto-placement: the hero (column 1)
+     and the images (column 2, next in DOM) share a row, so do discounts and taxes; everything else spans both columns.
+     Weights: > * (0,1,0) < > .receipt-hero (0,2,0) < > #receipt-images (1,1,0) < :not(:has()) hero (1,2,0). The action
+     tiles become pills — icon before the word, 44 px — by repeating the selectors of Receipts.css verbatim: the same
+     weight, this sheet comes later; the four-tile rule of a manual spend with «Скрыть» is lifted the same way. The notes
+     and the inline confirmation (flex: 1 1 100%) are not matched and keep the whole width. */
+  .receipt-screen { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  .receipt-screen > * { grid-column: 1 / -1; }
+  .receipt-screen > .receipt-hero { grid-column: 1; }
+  .receipt-screen > #receipt-images { grid-column: 2; }
+  .receipt-screen:not(:has(> #receipt-images)) > .receipt-hero { grid-column: 1 / -1; max-width: 760px; }
+  .receipt-screen > #receipt-discounts { grid-column: 1; }
+  .receipt-screen > #receipt-taxes { grid-column: 2; }
+  .receipt-screen #receipt-images .receipt-images { grid-template-columns: minmax(0, 1fr); }
+  .receipt-toolbar > .receipt-actions > a, .receipt-toolbar > .receipt-actions > button { flex: 0 1 auto; flex-direction: row; gap: 8px; min-height: 44px; padding: 0 16px; }
+  .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > a, .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > button { flex-basis: auto; }
+
+  /* «Новая трата» (features/expense ExpensePage.tsx): the form at the left (two thirds), «Скажите словами — заполню форму»
+     pinned at the right; without the hint (editing a spend or an income) one column at the 760 px cap of the receipt
+     page. The form itself is not split: its reading and tab order stay, the save bar stays in flow at its end. Without
+     .expense-kind the form takes row 1 and the hint spans rows 1–2 (row 2 empty, 0 px); with it, kind row 1, form row 2.
+     align-items: start gives the hint's cell the height of the form, inside which it sticks 16 px from the top (no sticky
+     header on a desktop: App.css pins .intro only in its phone block). The only sticky of this sheet — the guard lists it.
+     Weights: .expense-page (0,1,0) later in cascade beats Expense.css «flex; max-width: 600px»; the :not(:has()) rule
+     (0,2,0) wins for the pages without the hint. */
+  .expense-page { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px 24px; align-items: start; max-width: none; }
+  .expense-page > .expense-kind { grid-column: 1; }
+  .expense-page > .expense-hint { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 16px; }
+  .expense-page > .expense-form { grid-column: 1; }
+  .expense-page:not(:has(> .expense-hint)) { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+
+  /* The catalog: the search and the categories a 280 px rail at the left, the products a table at the right (ProductList
+     draws it from 960 px, useDesktop). A category page keeps its order: head, then the rail beside the products; before
+     its category loads (or on an error) the head alone takes the whole width. Placement: the rail of the catalog page
+     (first in DOM) and the head of a category page (a main, first in DOM) auto-place into row 1; the rail that FOLLOWS a
+     main gets a definite row 1 / span 2 (placed before the auto-placed mains), so the products main lands in row 2 of
+     column 2. Weights: .ck-catalog-main (0,1,0) < .ck-catalog-main ~ .ck-catalog-side (0,2,0) < :only-child (0,3,0).
+     The table: fixed columns of 42 / 30 / 28 % that add up to the width, so names and generic names wrap by words
+     (overflow-wrap of .ck-catalog) and nothing scrolls; the price stays whole through Catalog.css. The split comes from
+     the narrowest main (584 px at a 960 window) and the headers in Manrope 700 / 13 px: «Обобщённый продукт» ≈ 141 px
+     needs ≥ 30 % (175 − 32 of padding = 143), «Последняя покупка» ≈ 127 px needs ≥ 28 % (163 − 32 = 131). The headers
+     are not nowrap: a browser that draws them a pixel wider wraps the second word instead of running into the next
+     heading. The rail's search controls go one under the other inside the 280 px card. */
+  .ck-catalog { grid-template-columns: 280px minmax(0, 1fr); gap: 20px 24px; align-items: start; }
+  .ck-catalog-side, .ck-catalog-main { display: grid; gap: 20px; min-width: 0; }
+  .ck-catalog-side { grid-column: 1; }
+  .ck-catalog-main { grid-column: 2; }
+  .ck-catalog-main ~ .ck-catalog-side { grid-row: 1 / span 2; }
+  .ck-catalog > .ck-catalog-main:only-child { grid-column: 1 / -1; }
+  .ck-catalog-side .ck-catalog-search-controls { grid-template-columns: minmax(0, 1fr); }
+  .ck-catalog-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
+  .ck-catalog-col-name { width: 42%; }
+  .ck-catalog-col-generic { width: 30%; }
+  .ck-catalog-col-last { width: 28%; }
+  .ck-catalog-table th, .ck-catalog-table td { padding: 12px 16px; text-align: left; vertical-align: top; }
+  .ck-catalog-table thead th { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; }
+  .ck-catalog-table tbody th, .ck-catalog-table tbody td { border-top: 1px solid var(--ck-divider); }
+  .ck-catalog-table th[scope="row"] { font-weight: 400; }
+  .ck-catalog-table h3 a { display: inline-block; min-height: 44px; padding-block: 6px; color: var(--ck-link); text-decoration: none; }
+  .ck-catalog-table h3 a:hover { text-decoration: underline; }
+  .ck-catalog-table-last ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .ck-catalog-table-last li { display: grid; gap: 2px; }
+
+  /* «Платежи»: the questions, the found ones and the month at the left (three fifths); the regular income and the
+     switched-off ones at the right. The forms stay in the sheet (a portal outside .rec-page). .rec-page (0,1,0) later in
+     cascade beats the 760 px cap and the single column of Recurring.css; the wrappers become columns of cards with the
+     gap of the page, so the rows of the two columns are independent; «Добавить платёж» / «Добавить доход» keep
+     width: 100 % inside their cards. */
+  .rec-page { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  .rec-page > .rec-intro { grid-column: 1 / -1; max-width: 760px; }
+  .rec-main, .rec-side { display: grid; gap: 16px; min-width: 0; }
+  .rec-main { grid-column: 1; }
+  .rec-side { grid-column: 2; }
+
+  /* «Цели» (features/goals GoalsPage.tsx — the list only: the page of one goal shares the .goals root and has no
+     .goal-add, so :has(> .goal-add) (0,2,0) leaves it at the 720 px cap of Goals.css): the family's at the left, the
+     personal ones at the right; one group alone (or the empty card) keeps today's width — section:only-of-type counts
+     <section> siblings only, the button is not one; «Новая цель» is not a page-wide button (> .goal-add (0,3,0) beats
+     width: 100 % of Goals.css). The gap repeats the one of the .ck-stack brick. */
+  .goals:has(> .goal-add) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; max-width: none; }
+  .goals:has(> .goal-add) > .goal-empty, .goals:has(> .goal-add) > section:only-of-type { grid-column: 1 / -1; max-width: 720px; }
+  .goals:has(> .goal-add) > .goal-add { grid-column: 1 / -1; width: auto; min-width: 280px; justify-self: start; }
+  /* «Доходы» (features/incomes IncomesPage.tsx): the month at the left (three fifths), the categories at the right of
+     the same row by auto-placement; the notice, when there is one, spans the row above. .inc-page (0,1,0) later in
+     cascade beats the 760 px cap of Incomes.css and the flex of the .ck-stack brick (weight 0). */
+  .inc-page { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; max-width: none; }
+  .inc-page > .inc-notice { grid-column: 1 / -1; }
+  /* «Магазины» (features/stores StoresPage.tsx): all the places at the left (three fifths), «Похоже на одного получателя»
+     at the right of the same row — dense flow lets the later «Все магазины» fill column 1 of the suggestions' row; without
+     suggestions (a member) the list sits alone in the 60 % column. The intro, the notices and the bar «Склеить выбранные»
+     span both columns. The merge sheet is a portal (null when closed), never a grid child. The phone rules of Stores.css
+     (the 540 block, the bar's margin-inline) are untouched. */
+  .stores-page { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-auto-flow: row dense; gap: 16px; align-items: start; max-width: none; }
+  .stores-page > .stores-intro, .stores-page > .stores-notice, .stores-page > .stores-failure, .stores-page > .stores-actions { grid-column: 1 / -1; }
+  .stores-page > .stores-intro { max-width: 760px; }
+  .stores-page > .stores-suggestions { grid-column: 2; }
+  .stores-page > .ck-panel:not(.stores-suggestions) { grid-column: 1; }
+}
