@@ -84,6 +84,25 @@ describe('the budget panel of «Лимиты»', () => {
     expect(limits()).not.toContain('limits-budget')
   })
 
+  it('stands with the currency, the list and the save bar in one wrapper; the history and «На главную» come after it (desktop columns)', () => {
+    // The wrapper is `display: contents` below 960 px: a phone reads the same sequence as before.
+    const html = renderToStaticMarkup(<LimitsView categories={[category]} limits={[limitFixture()]} currencies={['KZT']} currency="KZT" base="KZT"
+      family drafts={{}} statuses={{}} onCurrency={noop} onAddCurrency={() => undefined} onDraft={noop} onSave={noop} onDelete={noop}
+      budget={{ state: { kind: 'ok', budget: { amount: '700000.00', currency: 'KZT', base_currency: 'KZT' } }, onSave: save }}
+      history={{ kind: 'ok', changes: [] }} />)
+    const at = (marker: string) => { const index = html.indexOf(marker); expect(index, marker).toBeGreaterThan(-1); return index }
+    expect(html).toContain('</p><div class="limits-main"><section class="ck-panel dash-card limits-currencies"')
+    expect(at('limits-intro')).toBeLessThan(at('<div class="limits-main">'))
+    expect(at('limits-currencies')).toBeLessThan(at('limits-budget'))
+    expect(at('limits-budget')).toBeLessThan(at('limits-list'))
+    expect(at('limits-list')).toBeLessThan(at('limits-savebar'))
+    expect(at('limits-savebar')).toBeLessThan(at('limits-history'))
+    expect(at('limits-history')).toBeLessThan(at('limits-back'))
+    // The wrapper closes right after the save bar: the history is a sibling of the wrapper, not its child.
+    expect(html).toContain('</button></div></div><section class="ck-panel dash-card limits-history"')
+    expect(html.match(/limits-main/g)).toHaveLength(1)
+  })
+
   it('shows the amount, the field in the base currency, «Сохранить» and «Убрать»', () => {
     const html = renderToStaticMarkup(<MonthBudgetPanel family onSave={save}
       state={{ kind: 'ok', budget: { amount: '700000.00', currency: 'KZT', base_currency: 'KZT' } }} />)

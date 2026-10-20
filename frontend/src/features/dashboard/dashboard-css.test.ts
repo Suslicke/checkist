@@ -87,6 +87,35 @@ describe('«Главная» and «Лимиты» styles (text of the rules, not
     const wide = css.slice(css.indexOf('@media (min-width: 960px)'), css.indexOf('@media (max-width: 540px)'))
     expect(wide).toContain('.dash-column-side > .dash-limits { order: 0; }')
   })
+  it('lays «Лимиты» out in two columns from 960 px only: the list at the left, the history at the right, a row on one line', () => {
+    const base = css.slice(0, css.indexOf('@media'))
+    const wide = css.slice(css.indexOf('@media (min-width: 960px)'), css.indexOf('@media (max-width: 540px)'))
+    const phone = css.slice(css.indexOf('@media (max-width: 540px)'))
+    // Below 960 the wrapper is boxless: the phone and 541–959 keep today's one column, gap and 760 px cap.
+    expect(base).toContain('\n.limits-main { display: contents; }\n')
+    expect(css.match(/\.limits-main/g)).toHaveLength(2)
+    expect(body('.limits')).toContain('max-width: 760px;')
+    expect(wide).toContain('.limits { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }')
+    expect(wide).toContain('.limits > .limits-intro, .limits > .limits-back { grid-column: 1 / -1; max-width: 760px; }')
+    expect(wide).toContain('.limits-main { display: grid; gap: 16px; min-width: 0; grid-column: 1; }')
+    expect(wide).toContain('.limits > .limits-history { grid-column: 2; }')
+    // A row of the list: the head at the left, the field and «Удалить» in 16 rem at the right, a message under both.
+    expect(wide).toContain('.limits-list .limits-form { grid-template-columns: minmax(0, 1fr) minmax(0, 16rem); align-items: center; column-gap: 16px; }')
+    expect(wide).toContain('.limits-list .limits-form > .limits-row-head { grid-column: 1; }')
+    expect(wide).toContain('.limits-list .limits-form > .limits-controls { grid-column: 2; }')
+    expect(wide).toContain('.limits-list .limits-form > .receipt-field-error, .limits-list .limits-form > .limits-done { grid-column: 1 / -1; }')
+    expect((wide.match(/\.limits-list \.limits-form/g) ?? []).length).toBeGreaterThanOrEqual(4)
+    // The budget card renders the same form markup and keeps its stacked layout: no unscoped `.limits-form` rule on a wide screen.
+    const formSelectors = [...wide.matchAll(/([^{}]+)\{/g)].flatMap((match) => match[1].split(',').map((selector) => selector.trim()))
+      .filter((selector) => selector.includes('.limits-form'))
+    expect(formSelectors.length).toBeGreaterThanOrEqual(4)
+    expect(formSelectors.filter((selector) => !selector.startsWith('.limits-list .limits-form'))).toEqual([])
+    expect(wide).not.toContain('.limits-budget')
+    // The phone block of «Лимиты» is as it was.
+    expect(phone).toContain('.limits-savebar { margin-inline: -16px; padding-inline: 16px; }')
+    expect(phone).toContain('.limits-row { padding: 14px 16px; }')
+    expect(phone).not.toContain('limits-main')
+  })
   it('sizes text only by the tokens of the type scale, a field never under 16 px', () => {
     const sizes = [...css.matchAll(/font-size:\s*([^;]+);/g)].map((match) => match[1].trim())
     expect(sizes.filter((size) => !/^var\(--ck-text-(xs|sm|base|lg|xl|hero)\)$/.test(size))).toEqual([])

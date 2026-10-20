@@ -186,6 +186,8 @@ export function LimitsView({
       ? 'Лимит — сколько семья готова потратить на категорию за месяц. Лимиты общие: их видят и меняют все члены семьи.'
       : 'Лимит — сколько вы готовы потратить на категорию за месяц.'} Лимит можно задать и подкатегории: её траты входят
       и в её лимит, и в лимит категории выше.</p>
+    {/* The currency, the budget, the list and its save bar: the left column of a wide screen; boxless below 960 px. */}
+    <div className="limits-main">
     {base ? <section className="ck-panel dash-card limits-currencies" aria-labelledby="limits-currency-heading">
       <h2 id="limits-currency-heading" className="limits-small-heading">Валюта · {currencySymbol(base)}</h2>
       <p className="dash-note limits-base-note">{`Лимиты — в основной валюте${family ? ' семьи' : ''} (${base}): траты в других `
@@ -253,6 +255,7 @@ export function LimitsView({
       <button type="button" className="limits-save" disabled={saving || !changed.length} onClick={() => onSaveAll(changed)}>
         {saving ? 'Сохраняем…' : saveBarLabel(changed.length)}</button>
     </div>}
+    </div>
     {history && <LimitHistory state={history} category={historyCategory} onCategory={onHistoryCategory} onRetry={onHistoryRetry} />}
     <p className="limits-back"><Link className="dash-link" to="/">На главную</Link></p>
   </div>
