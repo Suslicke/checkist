@@ -25,7 +25,7 @@ from django.db.models import F
 from django.utils import timezone
 from rest_framework import status
 
-from accounts.models import AiUsage, Household
+from accounts.models import AiModelSetting, AiUsage, Household
 from api.common import utc_datetime
 from config.exceptions import ApiError
 
@@ -127,3 +127,24 @@ def set_enabled(household, enabled):
     household.ai_enabled = enabled
     household.save(update_fields=["ai_enabled"])
     return household
+
+
+def model_choice():
+    """Модель и усилие для вызова: строка ``AiModelSetting`` у ``claude_cli``, иначе настройки сервера."""
+    from django.conf import settings
+
+    choice = {"provider": settings.RECEIPT_OCR_PROVIDER, "model": settings.RECEIPT_OCR_MODEL,
+              "effort": settings.RECEIPT_OCR_CLAUDE_EFFORT, "source": "settings"}
+    if choice["provider"] != "claude_cli":
+        return choice
+    row = AiModelSetting.objects.filter(pk=1).values("model", "effort").first()
+    return {**choice, **row, "source": "database"} if row else choice
+
+
+def set_model(model, effort, *, actor):
+    """Выбор администратора сервера; неизвестное значение — ``ValueError`` с именем поля."""
+    if model not in AiModelSetting.MODELS:
+        raise ValueError("model")
+    if effort not in AiModelSetting.EFFORTS:
+        raise ValueError("effort")
+    AiModelSetting.objects.update_or_create(pk=1, defaults={"model": model, "effort": effort, "updated_by": actor})

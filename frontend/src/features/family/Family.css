@@ -35,6 +35,7 @@
 .family-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 56px; border-bottom: 1px solid var(--ck-divider); cursor: text; }
 .family-field > span { flex: none; font-size: var(--ck-text-sm); font-weight: 600; }
 .family-field input { flex: 1; width: 100%; min-width: 0; min-height: 48px; padding: 0 2px; border: 0; border-radius: var(--ck-radius-sm); background: transparent; color: var(--ck-text); font-size: var(--ck-text-base); text-align: right; }
+.family-field select { flex: 1; min-width: 0; min-height: 48px; padding: 0 2px; border: 0; background: transparent; color: var(--ck-text); font-size: var(--ck-text-base); text-align: right; cursor: pointer; }
 .family-field input::placeholder { color: var(--ck-text-muted); opacity: 1; }
 
 /* Something shown once: a password or the address of an invite, on the gold tint. */

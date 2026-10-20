@@ -187,3 +187,23 @@ class ApiToken(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.name} ({self.scope})"
+
+
+class AiModelSetting(models.Model):
+    """Модель и усилие Claude, выбранные администратором сервера на «Семье»; одна строка (``pk=1``).
+
+    Читает только ``accounts.ai.model_choice`` — перед каждым вызовом модели, поэтому смена действует
+    сразу; действует только при ``RECEIPT_OCR_PROVIDER=claude_cli``, без строки решают настройки.
+    """
+
+    MODELS = ("opus", "sonnet", "haiku")
+    EFFORTS = ("low", "medium", "high")
+
+    model = models.CharField(max_length=20, choices=[(name, name) for name in MODELS])
+    effort = models.CharField(max_length=10, choices=[(name, name) for name in EFFORTS], default="medium")
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+
+    class Meta:
+        verbose_name = "AI model"
+        verbose_name_plural = "AI model"

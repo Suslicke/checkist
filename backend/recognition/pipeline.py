@@ -164,7 +164,7 @@ class JobPipeline:
             attempt = queue.start_attempt(
                 *self.fence, phase=phase, image_id=image.pk if image else None,
                 provider=settings.RECEIPT_OCR_PROVIDER,
-                model="" if settings.RECEIPT_OCR_PROVIDER == "fake" else settings.RECEIPT_OCR_MODEL,
+                model="" if settings.RECEIPT_OCR_PROVIDER == "fake" else getattr(self.provider, "model_name", settings.RECEIPT_OCR_MODEL),
                 provider_version="1", cli_version=getattr(self.provider, "cli_version", ""),
                 prompt_version="2" if phase == AttemptPhase.DETECT else "5",
                 schema_version="1" if phase == AttemptPhase.DETECT else "2",
