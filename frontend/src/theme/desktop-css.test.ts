@@ -39,7 +39,8 @@ describe('desktop stylesheet (src/theme/desktop.css, text of the rules, not rend
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|\b(?:rgb|hsl|hwb|lab|lch|oklab|oklch)a?\(/i)
     for (const [, size] of css.matchAll(/font-size:\s*([^;]+);/g)) expect(size.trim()).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl|hero)\)$/)
     expect(css).not.toMatch(/z-index|position: fixed|transition|animation|@keyframes|!important|scroll-padding|\(max-width|overflow|@import|appearance|outline:\s*(none|0)/)
-    expect(rules(css).filter((item) => /position: sticky/.test(item.body)).map((item) => item.selector)).toEqual([])
+    // The one allowed sticky: «Скажите словами» pinned beside the spend form (T5); never a header, never a bar.
+    expect(rules(css).filter((item) => /position: sticky/.test(item.body)).map((item) => item.selector)).toEqual(['.expense-page > .expense-hint'])
   })
 })
 
@@ -125,5 +126,40 @@ describe('the page of a receipt at ≥ 960 (T4): the header beside the images, t
     expect(value(pill, 'flex')).toBe('0 1 auto')
     // The four-tile rule of a manual spend with «Скрыть» (two by two on a phone) is lifted: pills take their own width.
     expect(value(rule('.receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > a'), 'flex-basis')).toBe('auto')
+  })
+})
+
+describe('«Новая трата» at ≥ 960 (T5): the form at the left, «Скажите словами» pinned at the right', () => {
+  const expense = read('features/expense/Expense.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const base = rules(expense.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, ''))
+  const alone = '.expense-page:not(:has(> .expense-hint))'
+
+  it('turns the page into two columns, two thirds for the form, and lifts the cap of the narrower screens', () => {
+    const page = rule('.expense-page')
+    expect(value(page, 'display')).toBe('grid')
+    expect(value(page, 'grid-template-columns').split(/\s+(?=minmax)/)).toEqual(['minmax(0, 2fr)', 'minmax(0, 1fr)'])
+    expect(value(page, 'align-items')).toBe('start')
+    expect(value(page, 'max-width')).toBe('none')
+    // The form is not split: no desktop rule reaches inside it, so its reading and tab order stay.
+    expect(desktop.filter((item) => /\.expense-form\s*[>\s]\s*\S/.test(item.selector))).toEqual([])
+  })
+
+  it('keeps the kind switch and the form at the left and pins the hint at the right across both rows', () => {
+    expect(value(rule('.expense-page > .expense-kind'), 'grid-column')).toBe('1')
+    expect(value(rule('.expense-page > .expense-form'), 'grid-column')).toBe('1')
+    const hint = rule('.expense-page > .expense-hint')
+    expect(value(hint, 'grid-column')).toBe('2')
+    expect(value(hint, 'grid-row')).toBe('1 / span 2')
+    expect(value(hint, 'position')).toBe('sticky')
+    expect(value(hint, 'top')).toMatch(/^\d+px$/)
+  })
+
+  it('gives a page without the hint (editing) one column no wider than the receipt page, heavier than the two-column rule', () => {
+    const one = rule(alone)
+    expect(value(one, 'grid-template-columns')).toBe('minmax(0, 1fr)')
+    expect(value(one, 'max-width')).toBe('760px')
+    // The base cap of Expense.css (600 px) stays below 960: this sheet overrides it only inside the block.
+    expect(value(rule('.expense-page', base), 'max-width')).toBe('600px')
+    expect(rules(outside).filter((item) => item.selector.startsWith('.expense'))).toEqual([])
   })
 })

@@ -46,4 +46,18 @@
   .receipt-screen #receipt-images .receipt-images { grid-template-columns: minmax(0, 1fr); }
   .receipt-toolbar > .receipt-actions > a, .receipt-toolbar > .receipt-actions > button { flex: 0 1 auto; flex-direction: row; gap: 8px; min-height: 44px; padding: 0 16px; }
   .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > a, .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > button { flex-basis: auto; }
+
+  /* «Новая трата» (features/expense ExpensePage.tsx): the form at the left (two thirds), «Скажите словами — заполню форму»
+     pinned at the right; without the hint (editing a spend or an income) one column at the 760 px cap of the receipt
+     page. The form itself is not split: its reading and tab order stay, the save bar stays in flow at its end. Without
+     .expense-kind the form takes row 1 and the hint spans rows 1–2 (row 2 empty, 0 px); with it, kind row 1, form row 2.
+     align-items: start gives the hint's cell the height of the form, inside which it sticks 16 px from the top (no sticky
+     header on a desktop: App.css pins .intro only in its phone block). The only sticky of this sheet — the guard lists it.
+     Weights: .expense-page (0,1,0) later in cascade beats Expense.css «flex; max-width: 600px»; the :not(:has()) rule
+     (0,2,0) wins for the pages without the hint. */
+  .expense-page { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px 24px; align-items: start; max-width: none; }
+  .expense-page > .expense-kind { grid-column: 1; }
+  .expense-page > .expense-hint { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 16px; }
+  .expense-page > .expense-form { grid-column: 1; }
+  .expense-page:not(:has(> .expense-hint)) { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
 }
