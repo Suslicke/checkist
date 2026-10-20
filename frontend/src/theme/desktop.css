@@ -27,4 +27,23 @@
   .spends-row { display: grid; grid-template-columns: 40px minmax(0, 1.2fr) minmax(0, 1fr) auto; column-gap: 12px; align-items: center; min-height: 52px; padding: 8px 16px; }
   .spends-row-main { display: contents; }
   .spends-row-amount { justify-self: end; text-align: right; }
+
+  /* The page of a receipt (features/receipts ReceiptPage.tsx): the header beside its images, the lines table across the
+     whole width (no scroll from 1024 px, WRAP_ACCEPTANCE step 5), discounts beside taxes; a spend by hand (no
+     #receipt-images) keeps one header at the 760 px cap of the narrower screen. Sparse auto-placement: the hero (column 1)
+     and the images (column 2, next in DOM) share a row, so do discounts and taxes; everything else spans both columns.
+     Weights: > * (0,1,0) < > .receipt-hero (0,2,0) < > #receipt-images (1,1,0) < :not(:has()) hero (1,2,0). The action
+     tiles become pills — icon before the word, 44 px — by repeating the selectors of Receipts.css verbatim: the same
+     weight, this sheet comes later; the four-tile rule of a manual spend with «Скрыть» is lifted the same way. The notes
+     and the inline confirmation (flex: 1 1 100%) are not matched and keep the whole width. */
+  .receipt-screen { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  .receipt-screen > * { grid-column: 1 / -1; }
+  .receipt-screen > .receipt-hero { grid-column: 1; }
+  .receipt-screen > #receipt-images { grid-column: 2; }
+  .receipt-screen:not(:has(> #receipt-images)) > .receipt-hero { grid-column: 1 / -1; max-width: 760px; }
+  .receipt-screen > #receipt-discounts { grid-column: 1; }
+  .receipt-screen > #receipt-taxes { grid-column: 2; }
+  .receipt-screen #receipt-images .receipt-images { grid-template-columns: minmax(0, 1fr); }
+  .receipt-toolbar > .receipt-actions > a, .receipt-toolbar > .receipt-actions > button { flex: 0 1 auto; flex-direction: row; gap: 8px; min-height: 44px; padding: 0 16px; }
+  .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > a, .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > button { flex-basis: auto; }
 }

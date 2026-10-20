@@ -84,3 +84,46 @@ describe('«Траты» at ≥ 960 (T3): the rules of the screen and the skelet
     expect(value(rule('.spends-toolbar > .receipt-panel'), 'gap')).toBe('')
   })
 })
+
+describe('the page of a receipt at ≥ 960 (T4): the header beside the images, the lines across the page, pill actions', () => {
+  const receipts = read('features/receipts/Receipts.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const base = rules(receipts.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, ''))
+  const manual = '.receipt-screen:not(:has(> #receipt-images)) > .receipt-hero'
+
+  it('turns the page into two columns and lets every section span them unless a rule places it', () => {
+    const screen = rule('.receipt-screen')
+    expect(value(screen, 'max-width')).toBe('none')
+    expect(value(screen, 'grid-template-columns').split(/\s+(?=minmax)/)).toHaveLength(2)
+    expect(value(screen, 'align-items')).toBe('start')
+    expect(rule('.receipt-screen > *')).toBe('grid-column: 1 / -1;')
+    // The lines table always spans both columns (WRAP_ACCEPTANCE step 5): no rule may put it into one.
+    expect(desktop.filter((item) => item.selector.includes('#receipt-lines'))).toEqual([])
+  })
+
+  it('places the header at the left of the images and the discounts at the left of the taxes', () => {
+    expect(value(rule('.receipt-screen > .receipt-hero'), 'grid-column')).toBe('1')
+    expect(value(rule('.receipt-screen > #receipt-images'), 'grid-column')).toBe('2')
+    expect(value(rule('.receipt-screen > #receipt-discounts'), 'grid-column')).toBe('1')
+    expect(value(rule('.receipt-screen > #receipt-taxes'), 'grid-column')).toBe('2')
+    expect(value(rule('.receipt-screen #receipt-images .receipt-images'), 'grid-template-columns')).toBe('minmax(0, 1fr)')
+  })
+
+  it('keeps the header of a spend by hand (no images) across both columns at the cap of the narrower screen', () => {
+    expect(value(rule(manual), 'grid-column')).toBe('1 / -1')
+    expect(value(rule(manual), 'max-width')).toBe(value(rule('.receipt-screen', base), 'max-width'))
+  })
+
+  it('turns the action tiles into pills by repeating the selectors of Receipts.css, so order decides, not weight', () => {
+    const toolbar = desktop.filter((item) => item.selector.startsWith('.receipt-toolbar'))
+    expect(toolbar.length).toBeGreaterThan(0)
+    const known = new Set(base.map((item) => item.selector))
+    for (const item of toolbar) expect(known.has(item.selector), item.selector).toBe(true)
+    const pill = rule('.receipt-toolbar > .receipt-actions > a')
+    expect(pill).toBe(rule('.receipt-toolbar > .receipt-actions > button'))
+    expect(value(pill, 'flex-direction')).toBe('row')
+    expect(value(pill, 'min-height')).toBe('44px')
+    expect(value(pill, 'flex')).toBe('0 1 auto')
+    // The four-tile rule of a manual spend with «Скрыть» (two by two on a phone) is lifted: pills take their own width.
+    expect(value(rule('.receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > a'), 'flex-basis')).toBe('auto')
+  })
+})
