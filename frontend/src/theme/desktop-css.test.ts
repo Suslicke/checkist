@@ -208,3 +208,42 @@ describe('the catalog at ≥ 960 (T6): a 280 px rail at the left, the products a
     expect(desktop.filter((item) => item.selector.includes('.ck-catalog-visually-hidden'))).toEqual([])
   })
 })
+
+describe('«Платежи» at ≥ 960 (T8): questions, suggestions and the month at the left, income and the off ones at the right', () => {
+  const recurring = read('features/recurring/Recurring.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const base = rules(recurring.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, ''))
+
+  it('dissolves the two wrappers below the line, so the phone keeps today\'s one column in today\'s DOM order', () => {
+    expect(rule('.rec-main', rules(outside))).toBe('display: contents;')
+    expect(rule('.rec-side', rules(outside))).toBe('display: contents;')
+    // No order rules: the wrappers hold contiguous groups, the DOM order is the visual order.
+    expect(rules(outside).filter((item) => item.selector.startsWith('.rec') && item.body.startsWith('order'))).toEqual([])
+  })
+
+  it('turns the page into three fifths and two fifths, the intro across both at the cap of the narrower screens', () => {
+    const page = rule('.rec-page')
+    expect(value(page, 'grid-template-columns').split(/\s+(?=minmax)/)).toEqual(['minmax(0, 3fr)', 'minmax(0, 2fr)'])
+    expect(value(page, 'align-items')).toBe('start')
+    expect(value(page, 'max-width')).toBe('none')
+    const intro = rule('.rec-page > .rec-intro')
+    expect(value(intro, 'grid-column')).toBe('1 / -1')
+    expect(value(intro, 'max-width')).toBe('760px')
+    // The base of Recurring.css stays one column at 760 px below 960: this sheet overrides it only inside the block.
+    expect(value(rule('.rec-page', base), 'max-width')).toBe('760px')
+    expect(value(rule('.rec-page', base), 'grid-template-columns')).toBe('minmax(0, 1fr)')
+  })
+
+  it('makes each wrapper a column of cards with the gap of the page, and reaches no card, row or form of the screen', () => {
+    for (const wrapper of ['.rec-main', '.rec-side']) {
+      const body = rule(wrapper)
+      expect(value(body, 'display'), wrapper).toBe('grid')
+      expect(value(body, 'gap'), wrapper).toBe(value(rule('.rec-page', base), 'gap'))
+      expect(value(body, 'min-width'), wrapper).toBe('0')
+    }
+    expect(value(rule('.rec-main'), 'grid-column')).toBe('1')
+    expect(value(rule('.rec-side'), 'grid-column')).toBe('2')
+    // Recurring.css, the cards and the sheet forms are not touched: only the page root, the intro and the wrappers.
+    expect([...new Set(desktop.filter((item) => /\.rec-/.test(item.selector)).map((item) => item.selector))].sort())
+      .toEqual(['.rec-main', '.rec-page', '.rec-page > .rec-intro', '.rec-side'])
+  })
+})

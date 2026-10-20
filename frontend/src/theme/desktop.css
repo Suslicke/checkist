@@ -7,6 +7,9 @@
 /* The catalog (features/catalog CatalogPage.tsx, CategoryPage.tsx): the rail and the main have no box below 960 px, so
    both pages render today's one column in today's DOM order. */
 .ck-catalog-side, .ck-catalog-main { display: contents; }
+/* «Платежи» (features/recurring RecurringPage.tsx): the two columns have no box below 960 px — today's one column in
+   today's DOM order, no order rules needed (each wrapper holds a contiguous group). */
+.rec-main, .rec-side { display: contents; }
 
 @media (min-width: 960px) {
   /* Правила экранов добавляют свои задачи: Траты, Чек, Новая трата, Каталог, Платежи, Цели, Доходы, Магазины. */
@@ -96,4 +99,15 @@
   .ck-catalog-table h3 a:hover { text-decoration: underline; }
   .ck-catalog-table-last ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
   .ck-catalog-table-last li { display: grid; gap: 2px; }
+
+  /* «Платежи»: the questions, the found ones and the month at the left (three fifths); the regular income and the
+     switched-off ones at the right. The forms stay in the sheet (a portal outside .rec-page). .rec-page (0,1,0) later in
+     cascade beats the 760 px cap and the single column of Recurring.css; the wrappers become columns of cards with the
+     gap of the page, so the rows of the two columns are independent; «Добавить платёж» / «Добавить доход» keep
+     width: 100 % inside their cards. */
+  .rec-page { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  .rec-page > .rec-intro { grid-column: 1 / -1; max-width: 760px; }
+  .rec-main, .rec-side { display: grid; gap: 16px; min-width: 0; }
+  .rec-main { grid-column: 1; }
+  .rec-side { grid-column: 2; }
 }

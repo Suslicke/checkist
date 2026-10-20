@@ -92,6 +92,8 @@ export function RecurringView({ data, busy = false, notice = null, onDecide = ()
   return <div className="rec-page">
     <p className="rec-intro">Оплачен — если около срока нашлась трата, где сошлись два из трёх: место, категория, сумма (±25 %).
       Сам я ничего не добавляю.</p>
+    {/* Two boxless columns (display: contents below 960 px, theme/desktop.css): the DOM order is the phone's order. */}
+    <div className="rec-main">
     <QuestionsCard questions={data.questions} today={data.today} busy={busy} onDecide={onDecide} />
     <NoticeLine notice={notice} />
     {data.suggestions.length > 0 && <section className="ck-panel rec-card" aria-labelledby="rec-suggest-heading">
@@ -113,6 +115,8 @@ export function RecurringView({ data, busy = false, notice = null, onDecide = ()
           осталось оплатить в месяце.</p>}
       <button type="button" className="rec-add" onClick={() => onEdit(null)} aria-haspopup="dialog">Добавить платёж</button>
     </section>
+    </div>
+    <div className="rec-side">
     <section className="ck-panel rec-card" aria-labelledby="rec-income-heading">
       <div className="ck-panel-head"><h2 id="rec-income-heading">Регулярный доход</h2></div>
       {incomes.length
@@ -125,6 +129,7 @@ export function RecurringView({ data, busy = false, notice = null, onDecide = ()
       <div className="ck-panel-head"><h2 id="rec-off-heading">Выключены</h2></div>
       <ul className="ck-list rec-list">{off.map((row) => <PaymentItem key={row.id} row={row} today={data.today} onEdit={onEdit} />)}</ul>
     </section>}
+    </div>
   </div>
 }
 
