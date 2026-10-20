@@ -36,7 +36,7 @@
 | Фронтенд, Node.js | собирается стадией образа (`node:24`), **на сервер Node не ставится** | собранный SPA и статика админки лежат внутри образа `proxy`: версия статики всегда равна версии кода |
 | PostgreSQL, Redis | в Compose, данные в именованных томах | порты наружу не опубликованы |
 | Celery | один worker в контейнере `celery` | нужен только проверке `celery` в `/api/health/`; расписаний и распознавания в нём нет |
-| Распознавание с Codex | контейнер `recognition`, отдельный профиль Compose, **по умолчанию выключен** | включает человек после входа Codex; без него сайт работает, фото ждут в очереди |
+| Распознавание с Codex или Claude | контейнер `recognition`, отдельный профиль Compose, **по умолчанию выключен** | включает человек после входа в выбранный CLI (`RECEIPT_OCR_PROVIDER`); без него сайт работает, фото ждут в очереди |
 
 ```text
 интернет ── 80/443 ──► proxy   Caddy: HTTPS, собранный SPA, статика админки
@@ -45,7 +45,7 @@
                                                                    ├─ redis      том redis_data
                                                                    └─ том data → /var/lib/checkist (фото)
 celery        тот же образ, что web; только для health
-recognition   тот же образ + Codex CLI; профиль recognition, по умолчанию выключен
+recognition   тот же образ + Codex CLI + Claude Code CLI; профиль recognition, по умолчанию выключен
 ```
 
 | Сервис | Образ | Что делает |
@@ -55,7 +55,7 @@ recognition   тот же образ + Codex CLI; профиль recognition, п
 | `web` | `checkist-app` (собирается) | Django под gunicorn |
 | `celery` | `checkist-app` | worker для проверки health |
 | `proxy` | `checkist-proxy` (собирается) | Caddy + SPA + статика; единственный сервис с опубликованными портами |
-| `recognition` | `checkist-recognition` (собирается) | `manage.py recognition_worker` рядом с Codex CLI 0.162.0 |
+| `recognition` | `checkist-recognition` (собирается) | `manage.py recognition_worker` рядом с Codex CLI 0.162.0 и Claude Code CLI 2.1.304 |
 
 Загруженные фото отдаёт только Django: он знает, чей это файл. В контейнере `proxy` тома с фото нет вообще.
 
@@ -68,7 +68,7 @@ recognition   тот же образ + Codex CLI; профиль recognition, п
 
 | Что | Требование | Почему |
 | --- | --- | --- |
-| ОС | Linux x86-64 либо arm64 с Docker Engine и плагином Compose; команды ниже — для Debian / Ubuntu | в `Dockerfile` закреплены сборки Codex для amd64 и arm64 |
+| ОС | Linux x86-64 либо arm64 с Docker Engine и плагином Compose; команды ниже — для Debian / Ubuntu | в `Dockerfile` закреплены сборки Codex и Claude для amd64 и arm64 |
 | Память | от 2 ГБ, либо 1 ГБ + файл подкачки 2 ГБ | **образы собираются на самом сервере**: проверка типов и сборка фронтенда на 1 ГБ могут не пройти |
 | Диск | с запасом: образы и кэш сборки, фото до 20 МБ каждое, копии базы и всех фото за 14 суток | копии лежат на том же диске, пока их не вывезли |
 | Домен | запись `A` на адрес сервера, **без записи `AAAA`** | см. ниже |
@@ -185,6 +185,7 @@ grep -cE '^(DJANGO_SECRET_KEY|POSTGRES_PASSWORD)=.{64}$' .env.prod
 | `CHECKIST_HTTP_BIND`, `CHECKIST_HTTPS_BIND` | `80`, `443` | только для локальной проверки, например `127.0.0.1:18080` |
 | `CHECKIST_BACKUP_DIR` | `/var/backups/checkist` | другой каталог копий на сервере (владелец UID 10001, `0700`) |
 | `COMPOSE_PROFILES` | нет | `recognition` — [раздел 9](#9-распознавание-codex-в-контейнере) |
+| `CLAUDE_CODE_OAUTH_TOKEN` | нет | токен подписки для `RECEIPT_OCR_PROVIDER=claude_cli` — [Claude в разделе 9](#claude-code-cli-вместо-codex-claude_cli) |
 | `COMPOSE_PROJECT_NAME` | `checkist` | **на сервере не менять**: имя — приставка томов, другое имя означает другой, пустой набор томов. QA задаёт своё имя именно этой переменной, а не флагом `-p`: скрипты вызывают `docker compose` сами |
 
 Путь к файлу окружения можно сменить переменной оболочки `CHECKIST_ENV_FILE` (абсолютный либо от корня репозитория); на сервере это не нужно.
@@ -530,6 +531,40 @@ sed -i -e 's/^POSTGRES_DB=.*/POSTGRES_DB=checkist_r2/' -e 's|^MEDIA_ROOT=.*|MEDI
 
 Версия Codex CLI закреплена в `Dockerfile` (`CODEX_VERSION` и четыре контрольные суммы: `codex` и `codex-code-mode-host` для amd64 и arm64); сменить её — правка пяти значений вместе и обычное обновление. `codex-code-mode-host` обязателен: без него Codex до начала ответа выдаёт событие `error`, и воркер отклоняет каждый ответ как `invalid_output` (найдено на сервере 2026-10-12).
 
+### Claude Code CLI вместо Codex (`claude_cli`)
+
+С 2026-10-20 в образе `checkist-recognition` рядом с Codex лежит Claude Code CLI (`/usr/local/bin/claude`, версия и контрольные суммы — в `Dockerfile`: `CLAUDE_CODE_VERSION=2.1.304`, `CLAUDE_CODE_SHA256_AMD64`, `CLAUDE_CODE_SHA256_ARM64`; адрес и суммы — те, что читает официальный `https://claude.ai/install.sh`: `https://downloads.claude.ai/claude-code-releases/<версия>/manifest.json`, сборки `linux-x64` и `linux-arm64` под glibc; сменить версию — правка трёх значений вместе). Какой CLI работает, решает `RECEIPT_OCR_PROVIDER` в `.env.prod`; очереди, API и клиент одинаковы ([development.md](development.md#claude-code-cli-вместо-codex-claude_cli-2026-10-20) — как устроен вызов и что стоит).
+
+**Работа Claude Code CLI в контейнере не проверялась никак** — так же, как Codex: ни вход токеном, ни первое настоящее распознавание. Локально проверено только, что образ собирается и `claude --version` в нём отвечает.
+
+1. На своей машине, где `claude` вошёл в подписку (`claude auth status` → `"loggedIn": true`), получите долгоживущий токен:
+
+   ```bash
+   claude setup-token
+   ```
+
+2. На сервере впишите его в `.env.prod` и переключите провайдера (модель без `RECEIPT_OCR_MODEL` — `claude-opus-5-5`; строка `RECEIPT_OCR_MODEL=opus|sonnet|haiku|claude-…` — по желанию):
+
+   ```bash
+   sed -i 's/^# CLAUDE_CODE_OAUTH_TOKEN=$/CLAUDE_CODE_OAUTH_TOKEN=<токен>/' .env.prod
+   sed -i 's/^RECEIPT_OCR_PROVIDER=codex_cli$/RECEIPT_OCR_PROVIDER=claude_cli/' .env.prod
+   ```
+
+   Токен — секрет уровня пароля: только `.env.prod` (режим `0600`), не git и не журнал. `.env.prod` читают целиком все сервисы приложения (`env_file`), поэтому переменная есть и в окружении `web` и `celery`, как `POSTGRES_PASSWORD`; но дочернему процессу её передаёт только `recognition_worker` — по allowlist провайдера, и больше никому. Настройки CLI живут в томе `claude_home` (`/home/checkist/.claude`, `CLAUDE_CONFIG_DIR`), который смонтирован только в `recognition`; сессии не сохраняются (`--no-session-persistence`), автообновление и телеметрия выключены переменными окружения воркера.
+
+3. Проверьте то же, что проверяет воркер при запуске (образ соберётся при первом вызове):
+
+   ```bash
+   ./deploy/docker/ck compose run --rm recognition claude --version
+   ./deploy/docker/ck compose run --rm recognition claude auth status; echo "exit $?"
+   ```
+
+   Ожидается `2.1.304 (Claude Code)` и JSON с `"loggedIn": true`, `exit 0`. **Дальше — только после этого.**
+
+4. Включите профиль и примените — шаг 3 раздела выше. В журнале — `Recognition worker ready.`; сообщения отказа этого провайдера: `Claude executable is unavailable…` (неверный `RECEIPT_OCR_CLAUDE_EXECUTABLE`), `Claude authentication is unavailable: run \`claude setup-token\` and set CLAUDE_CODE_OAUTH_TOKEN.` (нет входа или токен отозван), `Claude startup capability check failed.` (`claude --version` завершился с ошибкой), `Claude startup probe failed or timed out.` (10 с на проверку истекли), `Claude CLI version could not be determined.`; общие — `Recognition MEDIA/staging/scratch storage is unavailable.`, `Recognition worker is already running…`. Модель на старте не вызывается.
+
+Вернуться к Codex — `RECEIPT_OCR_PROVIDER=codex_cli` в `.env.prod` и `./deploy/docker/ck compose --profile recognition up -d recognition`; токен можно оставить закомментированным. Один вызов ограничен `RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD` (образец — `2.00`), перерасход — отказ `configuration_error` без повтора; лимитов на пользователя по-прежнему нет.
+
 ## 10. Тома и чего нельзя делать
 
 Все данные живут в именованных томах проекта `checkist` и в каталоге копий:
@@ -541,6 +576,7 @@ sed -i -e 's/^POSTGRES_DB=.*/POSTGRES_DB=checkist_r2/' -e 's|^MEDIA_ROOT=.*|MEDI
 | `checkist_redis_data` | `redis` | очередь Celery и кэш | ничего ценного |
 | `checkist_ocr_scratch` | `recognition` | временные файлы попыток модели | ничего ценного |
 | `checkist_codex_home` | `recognition` | вход Codex | войти заново |
+| `checkist_claude_home` | `recognition` | настройки Claude Code CLI (`CLAUDE_CONFIG_DIR`; вход — токен в `.env.prod`) | ничего ценного |
 | `checkist_caddy_data`, `checkist_caddy_config` | `proxy` | сертификаты | Caddy получит заново; у центра сертификации есть лимит выдач в неделю |
 | `/var/backups/checkist` (каталог сервера) | `web` → `/backups` | копии | все копии |
 
@@ -575,7 +611,7 @@ curl -sI https://<домен>/api/health/ | grep -i strict-transport-security
 - Сборка образов вне сервера (реестр образов): сейчас сервер собирает сам, отсюда требование к памяти.
 - Обновление без простоя, несколько серверов, CDN.
 - Лимиты на загрузки и модельные запросы по пользователям.
-- Обновления ОС и Docker — забота оператора. Версии образов PostgreSQL, Redis, Caddy, Node, Python и Codex закреплены в файлах и меняются правкой в репозитории.
+- Обновления ОС и Docker — забота оператора. Версии образов PostgreSQL, Redis, Caddy, Node, Python, Codex и Claude Code CLI закреплены в файлах и меняются правкой в репозитории.
 
 ## 13. Что проверено, а что нет
 
@@ -616,6 +652,7 @@ curl -sI https://<домен>/api/health/ | grep -i strict-transport-security
 - получение и продление сертификата;
 - **настоящий адрес клиента в «Login failures»** (приёмка, раздел «М»). Если там адрес вида `172.x` — защита от перебора считает всех одним клиентом. Исправление — перевести `proxy` на `network_mode: host`. Это не правка одной строки: в режиме host контейнер не видит имя `web`, поэтому вместе с ним меняются адрес в `deploy/docker/Caddyfile` и публикация порта `web` на loopback, а статический тест сейчас такое запрещает. Нужна отдельная задача; до неё оставьте домен без `AAAA` и сообщите о результате шага;
 - Codex CLI 0.162.0 в контейнере: вход без браузера, песочница `bubblewrap` под Docker, обновление токена в томе, первое настоящее распознавание;
+- Claude Code CLI 2.1.304 в контейнере (`claude_cli`): вход токеном `claude setup-token`, первое настоящее распознавание; локально 2026-10-20 проверены только сборка цели `recognition` с контрольной суммой и `claude --version` в образе ([verification.md](verification.md#фактические-результаты-провайдер-claude_cli-2026-10-20));
 - установка Docker и `ufw`, файл подкачки — команды шагов 1–3 взяты из общего знания, в рамках проекта не выполнялись;
 - вся приёмка [deployment-acceptance.md](deployment-acceptance.md): браузер, два устройства, телефон, файл 20 МБ, перезагрузка сервера, вывоз копий.
 
