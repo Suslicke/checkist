@@ -6,4 +6,21 @@
 
 @media (min-width: 960px) {
   /* Правила экранов добавляют свои задачи: Траты, Чек, Новая трата, Каталог, Платежи, Цели, Доходы, Магазины. */
+
+  /* «Траты» (features/receipts): the whole page, the filters as one line of four fields and the buttons, 52 px rows.
+     The two .receipt-filter-grid wrappers dissolve, so the four fields are columns 1–4 of the first row and the buttons
+     column 5; the help line, the note «Фильтры из ссылки» and the form error go under them (order: 9). The heading
+     stays for aria-labelledby, hidden by position and clip (not overflow). The phone sheet is a portal outside
+     .spends-toolbar, so these rules never reach it. A row: badge | title | meta | amount on one line. */
+  .spends-page { max-width: none; }
+  .spends-toolbar > .receipt-panel { padding: 12px 16px; gap: 8px; }
+  .spends-toolbar > .receipt-panel > h2 { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); white-space: nowrap; }
+  .spends-toolbar > .receipt-panel > form { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; gap: 8px 12px; }
+  .spends-toolbar > .receipt-panel > form > .receipt-filter-grid { display: contents; }
+  .spends-toolbar > .receipt-panel > form > .receipt-note, .spends-toolbar > .receipt-panel > form > .receipt-field-error { grid-column: 1 / -1; order: 9; margin: 0; }
+  .spends-toolbar > .receipt-panel > form > .receipt-actions { grid-column: 5; flex-wrap: nowrap; gap: 8px; }
+  .spends-toolbar > .receipt-panel > form > .receipt-actions > button { white-space: nowrap; }
+  .spends-row { display: grid; grid-template-columns: 40px minmax(0, 1.2fr) minmax(0, 1fr) auto; column-gap: 12px; align-items: center; min-height: 52px; padding: 8px 16px; }
+  .spends-row-main { display: contents; }
+  .spends-row-amount { justify-self: end; text-align: right; }
 }
