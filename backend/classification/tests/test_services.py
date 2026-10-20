@@ -737,6 +737,10 @@ class RunTests(TestCase):
         with override_settings(RECEIPT_OCR_PROVIDER="codex_cli", RECEIPT_OCR_MODEL="demo-model"):
             run, _created = services.request_run(trigger="manual")
         self.assertEqual((run.provider, run.model), ("codex_cli", "demo-model"))
+        run.delete()
+        with override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_MODEL="claude-demo-model"):
+            run, _created = services.request_run(trigger="manual")
+        self.assertEqual((run.provider, run.model), ("claude_cli", "claude-demo-model"))
 
     def test_run_keeps_who_asked_for_it(self):
         actor, other = (get_user_model().objects.create_user(f"synthetic-decider-{n}") for n in (1, 2))

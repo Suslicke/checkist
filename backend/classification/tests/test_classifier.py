@@ -208,8 +208,20 @@ class FactoryTests(SimpleTestCase):
                 self.assertEqual((classifier.name, classifier.model), ("codex_cli", "demo-model"))
                 self.assertTrue(callable(classifier.classify))
 
+    @override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_CLAUDE_EXECUTABLE="nonexistent-checkist-claude",
+                       RECEIPT_OCR_MODEL="demo-model")
+    def test_claude_provider_gets_the_same_classifier_over_the_claude_cli(self):
+        from classification.codex import CodexClassifier
+        from recognition.providers.claude_cli import ClaudeCLIProvider
+
+        classifier = get_classifier()
+        self.assertIsInstance(classifier, CodexClassifier)
+        self.assertIsInstance(classifier.provider, ClaudeCLIProvider)
+        self.assertEqual((classifier.name, classifier.model), ("claude_cli", "demo-model"))
+
     def test_unknown_provider_and_broken_codex_settings_are_configuration_errors(self):
-        for settings in ({"RECEIPT_OCR_PROVIDER": "other"}, {"RECEIPT_OCR_PROVIDER": "codex_cli", "RECEIPT_OCR_MODEL": ""}):
+        for settings in ({"RECEIPT_OCR_PROVIDER": "other"}, {"RECEIPT_OCR_PROVIDER": "codex_cli", "RECEIPT_OCR_MODEL": ""},
+                         {"RECEIPT_OCR_PROVIDER": "claude_cli", "RECEIPT_OCR_MODEL": ""}):
             with self.subTest(settings=settings), override_settings(**settings), \
                     self.assertRaises(ProviderError) as caught:
                 get_classifier(scenario="mixed")

@@ -8,6 +8,7 @@ a question about the spends (insights.queue, one text-only call, someone waits o
 the screen); then a recognition job; when none waits, one batch of a product
 classification run (classification/QUEUE.md).
 """
+import json
 import logging
 import os
 import re
@@ -32,6 +33,7 @@ from recognition.models import ProcessingJob
 from recognition.pipeline import process_job
 from recognition.process_supervisor import ProcessSupervisor
 from recognition.providers.base import ProviderError, RunContext
+from recognition.providers.claude_cli import claude_child_environment
 from recognition.providers.codex_cli import child_environment
 from recognition.providers.factory import get_provider
 from recognition.providers.fake import SCENARIOS
@@ -40,6 +42,7 @@ from receipts import manual_parse
 from statements import ask as statement_ask
 
 logger = logging.getLogger(__name__)
+CLAUDE_AUTH_MESSAGE = "Claude authentication is unavailable: run `claude setup-token` and set CLAUDE_CODE_OAUTH_TOKEN."
 
 
 @contextmanager
@@ -91,6 +94,11 @@ def validate_startup(*, fake_scenario=None):
         if executable is None or (os.name == "nt" and Path(executable).suffix.lower() != ".exe"):
             raise CommandError("Codex executable is unavailable; configure RECEIPT_OCR_CODEX_EXECUTABLE (native .exe on Windows).")
         probe_codex(provider, executable)
+    if settings.RECEIPT_OCR_PROVIDER == "claude_cli":
+        executable = shutil.which(str(provider.config.executable))
+        if executable is None or (os.name == "nt" and Path(executable).suffix.lower() != ".exe"):
+            raise CommandError("Claude executable is unavailable; configure RECEIPT_OCR_CLAUDE_EXECUTABLE (native .exe on Windows).")
+        probe_claude(provider, executable)
     return provider
 
 
@@ -118,6 +126,35 @@ def probe_codex(provider, executable):
     version = re.search(r"\b\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.]+)?\b", outputs[0])
     if not version:
         raise CommandError("Codex CLI version could not be determined.")
+    provider.cli_version = version.group(0)[:64]
+
+
+def probe_claude(provider, executable):
+    """Two bounded local probes — the version and the sign-in (`claude auth status`); no image or model invocation."""
+    supervisor = ProcessSupervisor(cancel_grace_seconds=provider.config.cancel_grace_seconds)
+    outputs = []
+    try:
+        for arguments in (("--version",), ("auth", "status")):
+            with tempfile.TemporaryDirectory(prefix="startup-", dir=provider.config.temp_root) as folder:
+                result = supervisor.run(
+                    [executable, *arguments], cwd=folder, env=claude_child_environment(provider.config.config_dir), stdin=b"",
+                    run=RunContext(deadline=time.monotonic() + 10),
+                )
+            if result.returncode:
+                raise CommandError(CLAUDE_AUTH_MESSAGE if arguments[0] == "auth" else "Claude startup capability check failed.")
+            outputs.append(result.stdout.decode("utf-8", errors="replace"))
+    except (ProviderError, OSError):
+        raise CommandError("Claude startup probe failed or timed out.") from None
+    version = re.search(r"\b\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.]+)?\b", outputs[0])
+    if not version:
+        raise CommandError("Claude CLI version could not be determined.")
+    try:
+        status = json.loads(outputs[1])
+    except ValueError:
+        status = None
+    # `auth status` prints JSON and exits 0 either way: only `"loggedIn": true` means a usable sign-in.
+    if type(status) is not dict or status.get("loggedIn") is not True:
+        raise CommandError(CLAUDE_AUTH_MESSAGE)
     provider.cli_version = version.group(0)[:64]
 
 

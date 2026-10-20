@@ -197,6 +197,20 @@ class GroupingTests(Spends, TestCase):
             with self.subTest(bad=bad), self.assertRaises(grouping.GroupingOutputError):
                 grouping.groups_from_output(bad, payload)
 
+    @override_settings(RECEIPT_OCR_PROVIDER="fake")
+    def test_get_grouper_follows_the_provider(self):
+        self.assertIsInstance(grouping.get_grouper(), grouping.FakeGrouper)
+        with override_settings(RECEIPT_OCR_PROVIDER="codex_cli", RECEIPT_OCR_CODEX_EXECUTABLE="nonexistent-checkist-codex"):
+            grouper = grouping.get_grouper()
+            self.assertIsInstance(grouper, grouping.CodexGrouper)
+            self.assertEqual((grouper.name, type(grouper.provider).__name__), ("codex_cli", "CodexCLIProvider"))
+        with override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_CLAUDE_EXECUTABLE="nonexistent-checkist-claude"):
+            grouper = grouping.get_grouper()
+            self.assertIsInstance(grouper, grouping.CodexGrouper)
+            self.assertEqual((grouper.name, type(grouper.provider).__name__), ("claude_cli", "ClaudeCLIProvider"))
+        with override_settings(RECEIPT_OCR_PROVIDER="other"), self.assertRaises(ProviderError):
+            grouping.get_grouper()
+
     def test_codex_grouper_sends_the_stores_after_the_marker(self):
         provider = Mock()
         provider.run_text.return_value = {"groups": [[self.magnum.pk, self.magnum_city.pk]]}

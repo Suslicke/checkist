@@ -84,15 +84,17 @@ class FakeGrouper:
 
 
 class CodexGrouper:
-    """Один текстовый вызов Codex CLI со схемой ответа."""
+    """Один текстовый вызов CLI (Codex либо Claude) со схемой ответа."""
 
     name = "codex_cli"
 
     def __init__(self, provider=None):
         if provider is None:
-            from recognition.providers.codex_cli import CodexCLIProvider
+            from recognition.providers.factory import get_provider
 
-            provider = CodexCLIProvider()
+            provider = get_provider()  # codex_cli либо claude_cli — тот же текстовый вызов
+            self.name = settings.RECEIPT_OCR_PROVIDER
+        # ponytail: с переданным провайдером имя остаётся «codex_cli» — так его строят только тесты.
         self.provider = provider
 
     def group(self, payload, run):
@@ -109,7 +111,7 @@ def get_grouper():
     """Исполнитель настроенного провайдера; сбой Codex никогда не выбирает fake."""
     if settings.RECEIPT_OCR_PROVIDER == "fake":
         return FakeGrouper()
-    if settings.RECEIPT_OCR_PROVIDER == "codex_cli":
+    if settings.RECEIPT_OCR_PROVIDER in ("codex_cli", "claude_cli"):
         return CodexGrouper()
     raise ProviderError("configuration_error")
 

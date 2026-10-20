@@ -18,6 +18,8 @@ from receipts.manual_parse import CodexTextParser, FakeTextParser, ParseOutputEr
 from receipts.models import ManualParseRequest, Receipt
 from receipts.ownership import local_user
 from recognition.providers.base import ProviderError
+from recognition.providers.claude_cli import ClaudeCLIProvider
+from recognition.providers.codex_cli import CodexCLIProvider
 from recognition.queue import db_now
 
 TODAY = date(2026, 10, 12)
@@ -234,12 +236,32 @@ class ExecuteTests(ParseFixture, TestCase):
         launch.assert_not_called()
         self.assertEqual((row.status, row.error_code), ("failed", "configuration_error"))
 
+    @override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_CLAUDE_EXECUTABLE="nonexistent-checkist-claude")
+    def test_real_provider_without_claude_is_configuration_error(self):
+        with patch("recognition.process_supervisor.ProcessSupervisor.run") as launch:
+            row = self.run_one(manual_parse.get_parser())
+        launch.assert_not_called()
+        self.assertEqual((row.status, row.error_code), ("failed", "configuration_error"))
+
     def test_parser_choice(self):
         with override_settings(RECEIPT_OCR_PROVIDER="fake"):
             self.assertIsInstance(manual_parse.get_parser(), FakeTextParser)
             self.assertEqual(manual_parse.get_parser(scenario="timeout").scenario, "timeout")
         with self.assertRaises(ProviderError):
             FakeTextParser("unknown")
+        # The same text wrapper over either CLI; its name is the configured provider, not a literal.
+        with override_settings(RECEIPT_OCR_PROVIDER="codex_cli", RECEIPT_OCR_CODEX_EXECUTABLE="nonexistent-checkist-codex"):
+            parser = manual_parse.get_parser()
+            self.assertIsInstance(parser, CodexTextParser)
+            self.assertIsInstance(parser.provider, CodexCLIProvider)
+            self.assertEqual(parser.name, "codex_cli")
+        with override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_CLAUDE_EXECUTABLE="nonexistent-checkist-claude"):
+            parser = manual_parse.get_parser()
+            self.assertIsInstance(parser, CodexTextParser)
+            self.assertIsInstance(parser.provider, ClaudeCLIProvider)
+            self.assertEqual(parser.name, "claude_cli")
+        with override_settings(RECEIPT_OCR_PROVIDER="other"), self.assertRaises(ProviderError):
+            manual_parse.get_parser()
 
 
 @tag("integration")

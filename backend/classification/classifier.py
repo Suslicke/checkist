@@ -26,7 +26,7 @@ TEST_GENERIC = ("Тестовый продукт", ("Тестовая катег
 
 
 class ProductClassifier(Protocol):
-    name: str   # "codex_cli" | "fake"
+    name: str   # "codex_cli" | "claude_cli" | "fake"
     model: str  # "" for fake
 
     def classify(self, request: ClassificationRequest, run: RunContext) -> ClassificationResponse: ...
@@ -133,7 +133,7 @@ def get_classifier(*, scenario=None):
     name = getattr(settings, "RECEIPT_OCR_PROVIDER", "codex_cli")
     if name == "fake":
         return FakeClassifier(scenario=scenario or os.environ.get(FAKE_SCENARIO_ENV) or "mixed")
-    if name == "codex_cli":
+    if name in ("codex_cli", "claude_cli"):
         from classification.codex import CodexClassifier
 
         return CodexClassifier()  # the model is RECEIPT_OCR_MODEL, as for recognition

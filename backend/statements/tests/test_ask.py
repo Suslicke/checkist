@@ -118,7 +118,13 @@ class AskTests(TestCase):
     def test_get_asker_follows_the_provider(self):
         self.assertIsInstance(ask.get_asker(), ask.FakeAsker)
         with override_settings(RECEIPT_OCR_PROVIDER="codex_cli", RECEIPT_OCR_CODEX_EXECUTABLE="nonexistent-checkist-codex"):
-            self.assertIsInstance(ask.get_asker(), ask.CodexAsker)
+            asker = ask.get_asker()
+            self.assertIsInstance(asker, ask.CodexAsker)
+            self.assertEqual((asker.name, type(asker.provider).__name__), ("codex_cli", "CodexCLIProvider"))
+        with override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_CLAUDE_EXECUTABLE="nonexistent-checkist-claude"):
+            asker = ask.get_asker()
+            self.assertIsInstance(asker, ask.CodexAsker)
+            self.assertEqual((asker.name, type(asker.provider).__name__), ("claude_cli", "ClaudeCLIProvider"))
         with override_settings(RECEIPT_OCR_PROVIDER="other"), self.assertRaises(ProviderError):
             ask.get_asker()
 

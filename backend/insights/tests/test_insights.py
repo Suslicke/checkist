@@ -289,7 +289,13 @@ class QueueTests(Spends, TestCase):
     def test_get_writer_follows_the_provider(self):
         self.assertIsInstance(queue.get_writer(), queue.FakeWriter)
         with override_settings(RECEIPT_OCR_PROVIDER="codex_cli", RECEIPT_OCR_CODEX_EXECUTABLE="nonexistent-checkist-codex"):
-            self.assertIsInstance(queue.get_writer(), queue.CodexWriter)
+            writer = queue.get_writer()
+            self.assertIsInstance(writer, queue.CodexWriter)
+            self.assertEqual((writer.name, type(writer.provider).__name__), ("codex_cli", "CodexCLIProvider"))
+        with override_settings(RECEIPT_OCR_PROVIDER="claude_cli", RECEIPT_OCR_CLAUDE_EXECUTABLE="nonexistent-checkist-claude"):
+            writer = queue.get_writer()
+            self.assertIsInstance(writer, queue.CodexWriter)
+            self.assertEqual((writer.name, type(writer.provider).__name__), ("claude_cli", "ClaudeCLIProvider"))
         with override_settings(RECEIPT_OCR_PROVIDER="other"), self.assertRaises(ProviderError):
             queue.get_writer()
 

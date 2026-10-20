@@ -172,7 +172,12 @@ image that does not fit even at the lowest quality is `invalid_input`. Settings:
 `RECEIPT_OCR_CLAUDE_MAX_BUDGET_USD`; the model default is `claude-opus-5-5`. The child
 environment is the Codex allowlist plus `CLAUDE_CONFIG_DIR` (there is no Django setting
 for it), `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) and `ANTHROPIC_API_KEY`,
-with auto-update, telemetry and non-essential traffic disabled. Tests never run the real CLI.
+with auto-update, telemetry and non-essential traffic disabled. The five text-only
+callers (manual parse, classification, insights, store grouping, statement asks) keep
+their one wrapper class and take the provider from `factory.get_provider()`, so the
+wrapper's `name` is the configured provider; `recognition_worker` starts only after
+`claude --version` and `claude auth status` (JSON with `"loggedIn": true`) succeed within
+10 s each, without calling the model. Tests never run the real CLI.
 
 Technical sources: [OpenAI CLI reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli),
 [Microsoft Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects).
