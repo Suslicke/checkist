@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Household, LoginFailure, Membership
+from .models import AiModelSetting, Household, LoginFailure, Membership
 
 
 @admin.register(LoginFailure)
@@ -38,3 +38,15 @@ class HouseholdAdmin(admin.ModelAdmin):
     list_display = ("name", "ai_enabled", "ai_daily_limit", "created_at")
     search_fields = ("name", "memberships__user__username")
     inlines = (MembershipInline,)
+
+
+@admin.register(AiModelSetting)
+class AiModelSettingAdmin(admin.ModelAdmin):
+    """Одна строка: модель и усилие Claude для всех вызовов сервера (то же, что карточка на «Семье»)."""
+
+    list_display = ("model", "effort", "updated_at", "updated_by")
+    readonly_fields = ("updated_at", "updated_by")
+
+    def save_model(self, request, obj, form, change):
+        obj.pk, obj.updated_by = 1, request.user
+        super().save_model(request, obj, form, change)

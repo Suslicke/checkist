@@ -13,6 +13,10 @@ export type FamilyInvite = { id: number; created_at: string; expires_at: string 
 /** ИИ of the family: photos and texts go to an external model; the head switches it, the server owner sets the limit.
  * `daily_limit: null` — no limit (families from before the invites of new families): requests are counted, never refused. */
 export type FamilyAi = { enabled: boolean; daily_limit: number | null; used_today: number; resets_at: string }
+/** The model and effort of Claude for every call of the server; only the server owner gets it (missing otherwise and from an
+ * older server). `source: 'settings'` — nothing chosen yet, the value comes from the server environment; the choice applies
+ * only while `provider` is `claude_cli`. */
+export type FamilyAiModel = { provider: string; model: string; effort: string; source: 'settings' | 'database'; models: string[]; efforts: string[] }
 export type Family = {
   household: { id: number; name: string; members: FamilyMember[] } | null
   /** The family head; a user without a family heads their own data. */
@@ -25,6 +29,8 @@ export type Family = {
   can_invite_families?: boolean
   /** Active invites of new families; only the server owner gets them, without tokens. */
   family_invites?: FamilyInvite[]
+  /** The model of Claude; only the server owner gets it. */
+  ai_model?: FamilyAiModel
 }
 /** `POST members/`: the password is shown once and never again. */
 export type NewMember = { member: FamilyMember; password: string }
@@ -40,14 +46,16 @@ const isMember: Guard<FamilyMember> = (value): value is FamilyMember => isMember
 const isInvite = object<FamilyInvite>({ id: isId, created_at: isISODateTime, expires_at: isISODateTime })
 const count = (value: unknown) => Number.isSafeInteger(value) && (value as number) >= 0
 const isAi = object<FamilyAi>({ enabled: bool, daily_limit: nullable(count), used_today: count, resets_at: isISODateTime })
-const isFamilyShape = object<Omit<Family, 'ai' | 'can_invite_families' | 'family_invites'>>({
+const isAiModel = object<FamilyAiModel>({ provider: text, model: text, effort: text, source: choice('settings', 'database'),
+  models: array(text), efforts: array(text) })
+const isFamilyShape = object<Omit<Family, 'ai' | 'can_invite_families' | 'family_invites' | 'ai_model'>>({
   household: nullable(object<NonNullable<Family['household']>>({ id: isId, name: text, members: array(isMember) })),
   is_head: bool,
   invites: array(isInvite),
 })
 export const isFamily: Guard<Family> = (value): value is Family => isFamilyShape(value)
   && optional(value, 'ai', nullable(isAi)) && optional(value, 'can_invite_families', bool)
-  && optional(value, 'family_invites', array(isInvite))
+  && optional(value, 'family_invites', array(isInvite)) && optional(value, 'ai_model', isAiModel)
 const isNewMember = object<NewMember>({ member: isMember, password: text })
 const isNewInvite: Guard<NewInvite> = (value): value is NewInvite => isInvite(value)
   && object<{ token: string; path: string }>({ token: text, path: text })(value)
@@ -79,6 +87,9 @@ export function revokeInvite(id: number, options: RequestOptions = {}) { return 
 export function joinFamily(token: string, options: RequestOptions = {}) { return send('family/join/', { token }, isFamily, options) }
 /** The head switches ИИ of the family; the answer is the family. */
 export function setFamilyAi(enabled: boolean, options: RequestOptions = {}) { return send('family/ai/', { enabled }, isFamily, options, 'PATCH') }
+export function setAiModel(model: string, effort: string, options: RequestOptions = {}) {
+  return send('family/ai-model/', { model, effort }, isFamily, options, 'PATCH')
+}
 /** The server owner: an invite of a new family; `path` — `/family/new?token=…`, the token travels only in this answer. */
 export function createFamilyInvite(options: RequestOptions = {}): Promise<LocalApiResult<NewInvite>> {
   return send('family/new-invites/', undefined, isNewInvite, options)

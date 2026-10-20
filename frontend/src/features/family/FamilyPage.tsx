@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   addMember, createFamily, createFamilyInvite, createInvite, getFamily, joinFamily, leaveFamily, removeMember, renameFamily,
-  revokeFamilyInvite, revokeInvite, setFamilyAi, setVisibleFrom, transferHead,
+  revokeFamilyInvite, revokeInvite, setAiModel, setFamilyAi, setVisibleFrom, transferHead,
 } from '../../api/family'
-import type { Family, FamilyAi, FamilyInvite, FamilyMember } from '../../api/family'
+import type { Family, FamilyAi, FamilyAiModel, FamilyInvite, FamilyMember } from '../../api/family'
 import type { LocalApiResult } from '../../api/types'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
@@ -37,6 +37,8 @@ export type FamilyViewProps = {
   /** The server owner invites a new family and revokes such an invite. */
   onFamilyInvite?: () => void
   onRevokeFamily?: (id: number) => void
+  /** The server owner picks the model and the effort of Claude for the whole server. */
+  onAiModel?: (model: string, effort: string) => void
   /** The head: since which month (`YYYY-MM`, `null` — no limit) a member sees the spends of the others. */
   onVisibleFrom?: (member: FamilyMember, month: string | null) => void
 }
@@ -93,6 +95,33 @@ function AiPanel({ ai, head, busy, onAi }: { ai: FamilyAi; head: boolean; busy: 
     <div className="family-ai-usage">
       <p data-family-ai-usage>{aiUsageText(ai)}</p>
       {share !== null && <div className="ck-bar" aria-hidden="true"><span style={{ width: `${share}%` }} /></div>}
+    </div>
+  </section>
+}
+
+const MODEL_WORDS: Record<string, string> = { opus: 'Opus — точнее, дороже', sonnet: 'Sonnet — быстрее', haiku: 'Haiku — дешевле всего' }
+const EFFORT_WORDS: Record<string, string> = { low: 'низкое', medium: 'среднее', high: 'высокое' }
+
+/** The server owner: the model and the effort of Claude; a value from the server environment outside the list is shown as is. */
+function AiModelPanel({ choice, busy, onAiModel }: { choice: FamilyAiModel; busy: boolean; onAiModel?: (model: string, effort: string) => void }) {
+  const models = choice.models.includes(choice.model) ? choice.models : [choice.model, ...choice.models]
+  const efforts = choice.efforts.includes(choice.effort) ? choice.efforts : [choice.effort, ...choice.efforts]
+  const pick = (model: string, effort: string) => { if (!busy) onAiModel?.(model, effort) }
+  return <section className="ck-auth-panel" aria-labelledby="family-model-heading" data-family-ai-model>
+    <h2 id="family-model-heading">Модель ИИ</h2>
+    <p className="family-note family-sub">{familyTexts.aiModelNote}</p>
+    {choice.provider !== 'claude_cli' && <p className="family-note family-sub" role="status">{familyTexts.aiModelCodex}</p>}
+    <div className="family-fields">
+      <label className="family-field" htmlFor="family-ai-model"><span>Модель</span>
+        <select id="family-ai-model" value={choice.model} aria-disabled={busy || undefined} onChange={(event) => pick(event.target.value, choice.effort)}>
+          {models.map((name) => <option key={name} value={name}>{MODEL_WORDS[name] ?? name}</option>)}
+        </select>
+      </label>
+      <label className="family-field" htmlFor="family-ai-effort"><span>Усилие</span>
+        <select id="family-ai-effort" value={choice.effort} aria-disabled={busy || undefined} onChange={(event) => pick(choice.model, event.target.value)}>
+          {efforts.map((name) => <option key={name} value={name}>{EFFORT_WORDS[name] ?? name}</option>)}
+        </select>
+      </label>
     </div>
   </section>
 }
@@ -174,7 +203,10 @@ export function FamilyView(props: FamilyViewProps) {
   const [managing, setManaging] = useState<FamilyMember | null>(null)
   const household = family.household
   const status = message && <p className="family-notice" role="status" data-family-message>{message}</p>
-  const newFamilies = family.can_invite_families ? <NewFamiliesPanel {...props} /> : null
+  const newFamilies = <>
+    {family.can_invite_families && <NewFamiliesPanel {...props} />}
+    {family.ai_model && <AiModelPanel choice={family.ai_model} busy={busy} onAiModel={props.onAiModel} />}
+  </>
   if (!household) {
     return <div className="ck-auth" data-family="none">
       {status}
@@ -343,6 +375,7 @@ export default function FamilyPage({ joinToken }: { joinToken?: string }) {
         return null
       })}
       onRevokeFamily={(id) => run('family-revoke', () => revokeFamilyInvite(id), () => 'Приглашение новой семьи отозвано.')}
+      onAiModel={(model, effort) => run('ai-model', () => setAiModel(model, effort), (data) => { asFamily(data); return 'Модель сохранена.' })}
       onVisibleFrom={(member, month) => run('visible', () => setVisibleFrom(member.username, month), (data) => {
         asFamily(data)
         return `${member.display_name} видит траты семьи ${visibleFromText(month)}.`

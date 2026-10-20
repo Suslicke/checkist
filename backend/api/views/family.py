@@ -19,7 +19,7 @@ from rest_framework.response import Response
 
 from accounts import ai, family, throttle
 from accounts.access import request_user
-from accounts.models import Membership
+from accounts.models import AiModelSetting, Membership
 from accounts.people import display_name
 from api.common import utc_datetime
 from config.exceptions import (
@@ -60,6 +60,8 @@ def family_object(request):
     # Приглашения «новая семья» — только администратору сервера, без токенов.
     extra = {"can_invite_families": staff,
              "family_invites": [invite_object(invite) for invite in family.active_family_invites()] if staff else []}
+    if staff:  # модель и усилие Claude — выбор администратора сервера (accounts.ai.model_choice)
+        extra["ai_model"] = {**ai.model_choice(), "models": list(AiModelSetting.MODELS), "efforts": list(AiModelSetting.EFFORTS)}
     own = family.membership_of(user)
     if own is None:
         return {"household": None, "is_head": True, "invites": [], "ai": None, **extra}
@@ -272,6 +274,23 @@ class AiView(FamilyBaseView):
         if not isinstance(data.get("enabled"), bool):
             raise InvalidParameter({"enabled": ["Ожидается true или false."]})
         ai.set_enabled(household, data["enabled"])
+        return Response(family_object(request))
+
+
+class AiModelView(FamilyBaseView):
+    """``PATCH`` ``{model, effort}`` — модель и усилие Claude для всех вызовов сервера (администратор); ответ — семья."""
+
+    http_method_names = ["patch", "options"]
+
+    def patch(self, request):
+        self.staff_only(request)
+        data = self.body(request, ("model", "effort"))
+        try:
+            ai.set_model(data.get("model"), data.get("effort"), actor=request_user(request))
+        except ValueError as error:
+            fields = {"model": AiModelSetting.MODELS, "effort": AiModelSetting.EFFORTS}
+            raise InvalidParameter({name: [f"Ожидается одно из: {', '.join(values)}."] for name, values in fields.items()
+                                    if data.get(name) not in values}) from error
         return Response(family_object(request))
 
 

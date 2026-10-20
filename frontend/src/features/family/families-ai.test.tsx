@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { isFamily } from '../../api/family'
-import type { Family, FamilyAi } from '../../api/family'
+import type { Family, FamilyAi, FamilyAiModel } from '../../api/family'
 import { readError } from '../../api/http'
 import type { AuthFailure } from '../../api/session'
 import type { LocalApiFailure } from '../../api/types'
@@ -176,5 +176,41 @@ describe('the screen of a new family', () => {
     expect(both.message).toBe('Проверьте: логин, название семьи.')
     expect(both.details?.[0]).toContain('Логин:')
     expect(newFamilyRefusal(auth('login_throttled', { retryAfter: 600 })).message).toBe('Слишком много попыток. Повторите через 10 минут.')
+  })
+})
+
+describe('model of ИИ (the server owner)', () => {
+  const aiModel: FamilyAiModel = { provider: 'claude_cli', model: 'claude-opus-5-5', effort: 'medium', source: 'settings',
+    models: ['opus', 'sonnet', 'haiku'], efforts: ['low', 'medium', 'high'] }
+
+  it('is a card with the current model and effort selected, only when the server sends it', () => {
+    const html = view(family({ can_invite_families: true, ai_model: aiModel }))
+    expect(html).toContain('data-family-ai-model')
+    expect(html).toContain('Модель ИИ')
+    expect(html).toContain(familyTexts.aiModelNote)
+    expect(html).toMatch(/<option value="claude-opus-5-5" selected="">/)
+    expect(html).toMatch(/<option value="sonnet">/)
+    expect(html).toMatch(/<option value="medium" selected="">/)
+    expect(html).not.toContain(familyTexts.aiModelCodex)
+    expect(view(family())).not.toContain('data-family-ai-model')
+    expect(view({ household: null, is_head: true, invites: [], ai_model: aiModel })).toContain('data-family-ai-model')
+  })
+
+  it('marks a saved choice and warns while the server runs Codex', () => {
+    const saved = view(family({ ai_model: { ...aiModel, model: 'sonnet', effort: 'high', source: 'database' } }))
+    expect(saved).toMatch(/<option value="sonnet" selected="">/)
+    expect(saved).toMatch(/<option value="high" selected="">/)
+    expect(saved).not.toMatch(/<option value="claude-opus-5-5"/)
+    const codex = view(family({ ai_model: { ...aiModel, provider: 'codex_cli', model: 'gpt-6.1-sol' } }))
+    expect(codex).toContain(familyTexts.aiModelCodex)
+    expect(codex).toMatch(/<option value="gpt-6.1-sol" selected="">/)
+  })
+
+  it('passes the guard only in the shape of the server', () => {
+    expect(isFamily(family({ ai_model: aiModel }))).toBe(true)
+    expect(isFamily(family({ ai_model: { ...aiModel, source: 'env' } as unknown as FamilyAiModel }))).toBe(false)
+    expect(isFamily(family({ ai_model: { ...aiModel, models: 'opus' } as unknown as FamilyAiModel }))).toBe(false)
+    const refused = { kind: 'error' as const, reason: 'invalid_response' as const, status: 403 }
+    expect(familyFailure('ai-model', refused)).toBe(familyTexts.staffOnly)
   })
 })

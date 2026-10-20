@@ -2052,11 +2052,13 @@ Line несёт ещё `category` (`{"id","name"}` либо `null`, после `
 
 - `ai` — `null` без семьи, иначе `{"enabled", "daily_limit", "used_today", "resets_at"}`: включён ли ИИ семьи, предел запросов за сутки (`null` — без предела: семьи, заведённые до `accounts.0004`), израсходовано сегодня, начало следующих суток (UTC ISO 8601). Видят все члены семьи;
 - `can_invite_families` — пользователь запроса — администратор сервера (`is_staff` активной учётной записи);
-- `family_invites` — действующие приглашения новых семей `[{"id", "created_at", "expires_at"}]` (без токенов; не администратору — `[]`).
+- `family_invites` — действующие приглашения новых семей `[{"id", "created_at", "expires_at"}]` (без токенов; не администратору — `[]`);
+- `ai_model` — только администратору сервера: `{"provider", "model", "effort", "source": "settings" | "database", "models": ["opus", "sonnet", "haiku"], "efforts": ["low", "medium", "high"]}` — модель и усилие Claude для всех вызовов сервера (`accounts.ai.model_choice`): строка `accounts.AiModelSetting`, если её нет — `RECEIPT_OCR_MODEL` / `RECEIPT_OCR_CLAUDE_EFFORT`; при `provider` не `claude_cli` строка не действует (`source: "settings"`, значения Codex).
 
 | Метод и адрес | Кто | Тело → ответ |
 | --- | --- | --- |
 | `PATCH /api/family/ai/` | главный | `{"enabled": true \| false}` → объект семьи; не главный — `403 head_only`, без семьи — `404`, не булево либо лишнее поле — `400 invalid_parameter` |
+| `PATCH /api/family/ai-model/` | администратор сервера | `{"model": "opus" \| "sonnet" \| "haiku", "effort": "low" \| "medium" \| "high"}` → объект семьи с `ai_model`; действует с следующего вызова модели (воркер читает строку перед каждым); не администратор — `403 staff_only`, другое значение — `400 invalid_parameter` с полем |
 | `POST /api/family/new-invites/` | администратор сервера | `201 {"id", "created_at", "expires_at", "token", "path": "/family/new?token=…"}`; одноразовое, 7 дней, в базе — SHA-256 токена; не администратор — `403 staff_only` |
 | `DELETE /api/family/new-invites/{id}/` | администратор сервера | `204` (отозвать непринятое); не администратор — `403 staff_only`; принятое, просроченное, чужого вида — `404` |
 | `POST /api/auth/new-family/check/` | кто угодно (как вход: без входа, с CSRF из `/api/auth/csrf/`) | `{"token"}` → `200 {"expires_at"}`; неверное, просроченное, принятое, приглашение в существующую семью — `400 invite_invalid` |

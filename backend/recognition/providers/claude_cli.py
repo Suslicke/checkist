@@ -63,6 +63,7 @@ class ClaudeConfig:
     recognize_timeout_seconds: float = 180
     cancel_grace_seconds: float = 2
     config_dir: str | None = None  # CLAUDE_CONFIG_DIR, аналог CODEX_HOME
+    dynamic: bool = False  # модель и усилие — из accounts.ai.model_choice() при каждом вызове (выбор администратора)
 
     def __post_init__(self):
         if not isinstance(self.executable, (str, Path)) or not str(self.executable):
@@ -93,6 +94,7 @@ class ClaudeConfig:
             detect_timeout_seconds=_positive(getattr(settings, "RECEIPT_OCR_DETECT_TIMEOUT_SECONDS", 90)),
             recognize_timeout_seconds=_positive(getattr(settings, "RECEIPT_OCR_RECOGNIZE_TIMEOUT_SECONDS", 180)),
             cancel_grace_seconds=_positive(getattr(settings, "RECEIPT_OCR_CANCEL_GRACE_SECONDS", 2)),
+            dynamic=True,
             # Настройки Django для каталога нет: его задаёт только CLAUDE_CONFIG_DIR окружения воркера (allowlist).
         )
 
@@ -291,6 +293,19 @@ class ClaudeCLIProvider:
         self.config = config or ClaudeConfig.from_settings()
         self.supervisor = supervisor or ProcessSupervisor(cancel_grace_seconds=self.config.cancel_grace_seconds)
 
+    def _choice(self):
+        if not self.config.dynamic:
+            return self.config.model, self.config.effort
+        from accounts.ai import model_choice
+
+        choice = model_choice()
+        return choice["model"], choice["effort"]
+
+    @property
+    def model_name(self):
+        """Модель следующего вызова — для записи попытки."""
+        return self._choice()[0]
+
     def detect(self, prepared_image, run):
         return self._call("detect", prepared_image, run)
 
@@ -357,7 +372,8 @@ class ClaudeCLIProvider:
         executable = shutil.which(str(self.config.executable))
         if executable is None or (os.name == "nt" and Path(executable).suffix.lower() != ".exe"):
             raise ProviderError("configuration_error")
-        if not self.config.model or any(ord(c) < 32 for c in self.config.model):
+        model, effort = self._choice()
+        if not model or any(ord(c) < 32 for c in model) or effort not in EFFORTS:
             raise ProviderError("configuration_error")
         root = self.config.temp_root.resolve()
         media = getattr(settings, "MEDIA_ROOT", "")
@@ -367,7 +383,7 @@ class ClaudeCLIProvider:
             root.mkdir(parents=True, exist_ok=True, mode=0o700)
             with tempfile.TemporaryDirectory(prefix="attempt-", dir=root) as folder:
                 work = Path(folder).resolve()
-                argv = build_argv(executable, self.config.model, self.config.effort, schema_json,
+                argv = build_argv(executable, model, effort, schema_json,
                                   self.config.max_budget_usd, SYSTEM_PROMPT)
                 result = self.supervisor.run(
                     argv, cwd=work, env=claude_child_environment(self.config.config_dir),

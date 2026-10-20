@@ -7,7 +7,7 @@ import type { Refusal } from '../auth/labels'
 import { passwordRules, waitText } from '../auth/labels'
 
 export type FamilyAction = 'create' | 'rename' | 'add' | 'remove' | 'head' | 'leave' | 'invite' | 'revoke' | 'join'
-  | 'ai' | 'family-invite' | 'family-revoke' | 'visible'
+  | 'ai' | 'family-invite' | 'family-revoke' | 'visible' | 'ai-model'
 
 export const familyTexts = {
   noFamily: 'Вы пока не в семье. Создайте семью — вы станете её главным и сможете добавить людей.',
@@ -24,6 +24,8 @@ export const familyTexts = {
   familyInvites: 'Для человека без учётной записи: он заведёт её и свою семью. Видит только администратор сервера.',
   aiNote: 'Фото чеков и тексты трат обрабатывает внешняя модель.',
   aiHeadOnly: 'Включить или выключить может главный.',
+  aiModelNote: 'Одна модель на весь сервер: фото чеков, «трата словами», категории, выписки и разбор месяца. Тратит подписку администратора, не квоту семьи; меняется сразу.',
+  aiModelCodex: 'Сейчас сервер работает через Codex: выбор сохранится и начнёт действовать после перехода на Claude.',
   visibleNote: 'Раньше выбранного месяца не видит траты, фото и доходы других членов семьи; свои — всегда. Сам эту настройку не видит.',
 }
 
@@ -35,7 +37,7 @@ export const aiUsageText = (ai: FamilyAi) => `Сегодня использов�
 export function familyFailure(action: FamilyAction, result: LocalApiResult<unknown>): string | null {
   if (result.kind !== 'error') return null
   const { status, fields } = result
-  if (status === 403) return action === 'family-invite' || action === 'family-revoke' ? familyTexts.staffOnly : familyTexts.headOnly
+  if (status === 403) return action === 'family-invite' || action === 'family-revoke' || action === 'ai-model' ? familyTexts.staffOnly : familyTexts.headOnly
   if (status === 429) return familyTexts.throttled
   if (status === 409) return action === 'create' || action === 'join' ? familyTexts.alreadyInFamily : familyTexts.headMustTransfer
   if (status === 400 && action === 'join' && !fields?.length) return familyTexts.inviteInvalid
