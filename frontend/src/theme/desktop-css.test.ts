@@ -163,3 +163,43 @@ describe('«Новая трата» at ≥ 960 (T5): the form at the left, «С�
     expect(rules(outside).filter((item) => item.selector.startsWith('.expense'))).toEqual([])
   })
 })
+
+describe('the catalog at ≥ 960 (T6): a 280 px rail at the left, the products a table at the right', () => {
+  const catalog = read('features/catalog/Catalog.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const base = rules(catalog.slice(0, catalog.indexOf('@media')))
+
+  it('dissolves the wrappers below the line and places them as rail and main above it', () => {
+    expect(rule('.ck-catalog-side', rules(outside))).toBe('display: contents;')
+    expect(rule('.ck-catalog-main', rules(outside))).toBe('display: contents;')
+    expect(value(rule('.ck-catalog'), 'grid-template-columns')).toBe('280px minmax(0, 1fr)')
+    expect(value(rule('.ck-catalog'), 'align-items')).toBe('start')
+    expect(value(rule('.ck-catalog-side'), 'grid-column')).toBe('1')
+    expect(value(rule('.ck-catalog-main'), 'grid-column')).toBe('2')
+    // The category page: the rail follows the head and spans the rows of the head and the products.
+    expect(value(rule('.ck-catalog-main ~ .ck-catalog-side'), 'grid-row')).toBe('1 / span 2')
+    // Before the category loads (or on an error) the head alone takes the whole width: no empty rail beside it.
+    expect(value(rule('.ck-catalog > .ck-catalog-main:only-child'), 'grid-column')).toBe('1 / -1')
+    expect(value(rule('.ck-catalog-side .ck-catalog-search-controls'), 'grid-template-columns')).toBe('minmax(0, 1fr)')
+  })
+
+  it('lays the table out with fixed columns that add up to the whole width, so a long name wraps instead of scrolling', () => {
+    const table = rule('.ck-catalog-table')
+    expect(value(table, 'width')).toBe('100%')
+    expect(value(table, 'table-layout')).toBe('fixed')
+    const widths = ['name', 'generic', 'last'].map((column) => Number(value(rule(`.ck-catalog-col-${column}`), 'width').replace('%', '')))
+    expect(widths.every((width) => width > 0)).toBe(true)
+    expect(widths.reduce((sum, width) => sum + width, 0)).toBe(100)
+    expect(value(rule('.ck-catalog-table thead th'), 'white-space')).toBe('nowrap')
+    // The price stays whole through the base rule of Catalog.css; the desktop sheet does not touch it.
+    expect(value(rule('.ck-catalog-price', base), 'white-space')).toBe('nowrap')
+    expect(desktop.filter((item) => item.selector.includes('.ck-catalog-price'))).toEqual([])
+  })
+
+  it('hides the caption of the table by position and clip in a base rule of Catalog.css, outside any media block', () => {
+    const caption = rule('.ck-catalog-visually-hidden', base)
+    expect(caption).toContain('position: absolute;')
+    expect(caption).toContain('clip-path: inset(50%);')
+    expect(caption).not.toMatch(/display\s*:|visibility\s*:|overflow/)
+    expect(desktop.filter((item) => item.selector.includes('.ck-catalog-visually-hidden'))).toEqual([])
+  })
+})

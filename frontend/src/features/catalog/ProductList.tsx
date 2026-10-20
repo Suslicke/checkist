@@ -1,5 +1,5 @@
 import type { Product } from '../../api/types'
-import { useNarrow } from '../../lib/cards'
+import { useDesktop, useNarrow } from '../../lib/cards'
 import { formatPrice, formatPurchasedOn, formatQuantity } from '../../lib/format'
 import { Link } from '../../navigation'
 import { ClassificationBadge } from '../classification/ClassificationMarks'
@@ -37,15 +37,51 @@ export function ProductRows({ products, merges, classifications }: { products: P
   </ul>
 }
 
+const tableColumns = ['Товар', 'Обобщённый продукт', 'Последняя покупка'] as const
+
+/** A desktop (from 960 px, useDesktop): one table — the name with its brand, package and marks, the generic product,
+ * the last purchase per place and currency. Its caption is read, not seen (.ck-catalog-visually-hidden, Catalog.css);
+ * the columns are drawn by desktop.css. */
+export function ProductTable({ products, merges, classifications }: { products: Product[] } & Marks) {
+  return <table className="ck-catalog-table">
+    <caption className="ck-catalog-visually-hidden">Товары и последние цены</caption>
+    <colgroup><col className="ck-catalog-col-name" /><col className="ck-catalog-col-generic" /><col className="ck-catalog-col-last" /></colgroup>
+    <thead><tr>{tableColumns.map((title) => <th key={title} scope="col">{title}</th>)}</tr></thead>
+    <tbody>{products.map((product) => {
+      const classification = markFor(classifications, product)
+      const meta = [product.brand?.name, product.package ? formatQuantity(product.package.quantity, product.package.unit) : undefined].filter(Boolean)
+      return <tr key={product.id}>
+        <th scope="row">
+          <h3><Link to={{ kind: 'product', productId: product.id, query: { page: 1 } }}>{product.name}</Link></h3>
+          {meta.length > 0 && <p className="ck-catalog-note">{meta.join(' · ')}</p>}
+          {merges?.has(product.id) && <MergeBadge mark={merges.get(product.id)!} />}
+          {classification && <ClassificationBadge mark={classification} />}
+        </th>
+        <td>{product.generic.name}</td>
+        <td className="ck-catalog-table-last">{product.prices.length === 0 ? <span className="ck-catalog-note">Покупок нет</span>
+          : <ul>{product.prices.map(({ country, currency, last }) => <li key={`${country}/${currency}`}>
+            <span className="ck-catalog-price">{formatPrice(last.paid_unit_price, currency)}</span>
+            <span className="ck-catalog-note">{country ?? NO_PLACE} · <time dateTime={last.purchased_on}>{formatPurchasedOn(last.purchased_on)}</time>{last.manual && ` · ${MANUAL_MARK}`}</span>
+          </li>)}</ul>}</td>
+      </tr>
+    })}</tbody>
+  </table>
+}
+
 /**
  * `merges`: kept products of pending duplicate groups; `classifications`: products with a pending category suggestion.
- * Absent or empty — the list has no marks of that kind.
+ * Absent or empty — the list has no marks of that kind. `view` — the rows of a phone, the table of a desktop or the cards
+ * between; absent, the window chooses (a server render: the cards).
  */
-export default function ProductList({ products, merges, classifications }: {
+export default function ProductList({ products, merges, classifications, view: chosen }: {
   products: Product[]; merges?: ReadonlyMap<number, PendingMark>; classifications?: ReadonlyMap<number, ClassificationMark>
+  view?: 'cards' | 'rows' | 'table'
 }) {
   const narrow = useNarrow()
-  if (narrow) return <ProductRows products={products} merges={merges} classifications={classifications} />
+  const desktop = useDesktop()
+  const view = chosen ?? (narrow ? 'rows' : desktop ? 'table' : 'cards')
+  if (view === 'rows') return <ProductRows products={products} merges={merges} classifications={classifications} />
+  if (view === 'table') return <ProductTable products={products} merges={merges} classifications={classifications} />
   return <ul className="ck-catalog-products">
     {products.map((product) => {
       const classification = markFor(classifications, product)

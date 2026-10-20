@@ -50,6 +50,8 @@
 /* A price or a quantity is one value: it is never broken inside, at any width. */
 .ck-catalog-price { font-family: var(--ck-font-figures); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ck-catalog-value { white-space: nowrap; }
+/* Read, not seen: the caption of the product table of a desktop (ProductList.tsx ProductTable). Position and clip only. */
+.ck-catalog-visually-hidden { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); white-space: nowrap; }
 
 /* The phone view (drawn only on a phone, useNarrow): category chips and product rows. */
 .ck-catalog-chip-count { margin-left: 8px; color: var(--ck-text-muted); font-weight: 500; }

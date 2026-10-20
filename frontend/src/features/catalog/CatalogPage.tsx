@@ -22,18 +22,23 @@ export function CatalogPage({ query }: CatalogPageProps) {
   const products = useCatalogRequest(loadProducts)
   const categoriesBlock = useLocalRequestFocus(categories.state)
   const narrow = useNarrow()
+  // The side and main wrappers have no box below 960 px (display: contents, desktop.css): one column in this order.
   return <div className="ck-catalog">
-    <CatalogSearch route={route} error={products.state.kind === 'error' ? products.state : undefined} />
-    <section ref={categoriesBlock} aria-labelledby="ck-catalog-categories-heading" aria-busy={categories.state.kind === 'loading'}>
-      <h2 id="ck-catalog-categories-heading" data-request-focus-target tabIndex={-1}>Категории</h2>
-      {categories.state.kind === 'loading' && <RequestState kind="loading" message="Загружаем категории…" />}
-      {categories.state.kind === 'error' && <CatalogError error={categories.state} route={route} onRetry={categories.retry} />}
-      {categories.state.kind === 'ok' && (categories.state.data.results.length === 0
-        ? <RequestState kind="empty" message="Категорий пока нет." />
-        : narrow ? <CategoryChips categories={categories.state.data.results} label="Категории" />
-          : <div className="ck-catalog-panel"><CategoryLinks categories={categories.state.data.results} /></div>)}
-    </section>
-    <ProductsSection state={products.state} route={route} onRetry={products.retry} />
+    <div className="ck-catalog-side">
+      <CatalogSearch route={route} error={products.state.kind === 'error' ? products.state : undefined} />
+      <section ref={categoriesBlock} aria-labelledby="ck-catalog-categories-heading" aria-busy={categories.state.kind === 'loading'}>
+        <h2 id="ck-catalog-categories-heading" data-request-focus-target tabIndex={-1}>Категории</h2>
+        {categories.state.kind === 'loading' && <RequestState kind="loading" message="Загружаем категории…" />}
+        {categories.state.kind === 'error' && <CatalogError error={categories.state} route={route} onRetry={categories.retry} />}
+        {categories.state.kind === 'ok' && (categories.state.data.results.length === 0
+          ? <RequestState kind="empty" message="Категорий пока нет." />
+          : narrow ? <CategoryChips categories={categories.state.data.results} label="Категории" />
+            : <div className="ck-catalog-panel"><CategoryLinks categories={categories.state.data.results} /></div>)}
+      </section>
+    </div>
+    <div className="ck-catalog-main">
+      <ProductsSection state={products.state} route={route} onRetry={products.retry} />
+    </div>
   </div>
 }
 

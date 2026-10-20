@@ -4,6 +4,10 @@
    Файл идёт в styles.ts после всех CSS экранов и до Skeleton.css: при равном весе правило отсюда побеждает правило экрана;
    App.css и ActionBar.css идут ПОСЛЕ — на их правила равного веса здесь не рассчитывать. Страж — theme/desktop-css.test.ts. */
 
+/* The catalog (features/catalog CatalogPage.tsx, CategoryPage.tsx): the rail and the main have no box below 960 px, so
+   both pages render today's one column in today's DOM order. */
+.ck-catalog-side, .ck-catalog-main { display: contents; }
+
 @media (min-width: 960px) {
   /* Правила экранов добавляют свои задачи: Траты, Чек, Новая трата, Каталог, Платежи, Цели, Доходы, Магазины. */
 
@@ -60,4 +64,33 @@
   .expense-page > .expense-hint { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 16px; }
   .expense-page > .expense-form { grid-column: 1; }
   .expense-page:not(:has(> .expense-hint)) { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+
+  /* The catalog: the search and the categories a 280 px rail at the left, the products a table at the right (ProductList
+     draws it from 960 px, useDesktop). A category page keeps its order: head, then the rail beside the products; before
+     its category loads (or on an error) the head alone takes the whole width. Placement: the rail of the catalog page
+     (first in DOM) and the head of a category page (a main, first in DOM) auto-place into row 1; the rail that FOLLOWS a
+     main gets a definite row 1 / span 2 (placed before the auto-placed mains), so the products main lands in row 2 of
+     column 2. Weights: .ck-catalog-main (0,1,0) < .ck-catalog-main ~ .ck-catalog-side (0,2,0) < :only-child (0,3,0).
+     The table: fixed columns of 44 / 24 / 32 % that add up to the width, so names and generic names wrap by words
+     (overflow-wrap of .ck-catalog) and nothing scrolls; the price stays whole through Catalog.css. The rail's search
+     controls go one under the other inside the 280 px card. */
+  .ck-catalog { grid-template-columns: 280px minmax(0, 1fr); gap: 20px 24px; align-items: start; }
+  .ck-catalog-side, .ck-catalog-main { display: grid; gap: 20px; min-width: 0; }
+  .ck-catalog-side { grid-column: 1; }
+  .ck-catalog-main { grid-column: 2; }
+  .ck-catalog-main ~ .ck-catalog-side { grid-row: 1 / span 2; }
+  .ck-catalog > .ck-catalog-main:only-child { grid-column: 1 / -1; }
+  .ck-catalog-side .ck-catalog-search-controls { grid-template-columns: minmax(0, 1fr); }
+  .ck-catalog-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
+  .ck-catalog-col-name { width: 44%; }
+  .ck-catalog-col-generic { width: 24%; }
+  .ck-catalog-col-last { width: 32%; }
+  .ck-catalog-table th, .ck-catalog-table td { padding: 12px 16px; text-align: left; vertical-align: top; }
+  .ck-catalog-table thead th { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; white-space: nowrap; }
+  .ck-catalog-table tbody th, .ck-catalog-table tbody td { border-top: 1px solid var(--ck-divider); }
+  .ck-catalog-table th[scope="row"] { font-weight: 400; }
+  .ck-catalog-table h3 a { display: inline-block; min-height: 44px; padding-block: 6px; color: var(--ck-link); text-decoration: none; }
+  .ck-catalog-table h3 a:hover { text-decoration: underline; }
+  .ck-catalog-table-last ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .ck-catalog-table-last li { display: grid; gap: 2px; }
 }
