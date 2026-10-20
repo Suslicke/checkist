@@ -10,15 +10,19 @@
   /* «Траты» (features/receipts): the whole page, the filters as one line of four fields and the buttons, 52 px rows.
      The two .receipt-filter-grid wrappers dissolve, so the four fields are columns 1–4 of the first row and the buttons
      column 5; the help line, the note «Фильтры из ссылки» and the form error go under them (order: 9). The heading
-     stays for aria-labelledby, hidden by position and clip (not overflow). The phone sheet is a portal outside
-     .spends-toolbar, so these rules never reach it. A row: badge | title | meta | amount on one line. */
+     stays for aria-labelledby, hidden by position and clip (not overflow) — out of flow, so the panel has one item and
+     no gap. The date tracks keep 150 px (a Chrome date field with its picker at 16 px; at 960 the four tracks would be
+     ≈ 142 px), the selects shrink. Fields align at the top, so a field error under one of them does not push the other
+     labels down; only the buttons sit at the bottom, on the line of the inputs. The phone sheet is a portal outside
+     .spends-toolbar, so these rules never reach it. A row: badge | title | meta | amount on one line. The skeleton of
+     the screen (Skeleton.css, second 960 block) mirrors the tracks, the gap and the row height — the guard compares them. */
   .spends-page { max-width: none; }
-  .spends-toolbar > .receipt-panel { padding: 12px 16px; gap: 8px; }
+  .spends-toolbar > .receipt-panel { padding: 12px 16px; }
   .spends-toolbar > .receipt-panel > h2 { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); white-space: nowrap; }
-  .spends-toolbar > .receipt-panel > form { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; gap: 8px 12px; }
+  .spends-toolbar > .receipt-panel > form { grid-template-columns: repeat(2, minmax(150px, 1fr)) repeat(2, minmax(0, 1fr)) auto; align-items: start; gap: 8px 12px; }
   .spends-toolbar > .receipt-panel > form > .receipt-filter-grid { display: contents; }
   .spends-toolbar > .receipt-panel > form > .receipt-note, .spends-toolbar > .receipt-panel > form > .receipt-field-error { grid-column: 1 / -1; order: 9; margin: 0; }
-  .spends-toolbar > .receipt-panel > form > .receipt-actions { grid-column: 5; flex-wrap: nowrap; gap: 8px; }
+  .spends-toolbar > .receipt-panel > form > .receipt-actions { grid-column: 5; align-self: end; flex-wrap: nowrap; gap: 8px; }
   .spends-toolbar > .receipt-panel > form > .receipt-actions > button { white-space: nowrap; }
   .spends-row { display: grid; grid-template-columns: 40px minmax(0, 1.2fr) minmax(0, 1fr) auto; column-gap: 12px; align-items: center; min-height: 52px; padding: 8px 16px; }
   .spends-row-main { display: contents; }
