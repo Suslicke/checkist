@@ -264,25 +264,76 @@ def _base(rows, request, month, today):
 
     Платёж другой валюты — по курсу сегодня (прошлый месяц — его последнего дня); оплата — в валюте платежа
     (копия по курсу дня покупки из сверки) и далее тем же курсом; без курса — платёж в ``excluded``.
+    Группы (``groups``) — корневые категории платежей по убыванию ожидаемой суммы, без категории — последней;
+    ``year`` — 12 месяцев по этот (старые сначала): оплаты по группам тем же курсом (у прошлого месяца — его последнего дня).
     """
     rows = [row for row in rows if row.state not in (services.BEFORE, services.INACTIVE) and row.payment.kind != INCOME]
     base = convert.request_base_currency(request)
-    day = today if month == Month.of(today) else month.last
-    rates = convert.converter(base, {(row.payment.currency_id, day) for row in rows})
-    expected = paid = left = Decimal("0")
+    tree = common.CategoryTree.load()
+    zero = Decimal("0")
+
+    def day_of(item):
+        return today if item == Month.of(today) else item.last
+
+    def root(row):
+        return tree.path_ids(row.payment.category_id)[0] if row.payment.category_id is not None else None
+
+    day = day_of(month)
+    needs = {(row.payment.currency_id, day) for row in rows}
+    needs |= {(row.payment.currency_id, day_of(item)) for row in rows for item, _, spend in row.year if spend is not None}
+    rates = convert.converter(base, needs)
+    groups = {}
+
+    def group(key):
+        if key not in groups:
+            groups[key] = {"category_id": key, "name": tree.path(key)[-1]["name"] if key is not None else "Без категории",
+                           "icon": tree.icon(key) if key is not None else None, "expected": zero, "paid": zero, "left": zero,
+                           "payments": 0, "done": 0, "payment_ids": []}
+        return groups[key]
+
+    expected = paid = left = zero
     excluded = 0
     for row in rows:
-        amount = rates.convert(row.payment.amount, row.payment.currency_id, day)
+        currency = row.payment.currency_id
+        amount = rates.convert(row.payment.amount, currency, day)
         if amount is None:
             excluded += 1
             continue
+        entry = group(root(row))
+        entry["payments"] += 1
+        entry["payment_ids"].append(row.payment.pk)
+        entry["expected"] += amount
         expected += amount
         if row.state in services.UNPAID:
             left += amount
-        elif row.spend is not None:
-            paid += rates.convert(row.spend.total, row.payment.currency_id, day) or Decimal("0")
-    return {"currency": base, "expected": common.amount(expected), "paid": common.amount(paid), "left": common.amount(left),
-            "excluded": excluded}
+            entry["left"] += amount
+        else:
+            entry["done"] += 1
+            if row.spend is not None:
+                value = rates.convert(row.spend.total, currency, day) or zero
+                paid += value
+                entry["paid"] += value
+    months = [item for item, _, _ in rows[0].year][::-1] if rows and rows[0].year else []
+    year = {item.label(): {"month": item.label(), "total": zero, "groups": {}} for item in months}
+    for row in rows:
+        for item, _, spend in row.year:
+            value = rates.convert(spend.total, row.payment.currency_id, day_of(item)) if spend is not None else None
+            if value is None or item.label() not in year:
+                continue
+            entry = year[item.label()]
+            entry["total"] += value
+            entry["groups"][root(row)] = entry["groups"].get(root(row), zero) + value
+    money = ("expected", "paid", "left")
+    return {
+        "currency": base, "expected": common.amount(expected), "paid": common.amount(paid), "left": common.amount(left),
+        "excluded": excluded,
+        "groups": [{**entry, **{name: common.amount(entry[name]) for name in money}, "payment_ids": sorted(entry["payment_ids"])}
+                   for entry in sorted(groups.values(), key=lambda entry: (entry["category_id"] is None, -entry["expected"]))],
+        "year": [{"month": entry["month"], "total": common.amount(entry["total"]),
+                  "groups": [{"category_id": key, "paid": common.amount(value)}
+                             for key, value in sorted(entry["groups"].items(), key=lambda pair: (pair[0] is None, -pair[1]))]}
+                 for entry in year.values()],
+    }
 
 
 def visible_payments(request):

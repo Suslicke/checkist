@@ -7,10 +7,15 @@ import { getManualDefaults } from '../../api/receipts'
 import {
   acceptSuggestion, createRecurring, decideRecurring, deleteRecurring, dismissSuggestion, getRecurringMonth, payRecurring, updateRecurring,
 } from '../../api/recurring'
-import type { RecurringMonth, RecurringMonthPayment, RecurringPayment, RecurringSuggestion } from '../../api/recurring'
+import type { RecurringBase, RecurringMonth, RecurringMonthPayment, RecurringPayment, RecurringSuggestion } from '../../api/recurring'
 import type { Category, LocalApiResult } from '../../api/types'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
+import { StackedColumns } from '../../lib/charts'
+import { categoryTone } from '../../lib/category-tone'
+import { categoryIcon } from '../../lib/category-icons'
+import Icon from '../../components/Icon'
+import { formatMonthStart, formatMonthTick, monthStart, moneyAxis } from '../stats/trends-state'
 import { formatMoney } from '../../lib/money'
 import { dashboardErrorMessage, monthTitle } from '../dashboard/dashboard-state'
 import { DueBadge, NoticeLine, QuestionsCard } from './RecurringDue'
@@ -50,6 +55,63 @@ function PaymentItem({ row, today, onEdit }: { row: RecurringMonthPayment; today
       <span className="ck-row-amount ck-figures">{formatMoney(row.paid?.total ?? row.amount, row.currency)}</span>
     </button>
   </li>
+}
+
+const groupKey = (id: number | null) => (id === null ? 'none' : String(id))
+
+/** The dashboard of the month: a tile per root category — expected sum, how many are paid, what is left; a tap scrolls to the group. */
+function Tiles({ base }: { base: RecurringBase }) {
+  return <ul className="rec-tiles" aria-label="Платежи по категориям">
+    {base.groups.map((group) => <li key={groupKey(group.category_id)} className={`rec-tile rec-cat-${categoryTone(group.category_id)}`}>
+      <a href={`#rec-group-${groupKey(group.category_id)}`}>
+        <span className="rec-tile-head"><Icon name={categoryIcon(group.icon)} size={18} /><span className="rec-tile-name">{group.name}</span></span>
+        <span className="rec-tile-sum ck-figures">{formatMoney(group.expected, base.currency)}</span>
+        <span className="rec-tile-meta">{group.done === group.payments
+          ? `оплачено ${group.done} из ${group.payments}`
+          : <>осталось <span className="ck-figures">{formatMoney(group.left, base.currency)}</span></>}</span>
+      </a>
+    </li>)}
+  </ul>
+}
+
+/** The payments of the month under their root category; without `base` (an older server) — one flat list. */
+function Groups({ base, rows, today, onEdit }: { base?: RecurringBase; rows: RecurringMonthPayment[]; today: string; onEdit: (payment: RecurringPayment) => void }) {
+  const list = (items: RecurringMonthPayment[]) => <ul className="ck-list rec-list">{items.map((row) => <PaymentItem key={row.id} row={row} today={today} onEdit={onEdit} />)}</ul>
+  if (!base || base.groups.length === 0) return list(rows)
+  const grouped = new Set(base.groups.flatMap((group) => group.payment_ids))
+  const rest = rows.filter((row) => !grouped.has(row.id))
+  return <>
+    {base.groups.map((group) => {
+      const items = rows.filter((row) => group.payment_ids.includes(row.id))
+      return items.length === 0 ? null : <section key={groupKey(group.category_id)} className={`rec-group rec-cat-${categoryTone(group.category_id)}`}
+        id={`rec-group-${groupKey(group.category_id)}`} aria-label={group.name}>
+        <h3 className="rec-group-head"><span className="rec-tile-dot" aria-hidden="true" />{group.name}
+          <span className="rec-group-sum ck-figures">{formatMoney(group.expected, base.currency)}</span></h3>
+        {list(items)}
+      </section>
+    })}
+    {rest.length > 0 && <section className="rec-group" aria-label="Без курса">
+      <h3 className="rec-group-head">Без курса</h3>
+      {list(rest)}
+    </section>}
+  </>
+}
+
+/** Twelve months of payments by group, in the base currency; the legend is the order of the tiles. */
+function YearCard({ base }: { base: RecurringBase }) {
+  const amount = (value: string) => formatMoney(value, base.currency)
+  const legend = base.groups.map((group) => ({ key: groupKey(group.category_id), label: group.name, tone: categoryTone(group.category_id) }))
+  const known = new Set(legend.map((entry) => entry.key))
+  const columns = base.year.map((entry) => ({
+    x: monthStart(entry.month), totalText: amount(entry.total),
+    segments: entry.groups.filter((part) => known.has(groupKey(part.category_id)))
+      .map((part) => ({ key: groupKey(part.category_id), value: Number(part.paid), valueText: amount(part.paid) })),
+  }))
+  return <section className="ck-panel rec-card" aria-labelledby="rec-year-heading">
+    <div className="ck-panel-head"><h2 id="rec-year-heading">Платежи за 12 месяцев</h2></div>
+    <StackedColumns title="Платежи за 12 месяцев" columns={columns} legend={legend} formatX={formatMonthStart} formatTick={formatMonthTick}
+      formatValue={moneyAxis} valueAxisLabel={base.currency} />
+  </section>
 }
 
 function SuggestionItem({ item, busy, onAccept, onDismiss }: {
@@ -107,17 +169,19 @@ export function RecurringView({ data, busy = false, notice = null, onDecide = ()
         <h2 id="rec-list-heading">{monthTitle(data.month)}</h2>
         {rows.length > 0 && <span className="rec-head-meta">оплачено {rows.length - rows.filter((row) => row.state === 'due' || row.state === 'overdue').length} из {rows.length}</span>}
       </div>
+      {data.base && data.base.groups.length > 0 && <Tiles base={data.base} />}
       {data.base && <p className="rec-sum rec-total">Обязательных платежей в месяц <span className="ck-figures rec-sum-value">{formatMoney(data.base.expected, data.base.currency)}</span>
         {' · '}оплачено <span className="ck-figures rec-sum-value">{formatMoney(data.base.paid, data.base.currency)}</span>
         {data.base.excluded > 0 && ` · без курса: ${data.base.excluded}`}</p>}
       {left.length > 0 && <p className="rec-sum">Осталось оплатить {left.map((total, index) => <span key={total.currency}>
         {index > 0 && ' + '}<span className="ck-figures rec-sum-value">{formatMoney(total.left, total.currency)}</span></span>)}</p>}
       {active.length
-        ? <ul className="ck-list rec-list">{active.map((row) => <PaymentItem key={row.id} row={row} today={data.today} onEdit={onEdit} />)}</ul>
+        ? <Groups base={data.base} rows={active} today={data.today} onEdit={onEdit} />
         : <p className="rec-note">Регулярных платежей пока нет. Добавьте аренду, коммунальные или подписки — на главной будет видно, что
           осталось оплатить в месяце.</p>}
       <button type="button" className="rec-add" onClick={() => onEdit(null)} aria-haspopup="dialog">Добавить платёж</button>
     </section>
+    {data.base && data.base.year.length > 0 && <YearCard base={data.base} />}
     </div>
     <div className="rec-side">
     <section className="ck-panel rec-card" aria-labelledby="rec-income-heading">

@@ -18,7 +18,17 @@ export function monthPaymentFixture(patch: Partial<RecurringMonthPayment> = {}):
 export function recurringFixture(patch: Partial<RecurringMonth> = {}): RecurringMonth {
   return {
     month: '2026-10', previous_month: '2026-09', today: '2026-10-13',
-    base: { currency: 'KZT', expected: '237400.00', paid: '220000.00', left: '17400.00', excluded: 0 },
+    base: {
+      currency: 'KZT', expected: '237400.00', paid: '220000.00', left: '17400.00', excluded: 0,
+      groups: [
+        { category_id: 10, name: 'Жильё', icon: 'home', expected: '220000.00', paid: '220000.00', left: '0.00', payments: 1, done: 1, payment_ids: [1] },
+        { category_id: 15, name: 'Связь и подписки', icon: 'phone', expected: '17400.00', paid: '0.00', left: '17400.00', payments: 2, done: 0, payment_ids: [2, 3] },
+      ],
+      year: Array.from({ length: 12 }, (_, index) => {
+        const month = `${2025 + Math.floor((10 + index) / 12)}-${String(((10 + index) % 12) + 1).padStart(2, '0')}`
+        return index < 6 ? { month, total: '0.00', groups: [] } : { month, total: '220000.00', groups: [{ category_id: 10, paid: '220000.00' }] }
+      }),
+    },
     payments: [
       monthPaymentFixture(),
       monthPaymentFixture({

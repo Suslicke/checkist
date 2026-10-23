@@ -113,7 +113,7 @@ describe('«Осталось оплатить» on «Главная» (Vitest/SS
 
 describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
   it('shows the month total of the mandatory payments in the base currency, or nothing on an older server', () => {
-    const base = { currency: 'KZT' as const, expected: '347177.00', paid: '350522.78', left: '0.00', excluded: 0 }
+    const base = { ...recurringFixture().base!, expected: '347177.00', paid: '350522.78', left: '0.00', excluded: 0 }
     const page = html(<RecurringView data={recurringFixture({ base })} />)
     expect(page).toContain('<p class="rec-sum rec-total">Обязательных платежей в месяц <span class="ck-figures rec-sum-value">347 177 ₸</span>')
     expect(page).toContain('оплачено <span class="ck-figures rec-sum-value">350 522,78 ₸</span>')
@@ -125,6 +125,32 @@ describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
     expect(html(<RecurringView data={older} />)).not.toContain('rec-total')
     expect(isRecurringMonth(older)).toBe(true)
     expect(isRecurringMonth({ ...older, base: { ...base, excluded: 'x' } })).toBe(false)
+  })
+  it('shows a tile per root category, lists the payments under their group and draws twelve months', () => {
+    const page = html(<RecurringView data={recurringFixture()} />)
+    const tiles = page.slice(page.indexOf('class="rec-tiles"'), page.indexOf('</ul>', page.indexOf('class="rec-tiles"')))
+    expect(tiles).toContain('rec-tile rec-cat-4')
+    expect(tiles).toContain('Жильё')
+    expect(tiles).toContain('220 000 ₸')
+    expect(tiles).toContain('оплачено 1 из 1')
+    expect(tiles).toContain('Связь и подписки')
+    expect(tiles).toContain('осталось <span class="ck-figures">17 400 ₸</span>')
+    expect(tiles).toContain('href="#rec-group-15"')
+    // The groups: the heading with the sum, then the rows of its payments (2 and 3 under subscriptions).
+    const subs = page.slice(page.indexOf('id="rec-group-15"'))
+    expect(subs).toContain('Связь и подписки')
+    expect(subs.indexOf('Интернет')).toBeGreaterThan(-1)
+    expect(subs.indexOf('ChatGPT')).toBeGreaterThan(subs.indexOf('Интернет'))
+    expect(page.indexOf('id="rec-group-10"')).toBeLessThan(page.indexOf('id="rec-group-15"'))
+    expect(page).toContain('Платежи за 12 месяцев')
+    expect(page).toContain(`class="ck-chart ck-columns" role="group" aria-label="Платежи за 12 месяцев"`)
+    // An older server: the flat list, no tiles, no chart.
+    const older = { ...recurringFixture(), base: undefined }
+    delete older.base
+    const flat = html(<RecurringView data={older} />)
+    expect(flat).not.toContain('rec-tiles')
+    expect(flat).not.toContain('Платежи за 12 месяцев')
+    expect(flat).toContain('Интернет')
   })
   it('explains the rule, offers the suggestions, lists the month with a strip of six months and the change of the amount', () => {
     const page = html(<RecurringView data={recurringFixture()} />)
@@ -153,7 +179,8 @@ describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
     // The intro stays first; the main column opens right after it with the question card.
     expect(page).toContain('Сам я ничего не добавляю.</p><div class="rec-main"><section class="ck-panel rec-card rec-ask"')
     // The side column opens right after the month card and holds the income first, the off ones last; the page ends with it.
-    expect(page).toContain('Добавить платёж</button></section></div><div class="rec-side"><section class="ck-panel rec-card" aria-labelledby="rec-income-heading">')
+    expect(page).toContain('Добавить платёж</button></section><section class="ck-panel rec-card" aria-labelledby="rec-year-heading">')
+    expect(page).toContain('</section></div><div class="rec-side"><section class="ck-panel rec-card" aria-labelledby="rec-income-heading">')
     expect(page).toMatch(/<h2 id="rec-off-heading">Выключены<\/h2>.*<\/section><\/div><\/div>$/)
     const at = (text: string) => { const index = page.indexOf(text); expect(index, text).toBeGreaterThan(-1); return index }
     const order = ['class="rec-intro"', 'class="rec-main"', 'rec-ask-heading', 'rec-suggest-heading', 'rec-list-heading', 'class="rec-side"', 'rec-income-heading', 'rec-off-heading']

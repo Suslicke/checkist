@@ -121,3 +121,22 @@
 /* A paid month is a link to its spend: the arrow says so, a press shows it. */
 .rec-year-go { flex: none; color: var(--ck-text-muted); }
 .rec-year-link:where(:hover) .ck-row-title { text-decoration: underline; }
+
+/* The dashboard of the month (2026-10-23): a tile per root category and the payments grouped under it; the colour of a
+   category is the same as on «Главная» and «Траты» (--ck-cat-N by categoryTone), the chart — lib/charts StackedColumns. */
+.rec-cat-1 { --rec-cat: var(--ck-cat-1); --rec-cat-tint: var(--ck-cat-1-tint); }
+.rec-cat-2 { --rec-cat: var(--ck-cat-2); --rec-cat-tint: var(--ck-cat-2-tint); }
+.rec-cat-3 { --rec-cat: var(--ck-cat-3); --rec-cat-tint: var(--ck-cat-3-tint); }
+.rec-cat-4 { --rec-cat: var(--ck-cat-4); --rec-cat-tint: var(--ck-cat-4-tint); }
+.rec-cat-5 { --rec-cat: var(--ck-cat-5); --rec-cat-tint: var(--ck-cat-5-tint); }
+.rec-cat-6 { --rec-cat: var(--ck-cat-6); --rec-cat-tint: var(--ck-cat-6-tint); }
+.rec-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rec-tile > a { display: grid; gap: 4px; min-height: 44px; padding: 12px; border-radius: var(--ck-radius-md); background: var(--rec-cat-tint, var(--ck-neutral-bg)); color: var(--ck-text); text-decoration: none; }
+.rec-tile-head { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--rec-cat, var(--ck-text-muted)); font-size: var(--ck-text-sm); font-weight: 700; }
+.rec-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-tile-sum { font-size: var(--ck-text-lg); font-weight: 800; white-space: nowrap; }
+.rec-tile-meta { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 600; }
+.rec-group { display: grid; gap: 0; }
+.rec-group-head { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 700; }
+.rec-group-sum { margin-left: auto; color: var(--ck-text); font-weight: 800; white-space: nowrap; }
+.rec-tile-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--rec-cat, var(--ck-text-muted)); }

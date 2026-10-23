@@ -72,7 +72,18 @@ export type RecurringSuggestion = {
 export type RecurringTotal = { currency: CurrencyCode; payments: number; done: number; left: Decimal | null }
 /** The month's mandatory payments as one sum in the base currency of the family; `excluded` — payments without a rate.
  * Missing from an older server. */
-export type RecurringBase = { currency: CurrencyCode; expected: Decimal; paid: Decimal; left: Decimal; excluded: number }
+export type RecurringBaseGroup = {
+  category_id: number | null; name: string; icon: string | null
+  expected: Decimal; paid: Decimal; left: Decimal; payments: number; done: number; payment_ids: number[]
+}
+export type RecurringBaseMonth = { month: string; total: Decimal; groups: { category_id: number | null; paid: Decimal }[] }
+export type RecurringBase = {
+  currency: CurrencyCode; expected: Decimal; paid: Decimal; left: Decimal; excluded: number
+  /** Root categories of the payments, the largest first. */
+  groups: RecurringBaseGroup[]
+  /** Twelve months up to this one, the oldest first: what was paid, by group. */
+  year: RecurringBaseMonth[]
+}
 export type RecurringMonth = {
   month: string; previous_month: string; today: ISODate
   payments: RecurringMonthPayment[]; questions: RecurringQuestion[]; suggestions: RecurringSuggestion[]; totals: RecurringTotal[]
@@ -116,7 +127,16 @@ const isSuggestion = object<RecurringSuggestion>({
   store_id: isId, store_name: text, category_id: isId, category_name: text, currency, amount, due_day: dueDay,
   months: nonNegativeInteger, last_date: isISODate, name: text,
 })
-const isBase = object<RecurringBase>({ currency, expected: amount, paid: amount, left: amount, excluded: nonNegativeInteger })
+const isBaseGroup = object<RecurringBaseGroup>({
+  category_id: nullable(isId), name: text, icon: nullable(text), expected: amount, paid: amount, left: amount,
+  payments: nonNegativeInteger, done: nonNegativeInteger, payment_ids: array(isId),
+})
+const isBaseMonth = object<RecurringBaseMonth>({
+  month: isMonthCode, total: amount, groups: array(object<RecurringBaseMonth['groups'][number]>({ category_id: nullable(isId), paid: amount })),
+})
+const isBase = object<RecurringBase>({
+  currency, expected: amount, paid: amount, left: amount, excluded: nonNegativeInteger, groups: array(isBaseGroup), year: array(isBaseMonth),
+})
 const monthShape = object<Omit<RecurringMonth, 'base'>>({
   month: isMonthCode, previous_month: isMonthCode, today: isISODate, payments: array(isMonthPayment),
   questions: array(isQuestion), suggestions: array(isSuggestion),

@@ -118,10 +118,30 @@ class RecurringLocalTests(Fixture, TestCase):
         self.create(name="Claude", store_name="Демо-Claude", amount="99990", due_day=12)
         self.create(name="Хостинг", store_name=None, amount="16.80", due_day=20, currency="USD")
         self.create(name="Без курса", store_name=None, amount="10", due_day=20, currency="EUR")
+        rent = self.create(name="Аренда", store_name="Демо-хозяин", category_id=self.rent.pk, amount="220000", due_day=5)
         data = self.month()
-        # Claude оплачен 225 $ = 120 375 ₸ (курс дня покупки); хостинг 16,80 $ × 540 (курс сегодня) = 9 072 ₸ не оплачен.
-        self.assertEqual(data["base"], {"currency": "KZT", "expected": "109062.00", "paid": "120375.00", "left": "9072.00",
-                                        "excluded": 1})
+        base = data["base"]
+        # Claude оплачен 225 $ = 120 375 ₸ (курс дня покупки); хостинг 16,80 $ × 540 (курс сегодня) = 9 072 ₸ не оплачен;
+        # аренда 220 000 ₸ оплачена, «Без курса» не входит.
+        self.assertEqual({name: base[name] for name in ("currency", "expected", "paid", "left", "excluded")},
+                         {"currency": "KZT", "expected": "329062.00", "paid": "340375.00", "left": "9072.00", "excluded": 1})
+        # Группы — корневые категории платежей по убыванию ожидаемой суммы.
+        claude_id, hosting_id = (self.payment(data, pk)["id"] for pk in (
+            next(row["id"] for row in data["payments"] if row["name"] == "Claude"),
+            next(row["id"] for row in data["payments"] if row["name"] == "Хостинг")))
+        self.assertEqual(base["groups"], [
+            {"category_id": self.home.pk, "name": "Демо-жильё", "icon": None, "expected": "220000.00", "paid": "220000.00",
+             "left": "0.00", "payments": 1, "done": 1, "payment_ids": [rent["id"]]},
+            {"category_id": self.subs.pk, "name": "Демо-подписки", "icon": None, "expected": "109062.00", "paid": "120375.00",
+             "left": "9072.00", "payments": 2, "done": 1, "payment_ids": sorted([claude_id, hosting_id])},
+        ])
+        # 12 месяцев, старые сначала: оплаты по группам в основной валюте.
+        self.assertEqual([entry["month"] for entry in base["year"]][::11], ["2025-11", "2026-10"])
+        self.assertEqual(base["year"][0], {"month": "2025-11", "total": "0.00", "groups": []})
+        self.assertEqual(base["year"][-2], {"month": "2026-09", "total": "220000.00",
+                                            "groups": [{"category_id": self.home.pk, "paid": "220000.00"}]})
+        self.assertEqual(base["year"][-1], {"month": "2026-10", "total": "340375.00", "groups": [
+            {"category_id": self.home.pk, "paid": "220000.00"}, {"category_id": self.subs.pk, "paid": "120375.00"}]})
 
     def test_suggestions_from_history_and_accept_in_one_tap(self):
         data = self.month()
