@@ -107,6 +107,9 @@ export function RecurringView({ data, busy = false, notice = null, onDecide = ()
         <h2 id="rec-list-heading">{monthTitle(data.month)}</h2>
         {rows.length > 0 && <span className="rec-head-meta">оплачено {rows.length - rows.filter((row) => row.state === 'due' || row.state === 'overdue').length} из {rows.length}</span>}
       </div>
+      {data.base && <p className="rec-sum rec-total">Обязательных платежей в месяц <span className="ck-figures rec-sum-value">{formatMoney(data.base.expected, data.base.currency)}</span>
+        {' · '}оплачено <span className="ck-figures rec-sum-value">{formatMoney(data.base.paid, data.base.currency)}</span>
+        {data.base.excluded > 0 && ` · без курса: ${data.base.excluded}`}</p>}
       {left.length > 0 && <p className="rec-sum">Осталось оплатить {left.map((total, index) => <span key={total.currency}>
         {index > 0 && ' + '}<span className="ck-figures rec-sum-value">{formatMoney(total.left, total.currency)}</span></span>)}</p>}
       {active.length

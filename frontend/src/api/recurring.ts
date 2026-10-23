@@ -70,9 +70,13 @@ export type RecurringSuggestion = {
   amount: Decimal; due_day: number; months: number; last_date: ISODate; name: string
 }
 export type RecurringTotal = { currency: CurrencyCode; payments: number; done: number; left: Decimal | null }
+/** The month's mandatory payments as one sum in the base currency of the family; `excluded` — payments without a rate.
+ * Missing from an older server. */
+export type RecurringBase = { currency: CurrencyCode; expected: Decimal; paid: Decimal; left: Decimal; excluded: number }
 export type RecurringMonth = {
   month: string; previous_month: string; today: ISODate
   payments: RecurringMonthPayment[]; questions: RecurringQuestion[]; suggestions: RecurringSuggestion[]; totals: RecurringTotal[]
+  base?: RecurringBase
 }
 /** The body of a new payment; `store_name` — the place by its name, empty — none. */
 export type RecurringInput = {
@@ -112,11 +116,14 @@ const isSuggestion = object<RecurringSuggestion>({
   store_id: isId, store_name: text, category_id: isId, category_name: text, currency, amount, due_day: dueDay,
   months: nonNegativeInteger, last_date: isISODate, name: text,
 })
-export const isRecurringMonth: Guard<RecurringMonth> = object<RecurringMonth>({
+const isBase = object<RecurringBase>({ currency, expected: amount, paid: amount, left: amount, excluded: nonNegativeInteger })
+const monthShape = object<Omit<RecurringMonth, 'base'>>({
   month: isMonthCode, previous_month: isMonthCode, today: isISODate, payments: array(isMonthPayment),
   questions: array(isQuestion), suggestions: array(isSuggestion),
   totals: array(object<RecurringTotal>({ currency, payments: nonNegativeInteger, done: nonNegativeInteger, left: nullable(amount) })),
 })
+export const isRecurringMonth: Guard<RecurringMonth> = (value): value is RecurringMonth => monthShape(value)
+  && (!Object.hasOwn(value, 'base') || isBase((value as Record<string, unknown>).base))
 const isDecision = object<RecurringDecisionResult>({
   payment_id: isId, month: isMonthCode, decision: choice('added', 'skipped', 'elsewhere'), receipt_id: nullable(isId),
 })

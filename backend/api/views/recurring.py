@@ -13,6 +13,7 @@ loopback; запись — с CSRF. Платежи семьи видят и пр
 """
 import re
 from datetime import date, timedelta
+from decimal import Decimal
 
 from django.utils import timezone
 from rest_framework import status
@@ -25,6 +26,7 @@ from catalog.models import Category
 from config.exceptions import ApiError, InvalidParameter, ObjectNotFound
 from receipts import manual
 from receipts.models import Receipt
+from rates import convert
 from recurring import matching, services
 from incomes.access import categories_q
 from incomes.models import IncomeCategory
@@ -257,6 +259,32 @@ def _totals(rows):
     return [{**entry, "left": common.amount(entry["left"])} for _, entry in sorted(totals.items())]
 
 
+def _base(rows, request, month, today):
+    """Обязательные платежи месяца одной суммой в основной валюте семьи: ожидается, оплачено, осталось.
+
+    Платёж другой валюты — по курсу сегодня (прошлый месяц — его последнего дня); оплата — в валюте платежа
+    (копия по курсу дня покупки из сверки) и далее тем же курсом; без курса — платёж в ``excluded``.
+    """
+    rows = [row for row in rows if row.state not in (services.BEFORE, services.INACTIVE) and row.payment.kind != INCOME]
+    base = convert.request_base_currency(request)
+    day = today if month == Month.of(today) else month.last
+    rates = convert.converter(base, {(row.payment.currency_id, day) for row in rows})
+    expected = paid = left = Decimal("0")
+    excluded = 0
+    for row in rows:
+        amount = rates.convert(row.payment.amount, row.payment.currency_id, day)
+        if amount is None:
+            excluded += 1
+            continue
+        expected += amount
+        if row.state in services.UNPAID:
+            left += amount
+        elif row.spend is not None:
+            paid += rates.convert(row.spend.total, row.payment.currency_id, day) or Decimal("0")
+    return {"currency": base, "expected": common.amount(expected), "paid": common.amount(paid), "left": common.amount(left),
+            "excluded": excluded}
+
+
 def visible_payments(request):
     return RecurringPayment.objects.filter(visible_payments_q(request)).select_related(
         "store__merchant", "category", "income_category", "created_by")
@@ -280,6 +308,7 @@ class PaymentsView(LocalAPIView):
             "questions": [_question(item) for item in view.questions],
             "suggestions": [_suggestion(row) for row in view.suggestions],
             "totals": _totals(view.payments),
+            "base": _base(view.payments, request, month, today),
         })
 
     def post(self, request):

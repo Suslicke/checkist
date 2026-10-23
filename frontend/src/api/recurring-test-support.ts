@@ -18,6 +18,7 @@ export function monthPaymentFixture(patch: Partial<RecurringMonthPayment> = {}):
 export function recurringFixture(patch: Partial<RecurringMonth> = {}): RecurringMonth {
   return {
     month: '2026-10', previous_month: '2026-09', today: '2026-10-13',
+    base: { currency: 'KZT', expected: '237400.00', paid: '220000.00', left: '17400.00', excluded: 0 },
     payments: [
       monthPaymentFixture(),
       monthPaymentFixture({
