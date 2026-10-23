@@ -136,7 +136,9 @@
 .rec-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rec-tile-sum { font-size: var(--ck-text-lg); font-weight: 800; white-space: nowrap; }
 .rec-tile-meta { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 600; }
-.rec-group { display: grid; gap: 0; }
-.rec-group-head { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 700; }
+.rec-group { display: grid; gap: 0; min-width: 0; }
+.rec-group > .rec-list { min-width: 0; }
+.rec-group-head { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 12px 0 4px; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 700; }
+.rec-group-head > .rec-group-sum { flex: none; }
 .rec-group-sum { margin-left: auto; color: var(--ck-text); font-weight: 800; white-space: nowrap; }
 .rec-tile-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--rec-cat, var(--ck-text-muted)); }
