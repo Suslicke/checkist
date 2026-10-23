@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import type { ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { isRecurringMonth } from '../../api/recurring'
 import { monthPaymentFixture, recurringFixture } from '../../api/recurring-test-support'
 import type { Category } from '../../api/types'
 import { RecurringDueView } from './RecurringDue'
@@ -111,6 +112,20 @@ describe('«Осталось оплатить» on «Главная» (Vitest/SS
 })
 
 describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
+  it('shows the month total of the mandatory payments in the base currency, or nothing on an older server', () => {
+    const base = { currency: 'KZT' as const, expected: '347177.00', paid: '350522.78', left: '0.00', excluded: 0 }
+    const page = html(<RecurringView data={recurringFixture({ base })} />)
+    expect(page).toContain('<p class="rec-sum rec-total">Обязательных платежей в месяц <span class="ck-figures rec-sum-value">347 177 ₸</span>')
+    expect(page).toContain('оплачено <span class="ck-figures rec-sum-value">350 522,78 ₸</span>')
+    expect(page).not.toContain('без курса')
+    const partial = html(<RecurringView data={recurringFixture({ base: { ...base, excluded: 2 } })} />)
+    expect(partial).toContain('без курса: 2')
+    const older = { ...recurringFixture(), base: undefined }
+    delete older.base
+    expect(html(<RecurringView data={older} />)).not.toContain('rec-total')
+    expect(isRecurringMonth(older)).toBe(true)
+    expect(isRecurringMonth({ ...older, base: { ...base, excluded: 'x' } })).toBe(false)
+  })
   it('explains the rule, offers the suggestions, lists the month with a strip of six months and the change of the amount', () => {
     const page = html(<RecurringView data={recurringFixture()} />)
     expect(page).toContain('два из трёх: место, категория, сумма')

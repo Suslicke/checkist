@@ -109,6 +109,20 @@ class RecurringLocalTests(Fixture, TestCase):
         self.assertEqual((row["state"], row["paid"]["receipt_id"], row["paid"]["total"]), ("paid", october.pk, "120375.00"))
         self.assertEqual(row["year"]["total"], "220365.00")
 
+    def test_base_sums_the_month_in_the_base_currency(self):
+        # Обязательные платежи месяца одной суммой в основной валюте: ожидается, оплачено, осталось; без курса — excluded.
+        from rates.models import Rate
+        Rate.objects.create(currency="USD", day=date(2026, 10, 12), value=D("535"))
+        Rate.objects.create(currency="USD", day=date(2026, 10, 13), value=D("540"))
+        spend(local_user(), self.subs, 225, date(2026, 10, 12), "Демо-Claude", currency="USD")
+        self.create(name="Claude", store_name="Демо-Claude", amount="99990", due_day=12)
+        self.create(name="Хостинг", store_name=None, amount="16.80", due_day=20, currency="USD")
+        self.create(name="Без курса", store_name=None, amount="10", due_day=20, currency="EUR")
+        data = self.month()
+        # Claude оплачен 225 $ = 120 375 ₸ (курс дня покупки); хостинг 16,80 $ × 540 (курс сегодня) = 9 072 ₸ не оплачен.
+        self.assertEqual(data["base"], {"currency": "KZT", "expected": "109062.00", "paid": "120375.00", "left": "9072.00",
+                                        "excluded": 1})
+
     def test_suggestions_from_history_and_accept_in_one_tap(self):
         data = self.month()
         self.assertEqual((data["month"], data["previous_month"], data["today"]), ("2026-10", "2026-09", "2026-10-13"))
