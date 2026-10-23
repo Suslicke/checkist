@@ -160,12 +160,15 @@ def assign(plans, spends, months, parents, fixed=None, score=signals):
     признаков (у регулярного дохода — ``income_signals``, «траты» — доходы месяца).
     """
     months = set(months)
-    by_id = {}
+    by_id, by_currency_id = {}, {}
     for spend in spends:
-        by_id.setdefault(spend.id, spend)  # трата ответа — сама, а не её копия в другой валюте
+        by_id.setdefault(spend.id, spend)
+        by_currency_id.setdefault((spend.id, spend.currency), spend)
+    plan_currency = {plan.id: plan.currency for plan in plans}
     result, used = {}, set()
     for key, spend_id in (fixed or {}).items():
-        spend = by_id.get(spend_id)
+        # Трата ответа — в валюте платежа (копия по курсу дня), без курса — сама, в своей валюте.
+        spend = by_currency_id.get((spend_id, plan_currency.get(key[0]))) or by_id.get(spend_id)
         if spend is not None and key[1] in months and spend_id not in used:
             result[key] = spend
             used.add(spend_id)
