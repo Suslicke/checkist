@@ -108,6 +108,17 @@ class AssignTests(SimpleTestCase):
         result = assign([RENT], [added], self.months, PARENTS, fixed={(1, Month(2026, 9)): 5})
         self.assertEqual(result, {(1, Month(2026, 9)): added})
 
+    def test_fixed_spend_in_another_currency_pays_by_its_copy_in_the_plan_currency(self):
+        # Закреплённое ответом списание 8 642,18 ₸ закрывает платёж в евро своей копией по курсу, а не тенге.
+        server = Plan(id=6, store_id=30, category_id=15, currency="EUR", amount=D("16.80"), due_day=20)
+        tenge = spend(222, date(2026, 10, 10), "8642.18", store_id=30, category_id=15)
+        euro = spend(222, date(2026, 10, 10), "16.99", store_id=30, category_id=15, currency="EUR")
+        result = assign([server], [tenge, euro], self.months, PARENTS, fixed={(6, Month(2026, 9)): 222})
+        self.assertEqual(result, {(6, Month(2026, 9)): euro})
+        # Без копии (нет курса) — сама трата, как раньше.
+        result = assign([server], [tenge], self.months, PARENTS, fixed={(6, Month(2026, 9)): 222})
+        self.assertEqual(result, {(6, Month(2026, 9)): tenge})
+
     def test_average(self):
         self.assertEqual(average([D("200"), D("225"), D("225")]), D("216.67"))
         self.assertIsNone(average([]))
