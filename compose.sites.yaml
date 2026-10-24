@@ -1,0 +1,17 @@
+# Override of compose.prod.yaml: Caddy of Checkist also serves the other sites of this server
+# (ports 80/443 are taken by it). deploy/docker/ck adds it when the environment file sets
+# CHECKIST_CADDY_SITES=1. Beforehand on the server:
+#   docker network create caddy-edge      — the site containers join it, Caddy reaches them by name;
+#   /etc/checkist-sites/<name>.caddy      — one site block per file (CHECKIST_CADDY_SITES_DIR).
+# Without the variable nothing changes: a QA machine has no such network.
+services:
+  proxy:
+    networks:
+      default:
+      caddy-edge:
+    volumes:
+      - ${CHECKIST_CADDY_SITES_DIR:-/etc/checkist-sites}:/etc/caddy/sites:ro
+
+networks:
+  caddy-edge:
+    external: true

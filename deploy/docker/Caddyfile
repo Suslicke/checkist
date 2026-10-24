@@ -58,3 +58,7 @@
 		file_server
 	}
 }
+
+# Other sites of this server behind the same Caddy (compose.sites.yaml mounts the folder, one
+# `<name>.caddy` file per site). Empty folder or no mount: the glob matches nothing, nothing changes.
+import /etc/caddy/sites/*.caddy

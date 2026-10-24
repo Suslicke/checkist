@@ -39,6 +39,10 @@ if grep -qx 'CHECKIST_OBSERVABILITY=1' "$env_file"; then
     CHECKIST_COMMIT="$(git -C "$root" rev-parse --short=12 HEAD 2>/dev/null || true)"
     export CHECKIST_COMMIT
 fi
+# Other sites behind the same Caddy (compose.sites.yaml): only when the environment file asks.
+if grep -qx 'CHECKIST_CADDY_SITES=1' "$env_file"; then
+    compose+=(-f compose.sites.yaml)
+fi
 
 case "${1:-}" in
     compose)
