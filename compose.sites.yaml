@@ -4,6 +4,9 @@
 #   docker network create caddy-edge      — the site containers join it, Caddy reaches them by name;
 #   /etc/checkist-sites/<name>.caddy      — one site block per file (CHECKIST_CADDY_SITES_DIR).
 # Without the variable nothing changes: a QA machine has no such network.
+# Caddy resolves its own upstreams (web, postgres, redis) by name on every network it is on, so a
+# container on caddy-edge must never be called or aliased web, postgres or redis: it would take
+# Checkist's traffic. Give site containers distinct names (nutritrace, ...).
 services:
   proxy:
     networks:
