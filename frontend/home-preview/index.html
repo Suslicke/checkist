@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Главная и Деньги — макет</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap" />
+<link rel="stylesheet" href="../src/theme/tokens.css" />
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ck-bg); color: var(--ck-text); font-family: var(--ck-font-body); font-size: var(--ck-text-base); line-height: 1.4; }
+h1, h2, h3, p, ul { margin: 0; }
+.frames { display: flex; gap: 24px; justify-content: center; padding: 16px; align-items: flex-start; }
+.frame { width: 390px; flex: none; display: grid; gap: 14px; padding: 12px 16px 0; border-radius: 28px; background: var(--ck-bg); box-shadow: 0 0 0 1px var(--ck-border); }
+.top { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.top h1 { font-size: var(--ck-text-xl); font-weight: 800; }
+.top .mo { display: inline-flex; gap: 4px; margin-left: 2px; }
+.top .mo b { width: 28px; height: 28px; border-radius: 50%; background: var(--ck-surface-raised); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
+.top .r { margin-left: auto; display: flex; gap: 8px; }
+.ai-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--ck-accent-bg); color: var(--ck-accent-text); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--ck-surface-raised); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: var(--ck-text-xs); }
+.eyebrow { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.muted { color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
+.muted b { color: var(--ck-text); }
+
+/* hero: the ring — spent by root category, the gap is what is left of the budget */
+.hero { gap: 12px; }
+.ring-wrap { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: center; }
+.ring { position: relative; width: 132px; height: 132px; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 14; stroke-linecap: butt; }
+.ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .c .v { font-family: var(--ck-font-display-figures); font-size: var(--ck-text-xl); font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ring .c .l { color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 700; }
+.legend { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.legend li { display: flex; align-items: center; gap: 8px; font-size: var(--ck-text-xs); min-width: 0; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.legend span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend b { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 700; }
+.legend .rest { color: var(--ck-text-muted); }
+/* pulse: spends by day of the month, today marked, the dotted line is the average day */
+.pulse { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 44px; margin-top: 12px; }
+.pulse i { flex: 1; min-width: 0; background: var(--ck-cat-1-tint); border-radius: 2px 2px 0 0; }
+.pulse i.on { background: var(--ck-cat-1); }
+.pulse i.today { background: var(--ck-accent); }
+.pulse i.future { background: var(--ck-track); height: 3px !important; }
+.pulse .avg { position: absolute; left: 0; right: 0; bottom: 38%; border-top: 1.5px dashed var(--ck-text-muted); opacity: .6; }
+.pulse-x { display: flex; justify-content: space-between; margin-top: 4px; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 700; }
+.pulse-x b { color: var(--ck-accent-text); }
+.hero-foot { display: flex; justify-content: space-between; gap: 8px; padding-top: 10px; border-top: 1px solid var(--ck-divider); font-size: var(--ck-text-xs); color: var(--ck-text-muted); }
+.hero-foot b { color: var(--ck-text); white-space: nowrap; }
+
+/* attention: one card, up to three rows with an action */
+.att .ck-row { min-height: 48px; padding: 10px 0; }
+.att .ck-row-badge { width: 36px; height: 36px; }
+.att .go { color: var(--ck-text-muted); font-weight: 800; }
+.b-warn { background: var(--ck-warning-bg); color: var(--ck-warning-text); }
+.b-ai { background: var(--ck-accent-bg); color: var(--ck-accent-text); }
+.b-inc { background: var(--ck-success-bg); color: var(--ck-success-text); }
+
+/* tiles: three sections of money with a mini bar each */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.tile { display: grid; gap: 4px; padding: 12px; border-radius: var(--ck-radius-md, 16px); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); min-width: 0; }
+.tile .t { font-size: var(--ck-text-xs); font-weight: 700; color: var(--ck-text-muted); }
+.tile .v { font-size: var(--ck-text-base); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .s { font-size: var(--ck-text-2xs); color: var(--ck-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini { display: flex; gap: 2px; height: 5px; margin-top: 4px; }
+.mini i { display: block; height: 100%; border-radius: 3px; background: var(--ck-track); }
+.mini i.on { background: var(--ck-cat-2); } .mini i.on4 { background: var(--ck-cat-4); } .mini i.on3 { background: var(--ck-cat-3); }
+.mini i.tint { background: var(--ck-cat-2-tint); box-shadow: inset 0 0 0 1px var(--ck-cat-2); }
+
+/* limits as compact rows with a bar */
+.lim li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 0; }
+.lim .ck-bar { grid-column: 1 / -1; height: 6px; }
+.lim .ck-bar > span { background: var(--lc); }
+.lim .n { font-size: var(--ck-text-sm); font-weight: 700; } .lim .a { font-size: var(--ck-text-xs); color: var(--ck-text-muted); white-space: nowrap; }
+.lim .over > span { background: var(--ck-over-bar); } .lim .over-t { color: var(--ck-over-text); font-weight: 700; }
+
+/* bottom nav */
+.nav { position: static; display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; margin: 6px -16px 0; padding: 8px 8px 14px; background: var(--ck-nav-bg); border-top: 2px solid #B01212; border-radius: 0 0 28px 28px; }
+.nav a { display: grid; justify-items: center; gap: 3px; color: #b9ac93; font-size: var(--ck-text-2xs); font-weight: 700; text-decoration: none; }
+.nav a i { font-style: normal; font-size: 20px; line-height: 1; }
+.nav a.cur { color: #f0c24b; }
+.nav .plus { width: 52px; height: 52px; margin-top: -26px; border-radius: 50%; background: #f0c24b; color: #1a0c0a; display: grid; place-content: center; font-size: 28px; font-weight: 800; }
+
+/* money hub */
+.sum3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sum3 div { display: grid; gap: 2px; }
+.sum3 .l { font-size: var(--ck-text-2xs); font-weight: 700; color: var(--ck-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+.sum3 .v { font-size: var(--ck-text-base); font-weight: 800; white-space: nowrap; }
+.flow { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--ck-track); margin-top: 4px; }
+.flow i { display: block; height: 100%; }
+.hub { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.hub li { display: grid; gap: 6px; padding: 14px; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); min-height: 110px; min-width: 0; }
+.hub .h { display: flex; align-items: center; gap: 8px; font-size: var(--ck-text-sm); font-weight: 800; }
+.hub .h i { width: 28px; height: 28px; border-radius: 8px; display: grid; place-content: center; font-style: normal; font-size: 14px; }
+.hub .v { font-size: var(--ck-text-lg); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hub .s { font-size: var(--ck-text-2xs); color: var(--ck-text-muted); }
+.cols { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
+.cols i { flex: 1; background: var(--ck-cat-1-tint); border-radius: 2px 2px 0 0; }
+.cols i.now { background: var(--ck-cat-1); }
+.ai-row { display: flex; align-items: center; gap: 12px; }
+.ai-row .ai-btn { flex: none; }
+.ai-row .ck-row-meta { white-space: normal; }
+</style>
+</head>
+<body>
+<div class="frames">
+
+<!-- ================= ГЛАВНАЯ ================= -->
+<div class="frame">
+  <div class="top"><h1>Октябрь</h1><span class="mo"><b>‹</b><b>›</b></span><span class="r"><span class="ai-btn">✦</span><span class="avatar">L</span></span></div>
+
+  <section class="ck-panel hero">
+    <div class="ring-wrap">
+      <div class="ring">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" stroke="var(--ck-track)"/>
+          <!-- segments: dasharray = share of 264 (2πr); gap = remainder of budget -->
+          <circle cx="50" cy="50" r="42" stroke="var(--ck-cat-1)" stroke-dasharray="29 264" stroke-dashoffset="0"/>
+          <circle cx="50" cy="50" r="42" stroke="var(--ck-cat-3)" stroke-dasharray="7 264" stroke-dashoffset="-29"/>
+          <circle cx="50" cy="50" r="42" stroke="var(--ck-cat-4)" stroke-dasharray="4 264" stroke-dashoffset="-36"/>
+          <circle cx="50" cy="50" r="42" stroke="var(--ck-cat-2)" stroke-dasharray="2 264" stroke-dashoffset="-40"/>
+        </svg>
+        <div class="c"><span class="l">Потрачено</span><span class="v">127 500 ₸</span><span class="l">14 % бюджета</span></div>
+      </div>
+      <ul class="legend">
+        <li><i style="background:var(--ck-cat-1)"></i><span>Бытовая химия</span><b>99 200 ₸</b></li>
+        <li><i style="background:var(--ck-cat-3)"></i><span>Продукты</span><b>24 500 ₸</b></li>
+        <li><i style="background:var(--ck-cat-4)"></i><span>Кафе и рестораны</span><b>3 800 ₸</b></li>
+        <li><i style="background:var(--ck-cat-2)"></i><span>Аптека</span><b>7 200 ₸</b></li>
+        <li class="rest"><i style="background:var(--ck-track)"></i><span>Остаток бюджета</span><b>772 500 ₸</b></li>
+      </ul>
+    </div>
+    <div class="pulse"><span class="avg"></span><i class="on" style="height:18%"></i><i class="" style="height:4%"></i><i class="on" style="height:35%"></i><i class="on" style="height:10%"></i><i class="" style="height:4%"></i><i class="on" style="height:22%"></i><i class="on" style="height:60%"></i><i class="on" style="height:8%"></i><i class="" style="height:4%"></i><i class="on" style="height:14%"></i><i class="on" style="height:30%"></i><i class="" style="height:4%"></i><i class="on" style="height:5%"></i><i class="on" style="height:45%"></i><i class="on" style="height:12%"></i><i class="" style="height:4%"></i><i class="on" style="height:25%"></i><i class="on" style="height:70%"></i><i class="on" style="height:9%"></i><i class="on" style="height:16%"></i><i class="" style="height:4%"></i><i class="on" style="height:33%"></i><i class="on" style="height:20%"></i><i class="on" style="height:52%"></i><i class="on" style="height:38%"></i><i class="today" style="height:100%"></i><i class="future"></i><i class="future"></i><i class="future"></i><i class="future"></i><i class="future"></i></div><div class="pulse-x"><span>1 окт</span><span><b>сегодня 26</b> · средний день 4 900 ₸</span><span>31</span></div>
+    <div class="hero-foot"><span>из <b>900 000 ₸</b> · ещё 6 дней</span><span>в день <b>97 917 ₸</b></span></div>
+  </section>
+
+  <section class="ck-panel att">
+    <div class="ck-panel-head"><h2>Требует внимания</h2><a href="#">ещё 2</a></div>
+    <ul class="ck-list">
+      <li class="ck-row"><span class="ck-row-badge b-warn">⏰</span><span class="ck-row-main"><span class="ck-row-title">Аренда квартиры через 2 дня</span><span class="ck-row-meta">220 000 ₸ · 5 ноября · Оплатил?</span></span><span class="go">›</span></li>
+      <li class="ck-row"><span class="ck-row-badge b-inc">↓</span><span class="ck-row-main"><span class="ck-row-title">Доход за октябрь не внесён</span><span class="ck-row-meta">Зарплата обычно 1 050 000 ₸ · внести</span></span><span class="go">›</span></li>
+      <li class="ck-row"><span class="ck-row-badge b-ai">✦</span><span class="ck-row-main"><span class="ck-row-title">Куртку лучше отложить до ноября</span><span class="ck-row-meta">лимит «Дом» уже 92 % · обсудить</span></span><span class="go">›</span></li>
+    </ul>
+  </section>
+
+  <ul class="tiles">
+    <li class="tile"><span class="t">Платежи</span><span class="v">2 из 5</span><span class="s">ждут 356 445 ₸</span><div class="mini"><i class="on" style="flex:3"></i><i class="on" style="flex:2"></i><i style="flex:4"></i><i style="flex:2"></i><i style="flex:1"></i></div></li>
+    <li class="tile"><span class="t">Планы</span><span class="v">185 000 ₸</span><span class="s">ждём · 1 из 3</span><div class="mini"><i class="tint" style="flex:65"></i><i class="on4" style="flex:92"></i><i class="tint" style="flex:120"></i></div></li>
+    <li class="tile"><span class="t">Цели</span><span class="v">62 %</span><span class="s">3 цели · 305 000 ₸</span><div class="mini"><i class="on3" style="flex:62"></i><i style="flex:38"></i></div></li>
+  </ul>
+
+  <section class="ck-panel">
+    <div class="ck-panel-head"><h2>Сегодня и вчера</h2><a href="#">Все траты</a></div>
+    <ul class="ck-list">
+      <li class="ck-row"><span class="ck-row-badge" style="background:var(--ck-cat-2-tint);color:var(--ck-cat-2)">✚</span><span class="ck-row-main"><span class="ck-row-title">Аптека Europharma</span><span class="ck-row-meta">сегодня · Kaspi</span></span><span class="ck-row-amount ck-figures">7 200 ₸</span></li>
+      <li class="ck-row"><span class="ck-row-badge" style="background:var(--ck-cat-4-tint);color:var(--ck-cat-4)">☕</span><span class="ck-row-main"><span class="ck-row-title">Кофейня Nedelka</span><span class="ck-row-meta">вчера · Kaspi</span></span><span class="ck-row-amount ck-figures">3 800 ₸</span></li>
+      <li class="ck-row"><span class="ck-row-badge" style="background:var(--ck-cat-3-tint);color:var(--ck-cat-3)">🛒</span><span class="ck-row-main"><span class="ck-row-title">Magnum</span><span class="ck-row-meta">вчера · Forte · 12 позиций</span></span><span class="ck-row-amount ck-figures">24 500 ₸</span></li>
+    </ul>
+  </section>
+
+  <section class="ck-panel lim">
+    <div class="ck-panel-head"><h2>Лимиты</h2><a href="#">Изменить</a></div>
+    <ul class="ck-list">
+      <li style="--lc:var(--ck-cat-1)"><span class="n">Дом</span><span class="a over-t">92 % · 112 000 из 120 000</span><div class="ck-bar"><span style="width:92%"></span></div></li>
+      <li style="--lc:var(--ck-cat-3)"><span class="n">Продукты</span><span class="a">24 500 из 150 000</span><div class="ck-bar"><span style="width:16%"></span></div></li>
+      <li style="--lc:var(--ck-cat-4)"><span class="n">Кафе и рестораны</span><span class="a">3 800 из 40 000</span><div class="ck-bar"><span style="width:10%"></span></div></li>
+    </ul>
+  </section>
+
+  <nav class="nav"><a class="cur"><i>⌂</i>Главная</a><a><i>☰</i>Траты</a><a><span class="plus">+</span></a><a><i>◎</i>Деньги</a><a><i>⋯</i>Ещё</a></nav>
+</div>
+
+<!-- ================= ДЕНЬГИ ================= -->
+<div class="frame">
+  <div class="top"><h1>Деньги</h1><span class="r"><span class="ai-btn">✦</span><span class="avatar">L</span></span></div>
+
+  <section class="ck-panel">
+    <p class="eyebrow">Октябрь</p>
+    <div class="sum3">
+      <div><span class="l">Доход</span><span class="v">1 050 000 ₸</span></div>
+      <div><span class="l">Потрачено</span><span class="v">127 500 ₸</span></div>
+      <div><span class="l">Отложено</span><span class="v">305 000 ₸</span></div>
+    </div>
+    <div class="flow"><i style="flex:127.5;background:var(--ck-cat-1)"></i><i style="flex:356;background:var(--ck-cat-2-tint);box-shadow:inset 0 0 0 1px var(--ck-cat-2)"></i><i style="flex:185;background:var(--ck-cat-4-tint);box-shadow:inset 0 0 0 1px var(--ck-cat-4)"></i><i style="flex:381"></i></div>
+    <p class="muted">потрачено · платежи впереди · планы · <b>свободно 381 555 ₸</b></p>
+  </section>
+
+  <ul class="hub">
+    <li><span class="h"><i style="background:var(--ck-success-bg);color:var(--ck-success-text)">↓</i>Доходы</span><span class="v">1 050 000 ₸</span><span class="s">за октябрь не внесён</span></li>
+    <li><span class="h"><i style="background:var(--ck-cat-2-tint);color:var(--ck-cat-2)">↻</i>Платежи</span><span class="v">356 445 ₸</span><span class="s">2 из 5 оплачено · аренда через 2 дня</span></li>
+    <li><span class="h"><i style="background:var(--ck-cat-4-tint);color:var(--ck-cat-4)">◫</i>Планы</span><span class="v">185 000 ₸</span><span class="s">ждём · 2 без срока</span></li>
+    <li><span class="h"><i style="background:var(--ck-cat-3-tint);color:var(--ck-cat-3)">◎</i>Цели</span><span class="v">62 %</span><span class="s">«Зима» 57 000 · «Отпуск» 248 000</span></li>
+    <li><span class="h"><i style="background:var(--ck-cat-1-tint);color:var(--ck-cat-1)">▮</i>Статистика</span><div class="cols"><i style="height:40%"></i><i style="height:70%"></i><i style="height:55%"></i><i style="height:90%"></i><i style="height:60%"></i><i class="now" style="height:20%"></i></div><span class="s">октябрь пока ниже среднего</span></li>
+    <li><span class="h"><i style="background:var(--ck-accent-bg);color:var(--ck-accent-text)">✦</i>Разбор</span><span class="v">Сентябрь</span><span class="s">+12 % к августу · 3 совета</span></li>
+  </ul>
+
+  <section class="ck-panel">
+    <div class="ck-panel-head"><h2>Чат с ИИ</h2><a href="#">Все беседы</a></div>
+    <div class="ai-row"><span class="ai-btn">✦</span><span class="ck-row-main"><span class="ck-row-title">Планы</span><span class="ck-row-meta">Куртку лучше отложить, шины брать: срок 20 октября…</span></span></div>
+  </section>
+
+  <nav class="nav"><a><i>⌂</i>Главная</a><a><i>☰</i>Траты</a><a><span class="plus">+</span></a><a class="cur"><i>◎</i>Деньги</a><a><i>⋯</i>Ещё</a></nav>
+</div>
+
+</div>
+</body>
+</html>

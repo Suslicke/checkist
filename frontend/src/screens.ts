@@ -99,6 +99,7 @@ const insightsPart = part(() => import('./features/insights'))
 const chatPart = part(() => import('./features/chat'))
 const goalsPart = part(() => import('./features/goals'))
 const morePart = part(() => import('./features/more/MorePage'))
+const moneyPart = part(() => import('./features/money'))
 
 export const HealthPage = screen('HealthPage', healthPagePart, (module) => module.default)
 export const CatalogPage = screen('CatalogPage', catalogPagePart, (module) => module.default)
@@ -137,6 +138,7 @@ export const ChatPage = screen('ChatPage', chatPart, (module) => module.ChatPage
 export const GoalsPage = screen('GoalsPage', goalsPart, (module) => module.GoalsPage)
 export const GoalPage = screen('GoalPage', goalsPart, (module) => module.GoalPage)
 export const MorePage = screen('MorePage', morePart, (module) => module.default)
+export const MoneyPage = screen('MoneyPage', moneyPart, (module) => module.MoneyPage)
 
 /** The screen App renders for a route of a signed-in person; none — the shell draws the route itself. */
 export const routeScreens: Record<Route['kind'], Part | undefined> = {
@@ -148,7 +150,7 @@ export const routeScreens: Record<Route['kind'], Part | undefined> = {
   jobs: JobsPage, job: JobPage, merges: MergesPage, merge: MergePage, classification: ClassificationPage,
   account: AccountPage, export: ExportPage, family: FamilyPage, recurring: RecurringPage, planned: PlannedPage, stores: StoresPage,
   'family-new': NewFamilySignedIn, 'statement-new': UploadStatementPage, statement: StatementPage, 'statement-rules': StatementRulesPage,
-  review: ReviewPage, chat: ChatPage, goals: GoalsPage, goal: GoalPage, more: MorePage,
+  review: ReviewPage, chat: ChatPage, goals: GoalsPage, goal: GoalPage, more: MorePage, money: MoneyPage,
   login: undefined, 'invalid-query': undefined, 'not-found': undefined,
 }
 

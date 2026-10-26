@@ -32,22 +32,24 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
   })
 
   it.each<[string, Session, string[]]>([
-    ['fourteen items in local_single', local, ['Доходы', 'Платежи', 'Планы', 'Цели', 'Разбор месяца', 'Чат с ИИ', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Состояние сервисов']],
-    ['sixteen items in accounts', reader, ['Доходы', 'Платежи', 'Планы', 'Цели', 'Разбор месяца', 'Чат с ИИ', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов']],
+    ['eight items in local_single', local, ['Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Состояние сервисов']],
+    ['ten items in accounts', reader, ['Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов']],
   ])('keeps the links after the third one behind «Ещё» with %s', (_name, session, more) => {
     const html = render(session, { kind: 'not-found', path: '/missing' })
-    // The same nav: «Главная · Траты · ＋ · Статистика · Ещё»; the sections are its direct children, with no new attributes.
-    expect(html).toMatch(/^<nav class="main-navigation" aria-label="Основная навигация"><a href="\/">Главная<\/a><a href="\/receipts">Траты<\/a><div class="main-add">.*<\/div><a href="\/stats">Статистика<\/a><div class="main-more">/)
-    expect(links(html)).toEqual(['Главная', 'Траты', 'Статистика', 'Ещё', ...more])
+    // The same nav: «Главная · Траты · ＋ · Деньги · Ещё» (2026-10-26); the sections are its direct children, with no new attributes.
+    expect(html).toMatch(/^<nav class="main-navigation" aria-label="Основная навигация"><a href="\/">Главная<\/a><a href="\/receipts">Траты<\/a><div class="main-add">.*<\/div><a href="\/money">Деньги<\/a><div class="main-more">/)
+    // «Статистика» is the first link of the header row behind «Ещё»: a phone reaches it from the tile of «Деньги».
+    expect(links(html)).toEqual(['Главная', 'Траты', 'Деньги', 'Ещё', 'Статистика', ...more])
     // «Ещё» of the phone's bar is a link to its screen (/more, 2026-10-13); «＋» a closed sheet (a dialog, components/Sheet).
     expect(html).toContain('<a class="main-more-toggle" href="/more">Ещё</a>')
     expect(html).toContain('<button type="button" class="main-add-toggle" aria-haspopup="dialog" aria-expanded="false" aria-label="Добавить: снять или загрузить чек, внести трату или доход, загрузить выписку">')
     const list = html.split('<div class="main-more-list">')[1]
-    expect(links(list)).toEqual(more)
+    expect(links(list)).toEqual(['Статистика', ...more])
     // The theme and the pictures of the spends live on the screen «Ещё» (features/more), not in the menu.
     expect(html).not.toContain('main-more-theme')
-    // The sections for the header row of a wide screen: «Деньги» — links; «Данные» and «Настройки» — a word with ▾.
-    expect(list).toContain('<div class="main-more-tiles" role="group" aria-label="Деньги"><a href="/incomes">')
+    // The sections for the header row of a wide screen: «Статистика» a link; «Данные» and «Настройки» — a word with ▾.
+    expect(list).toMatch(/^<a href="\/stats">Статистика<\/a><div class="main-group">/)
+    expect(html).not.toContain('main-more-tiles')
     expect(html).toContain('<div class="main-group"><button type="button" class="main-group-toggle" aria-expanded="false" aria-controls="main-group-data">Данные</button><div class="main-group-list" id="main-group-data" role="group" aria-label="Данные"><a href="/receipts/upload">')
     expect(html).not.toMatch(/role="(dialog|menu)"|aria-modal/)
     expect(html.match(/aria-haspopup/g)).toHaveLength(1)
@@ -57,8 +59,8 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
   it('draws a picture over each word of the bar and before each row of «Ещё», hidden from the screen reader', () => {
     const html = raw(reader, catalog)
     const pictures = html.match(/<svg\b[^>]*>/g) ?? []
-    // Sixteen links behind «Ещё», three of the bar, «Ещё» itself, «＋» (26 px) and ▾ of «Данные» and «Настройки».
-    expect(pictures.filter((tag) => tag.includes('class="ck-icon"'))).toHaveLength(3 + 16 + 1 + 1 + 2)
+    // Ten links behind «Ещё» and «Статистика» of the header, three of the bar, «Ещё» itself, «＋» (26 px) and ▾ of «Данные» and «Настройки».
+    expect(pictures.filter((tag) => tag.includes('class="ck-icon"'))).toHaveLength(3 + 11 + 1 + 1 + 2)
     for (const tag of pictures) expect(tag).toContain('aria-hidden="true"')
     expect(html).toMatch(/<a href="\/"><svg class="ck-icon" viewBox="0 0 24 24" width="22" height="22"[^>]*>.*?<\/svg>Главная<\/a>/)
     expect(html).toMatch(/<button type="button" class="main-add-toggle"[^>]*><svg class="ck-icon" viewBox="0 0 24 24" width="26" height="26"/)
@@ -66,7 +68,7 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
 
   it('offers the actions: one «Снять чек» for the camera, the gallery and files, its field outside of the sheet, and «Трата или доход»', () => {
     const html = render(reader, catalog)
-    const add = html.slice(html.indexOf('<div class="main-add">'), html.indexOf('<a href="/stats">'))
+    const add = html.slice(html.indexOf('<div class="main-add">'), html.indexOf('<a href="/money">'))
     // Closed: the button and the two fields only. The open sheet is drawn by Sheet (components/sheet-markup.test.tsx).
     expect(add).not.toContain('main-add-list')
     const source = readFileSync(new URL('./MainMenu.tsx', import.meta.url), 'utf8')
@@ -88,6 +90,7 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
 
   it.each<[string, Route, string]>([
     ['the catalog', catalog, 'Каталог'],
+    ['the stores', { kind: 'stores' }, 'Магазины'],
     ['«Обработка чеков»', { kind: 'jobs', query: { page: 1 } }, 'Обработка чеков'],
     ['the health page', health, 'Состояние сервисов'],
     ['the account', { kind: 'account' }, 'synthetic-reader'],
@@ -100,7 +103,7 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
   })
 
   it('leaves «Ещё» unmarked while the current section is in the bar or nowhere in the menu', () => {
-    for (const route of [{ kind: 'receipts', query: { page: 1 } }, { kind: 'upload' }, { kind: 'spending', query: {} }, { kind: 'not-found', path: '/missing' }] as Route[]) {
+    for (const route of [{ kind: 'receipts', query: { page: 1 } }, { kind: 'upload' }, { kind: 'money' }, { kind: 'goals' }, { kind: 'spending', query: {} }, { kind: 'not-found', path: '/missing' }] as Route[]) {
       const html = render(reader, route)
       expect(html, route.kind).not.toContain('data-current')
       expect(more(html), route.kind).toEqual(['<a class="main-more-toggle" href="/more">Ещё</a>'])

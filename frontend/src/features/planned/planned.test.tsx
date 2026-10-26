@@ -258,11 +258,10 @@ describe('«Планируем в октябре» on «Главная» and the
     expect(html(<PlannedCard planned={planned} month="2026-09" currency="KZT" current={false} categoryNames={names} />)).not.toContain('учтено')
     expect(html(<PlannedCard planned={null} month="2026-10" currency="KZT" current categoryNames={names} />)).toBe('')
     expect(html(<PlannedCard planned={{ ...planned, count: 0, rows: [], segments: [] }} month="2026-10" currency="KZT" current categoryNames={names} />)).toBe('')
-    const dashboard = html(<DashboardView data={{ ...dashboardFixture(), base_currency: 'KZT', planned }} today="2026-10" date="2026-10-20" />)
-    expect(dashboard).toContain('pl-dash')
-    expect(dashboard).toContain('<span class="pl-meta">Дом</span>')
+    // Since 2026-10-26 the card is not on «Главная» (the plans are a tile there); the view stays for its own screen.
     const source = readFileSync(new URL('../dashboard/DashboardPage.tsx', import.meta.url), 'utf8')
-    expect(source).toContain('<RecurringDue month={data.month} />\n      <PlannedCard planned={data.planned}')
+    expect(source).not.toContain('PlannedCard')
+    expect(html(<DashboardView data={{ ...dashboardFixture(), base_currency: 'KZT', planned }} today="2026-10" date="2026-10-20" />)).not.toContain('pl-dash')
   })
   it('names the open plans of the month beside the unpaid payments in the note of «можно тратить в день»', () => {
     // The server's `unpaid` is the payments only; `planned` is a separate sum — the note lists both.

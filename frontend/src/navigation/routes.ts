@@ -176,8 +176,10 @@ export type NavigableRoute = CatalogRoute
   | { kind: 'account' }
   /** «Выгрузка»: the family's data as one JSON document; the filters live in the address. */
   | { kind: 'export'; query: ExportQuery }
-  /** «Ещё» of a phone as a screen: the person, «Деньги», «Данные», «Настройки» (features/more). */
+  /** «Ещё» of a phone as a screen: the person, «Данные», «Настройки» (features/more). */
   | { kind: 'more' }
+  /** «Деньги» (2026-10-26): the month as one card, the hub of the money sections, the last thread of the chat (features/money). */
+  | { kind: 'money' }
   /** «Семья» (only with accounts): members, invites, the head role; `token` — an invite opened from its link. */
   | { kind: 'family'; token?: string }
   /** «Регулярные платежи»: rent, utilities, subscriptions of this month, suggestions from history, the form. */
@@ -602,6 +604,7 @@ export function buildRoute(route: NavigableRoute): string {
     case 'account': return '/account'
     case 'export': return exportHref(route.query)
     case 'more': return '/more'
+    case 'money': return '/money'
     case 'family': return route.token ? `/family/join?${new URLSearchParams({ token: route.token })}` : '/family'
     case 'recurring': return '/recurring'
     case 'planned': return parseMonthParam(route.month) ? `/planned?month=${route.month}` : '/planned'
@@ -677,6 +680,7 @@ export function parseRoute(input: string | URL): Route {
   }
   if (normalizedPath === '/stores') return { kind: 'stores' }
   if (normalizedPath === '/more') return { kind: 'more' }
+  if (normalizedPath === '/money') return { kind: 'money' }
   if (normalizedPath === '/family') return { kind: 'family' }
   if (normalizedPath === '/recurring') return { kind: 'recurring' }
   if (normalizedPath === '/planned') {

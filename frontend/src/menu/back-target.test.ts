@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Route } from '../navigation'
-import { backTarget, headerAction, isFocusRoute } from './back-target'
+import { backTarget, headerAction, hubOf, isFocusRoute, isHubSection } from './back-target'
 
 const at = (route: Route, returnTo?: string) => backTarget({ route, returnTo })
 
@@ -51,5 +51,32 @@ describe('the round control of the header row (pure, no browser)', () => {
   it('goes back from any other nested page and has nothing on a page of a section', () => {
     expect(headerAction({ route: { kind: 'receipt', receiptId: 7 } }, '/stats')).toEqual({ kind: 'back', to: '/receipts', label: 'Назад к тратам' })
     expect(headerAction({ route: { kind: 'dashboard' } }, '/receipts')).toBeUndefined()
+  })
+
+  it('leads a section opened from «Деньги» back to it, as one opened from «Ещё» (2026-10-26)', () => {
+    for (const route of [{ kind: 'goals' }, { kind: 'recurring' }, { kind: 'incomes' }, { kind: 'planned' }, { kind: 'review' }, { kind: 'chat' }, { kind: 'spending', query: {} }] as Route[]) {
+      expect(isHubSection('/money', route), route.kind).toBe(true)
+      expect(headerAction({ route }, '/money', '/money'), route.kind).toEqual({ kind: 'back', to: '/money', label: 'Назад в «Деньги»' })
+    }
+    expect(isHubSection('/more', { kind: 'goals' })).toBe(false)
+    expect(isHubSection('/money', { kind: 'stores' })).toBe(false)
+    expect(headerAction({ route: { kind: 'stores' } }, '/money', '/money')).toBeUndefined()
+    expect(headerAction({ route: { kind: 'goals' } }, '/money')).toBeUndefined()
+    // A nested page keeps its own parent.
+    expect(headerAction({ route: { kind: 'goal', goalId: 4 } }, '/goals', '/money')).toEqual({ kind: 'back', to: '/goals', label: 'Назад к целям' })
+  })
+
+  it('keeps the hub while the person stays in one of its sections, and drops it anywhere else', () => {
+    // Just left «Деньги» for its section.
+    expect(hubOf('/money', undefined, { kind: 'goals' })).toBe('/money')
+    expect(hubOf('/more', undefined, { kind: 'stores' })).toBe('/more')
+    // Moved on inside the section (a tab of the statistics, a month of the plans): still inside the hub.
+    expect(hubOf('/stats', '/money', { kind: 'trends', query: {} })).toBe('/money')
+    expect(hubOf('/planned', '/money', { kind: 'planned', month: '2026-11' })).toBe('/money')
+    expect(hubOf('/goals', '/money', { kind: 'goal', goalId: 4 })).toBeUndefined()
+    // Left the hub's sections, or came from somewhere else.
+    expect(hubOf('/goals', '/money', { kind: 'receipts', query: { page: 1 } })).toBeUndefined()
+    expect(hubOf('/', undefined, { kind: 'goals' })).toBeUndefined()
+    expect(hubOf('/money', undefined, { kind: 'stores' })).toBeUndefined()
   })
 })

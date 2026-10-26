@@ -11,7 +11,7 @@ import type { PageHeaderSlots } from './components/page-header'
 // The screens come in parts of the build (screens.ts); only the sign-in is in the shell: a guest sees it first.
 import {
   AccountPage, CatalogPage, ChatPage, CategoryPage, CategorySpendsPage, ClassificationPage, DashboardPage, ExpensePage, ExportPage,
-  FamilyPage, GoalPage, GoalsPage, HealthPage, IncomesPage, IncomesStatsPage, JobPage, JobsPage, LimitsPage, MergePage, MergesPage, MorePage,
+  FamilyPage, GoalPage, GoalsPage, HealthPage, IncomesPage, IncomesStatsPage, JobPage, JobsPage, LimitsPage, MergePage, MergesPage, MoneyPage, MorePage,
   NewFamilyPage, NewFamilySignedIn, PlannedPage, ProductPage, ReceiptPage, ReceiptsPage, ReceiptsStatsPage, RecurringPage, ReviewPage, SpendingPage,
   StatementPage, StatementRulesPage, StoresPage, TrendsPage, UploadPage, UploadStatementPage,
   preloadRoute, warmScreens,
@@ -25,7 +25,8 @@ import { canModerate, loadSession, useSession } from './session'
 import { menuKey, useCurrentItemInView } from './menu-view'
 import MainMenu from './menu/MainMenu'
 import { useWarmUp } from './menu/warm-up'
-import { headerAction, isFocusRoute, isMoreSection } from './menu/back-target'
+import { headerAction, hubOf, isFocusRoute } from './menu/back-target'
+import type { HubPath } from './menu/back-target'
 import { ThemeToggle } from './theme'
 import OfflineBanner from './offline/OfflineBanner'
 import { usePendingSync } from './offline/pending-store'
@@ -61,6 +62,7 @@ function pageTitle(route: Route) {
     case 'account': return 'Аккаунт'
     case 'export': return 'Выгрузка'
     case 'more': return 'Ещё'
+    case 'money': return 'Деньги'
     case 'family': return 'Семья'
     case 'recurring': return 'Регулярные платежи'
     case 'planned': return 'Планы'
@@ -124,6 +126,7 @@ function pageContent({ route, returnTo }: NavigationSnapshot, username: string) 
     case 'account': return <AccountPage username={username} />
     case 'export': return <ExportPage query={route.query} />
     case 'more': return <MorePage />
+    case 'money': return <MoneyPage />
     case 'family': return <FamilyPage joinToken={route.token} />
     case 'recurring': return <RecurringPage />
     case 'planned': return <PlannedPage key={route.month ?? ''} month={route.month} />
@@ -167,11 +170,11 @@ export default function App() {
   const heading1 = view === 'page' && pageHeading?.path === pathname ? pageHeading.text : title
 
   // Where «✕» of a focus screen (a new spend) leads: the page the person came from, inside of the app.
-  // `more` — the section opened from the screen «Ещё», kept while the person stays in it (its own filters and months).
-  const [trail, setTrail] = useState<{ href: string; focus: boolean; from?: string; more?: Route['kind'] }>({ href: navigation.href, focus: isFocusRoute(route) })
+  // `hub` — the screen («Ещё» or «Деньги») a section was opened from, kept while the person stays in that section
+  // (its own filters and months): «назад» of the section leads to it (menu/back-target.ts).
+  const [trail, setTrail] = useState<{ href: string; focus: boolean; from?: string; hub?: HubPath }>({ href: navigation.href, focus: isFocusRoute(route) })
   if (trail.href !== navigation.href) {
-    const more = (trail.href === '/more' && isMoreSection(route)) || trail.more === route.kind ? route.kind : undefined
-    setTrail({ href: navigation.href, focus: isFocusRoute(route), from: trail.focus ? trail.from : trail.href, more })
+    setTrail({ href: navigation.href, focus: isFocusRoute(route), from: trail.focus ? trail.from : trail.href, hub: hubOf(trail.href, trail.hub, route) })
   }
 
   useEffect(() => watchSession(loadSession, document), [])
@@ -238,7 +241,7 @@ export default function App() {
   const mainNavigation = useCurrentItemInView(menuKey(view, session, route))
   // «Назад» before the heading on a nested page (to the list the person came from, or to the parent list), or «✕»
   // after it on a focus screen: a new or changed spend, drawn without the bottom bar of a phone.
-  const action = view === 'page' ? headerAction(navigation, trail.from, trail.more === route.kind) : undefined
+  const action = view === 'page' ? headerAction(navigation, trail.from, trail.hub) : undefined
   const focus = view === 'page' && isFocusRoute(route)
   useLayoutEffect(() => {
     document.documentElement.classList.toggle('ck-focus-mode', focus)
@@ -284,6 +287,8 @@ export default function App() {
           <span>Чекист</span>
         </Link>
         <div className="brand-actions">
+          {/* «Чат с ИИ» from every screen (2026-10-26): here on a wide screen, in the header row of the page on a phone. */}
+          {signedIn && <Link className="ck-chat-link" to="/chat" aria-label="Чат с ИИ"><Icon name="insight" size={20} /></Link>}
           <ThemeToggle placement="header" />
         </div>
         <MainMenu session={session} route={route} menuRef={mainNavigation} />
@@ -297,6 +302,7 @@ export default function App() {
             <div className="intro-slot" ref={setHeadStart} />
             <h1 id="page-heading" ref={heading} tabIndex={-1}>{heading1}</h1>
             <div className="intro-slot" ref={setHeadEnd} />
+            {signedIn && view === 'page' && !focus && <Link className="ck-chat-link ck-chat-link-page" to="/chat" aria-label="Чат с ИИ"><Icon name="insight" size={20} /></Link>}
             {action?.kind === 'close' && <Link className="ck-close ck-round" to={action.to} aria-label={action.label}><Icon name="close" size={20} /></Link>}
           </div>
           {route.kind === 'health' && <p className="intro-note intro-note-after">Сводка о состоянии служб.</p>}

@@ -99,9 +99,10 @@ describe('App feature connections (Node server markup, not browser behavior)', (
     expect(header).toContain('<span>Чекист</span>')
     expect(header).toMatch(/<img class="brand-mark" src="[^"]*emblem-96[^"]*" srcSet="[^"]*emblem-96[^"]* 1x, [^"]*emblem-192[^"]* 2x" width="44" height="44" alt=""\/>/)
     expect(header.match(/<a\b[^>]*href="[^"]*"/g)).toEqual([
-      '<a class="brand" aria-label="Чекист — главная" href="/"', '<a href="/"', '<a href="/receipts"',
-      // «Добавить трату» lives in the «＋» sheet (components/Sheet), which is closed until «＋» is pressed.
-      '<a href="/stats"', '<a class="main-more-toggle" aria-label="Ещё, текущий раздел: Каталог" data-current="" href="/more"', '<a href="/incomes"', '<a href="/recurring"', '<a href="/planned"', '<a href="/goals"', '<a href="/review"', '<a href="/chat"', '<a href="/receipts/upload"', '<a href="/statements/new"', '<a aria-current="page" href="/catalog"', '<a href="/stores"', '<a href="/statements/rules"', '<a href="/recognition/jobs"', '<a href="/export"', '<a href="/health"',
+      // «Чат с ИИ» stands beside the theme switch (2026-10-26); «Добавить трату» lives in the «＋» sheet (components/Sheet),
+      // which is closed until «＋» is pressed; «Статистика» is a link of the header row only, the money sections are the screen «Деньги».
+      '<a class="brand" aria-label="Чекист — главная" href="/"', '<a class="ck-chat-link" aria-label="Чат с ИИ" href="/chat"', '<a href="/"', '<a href="/receipts"', '<a href="/money"',
+      '<a class="main-more-toggle" aria-label="Ещё, текущий раздел: Каталог" data-current="" href="/more"', '<a href="/stats"', '<a href="/receipts/upload"', '<a href="/statements/new"', '<a aria-current="page" href="/catalog"', '<a href="/stores"', '<a href="/statements/rules"', '<a href="/recognition/jobs"', '<a href="/export"', '<a href="/health"',
     ])
     expect(html).not.toContain('href="/login"')
     expect(header.match(/<button\b[^>]*class="ck-theme-toggle ck-theme-toggle-header"/g)).toHaveLength(1)

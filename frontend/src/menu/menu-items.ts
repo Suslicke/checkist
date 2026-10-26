@@ -16,11 +16,11 @@ export type MenuItem = {
   icon: IconName
 }
 
-/** A section of the links behind «Ещё» (2026-10-13, «всё по менюшкам»): «Деньги» — tiles on a phone and links of the
- * header row on a wide screen; «Данные» and «Настройки» — headed lists on a phone and two lists under their words in
- * the header. */
+/** A section of the links behind «Ещё» (2026-10-13, «всё по менюшкам»; since 2026-10-26 «Деньги» is a screen of the
+ * bar, not a section): «Данные» and «Настройки» — headed lists on a phone and two lists under their words in the
+ * header. */
 export type MenuGroup = {
-  key: 'money' | 'data' | 'settings'
+  key: 'data' | 'settings'
   title: string
   items: MenuItem[]
 }
@@ -28,6 +28,8 @@ export type MenuGroup = {
 export type Menu = {
   /** Links that are always in sight: direct children of the menu. */
   primary: MenuItem[]
+  /** Links of the header row of a wide screen only («Статистика»): a phone reaches them from the hub «Деньги». */
+  header: MenuItem[]
   /** Links that the phone keeps behind «Ещё», in the order of `groups`; empty when everything fits. */
   more: MenuItem[]
   /** `more` by sections. */
@@ -38,7 +40,7 @@ export type Menu = {
 
 /** The bottom bar of a phone holds four things besides «＋»: three links and «Ещё». */
 export const BAR_SLOTS = 4
-/** How many links stand before «＋» in the bar: «Главная · Траты · ＋ · Статистика · Ещё». */
+/** How many links stand before «＋» in the bar: «Главная · Траты · ＋ · Деньги · Ещё». */
 export const ADD_AFTER = 2
 
 /** The month dashboard at '/', its limits at '/budget/limits' and the spends of one of its categories. */
@@ -54,13 +56,18 @@ const jobKinds: Route['kind'][] = ['jobs', 'job']
 export function menuItems(session: Session, route: Route): Menu {
   const health: MenuItem = { key: 'health', to: '/health', label: 'Состояние сервисов', current: route.kind === 'health', icon: 'health' }
   // A guest sees the shell only on the health page: everywhere else the sign-in replaces it.
-  if (session.kind === 'guest') return { primary: [health, { key: 'login', to: '/login', label: 'Войти', current: false, icon: 'login' }], more: [], groups: [], add: false }
+  if (session.kind === 'guest') return { primary: [health, { key: 'login', to: '/login', label: 'Войти', current: false, icon: 'login' }], header: [], more: [], groups: [], add: false }
   // While «Я» is being read, and when it could not be read, nothing is known about the person.
-  if (session.kind !== 'user') return { primary: [health], more: [], groups: [], add: false }
+  if (session.kind !== 'user') return { primary: [health], header: [], more: [], groups: [], add: false }
   const primary: MenuItem[] = [
     { key: 'home', to: '/', label: 'Главная', current: homeKinds.includes(route.kind), icon: 'home' },
     { key: 'receipts', to: '/receipts', label: 'Траты', current: receiptKinds.includes(route.kind), icon: 'list' },
-    // The tab and the filters the person left the statistics with, remembered on this device.
+    // «Деньги» (2026-10-26): the hub of the incomes, the payments, the plans, the goals, the statistics and the review.
+    { key: 'money', to: '/money', label: 'Деньги', current: route.kind === 'money', icon: 'bank' },
+  ]
+  // The header row of a wide screen keeps «Статистика» as a link of its own: the tab and the filters the person left
+  // the statistics with, remembered on this device. A phone reaches it from the tile of «Деньги».
+  const header: MenuItem[] = [
     { key: 'stats', to: statsMenuHref(route), label: 'Статистика', current: statsKinds.includes(route.kind), icon: 'stats' },
   ]
   const settings: MenuItem[] = session.mode === 'accounts' ? [
@@ -68,14 +75,6 @@ export function menuItems(session: Session, route: Route): Menu {
     { key: 'account', to: '/account', label: personName(session.user.username, session.user.display_name), current: route.kind === 'account', account: true, icon: 'account' },
   ] : []
   const groups: MenuGroup[] = [
-    { key: 'money', title: 'Деньги', items: [
-      { key: 'incomes', to: '/incomes', label: 'Доходы', current: route.kind === 'incomes' || route.kind === 'income-edit', icon: 'income' },
-      { key: 'recurring', to: '/recurring', label: 'Платежи', current: route.kind === 'recurring', icon: 'repeat' },
-      { key: 'planned', to: '/planned', label: 'Планы', current: route.kind === 'planned', icon: 'box' },
-      { key: 'goals', to: '/goals', label: 'Цели', current: route.kind === 'goals' || route.kind === 'goal', icon: 'goal' },
-      { key: 'review', to: '/review', label: 'Разбор месяца', current: route.kind === 'review', icon: 'insight' },
-      { key: 'chat', to: '/chat', label: 'Чат с ИИ', current: route.kind === 'chat', icon: 'insight' },
-    ] },
     { key: 'data', title: 'Данные', items: [
       // A computer has no «＋» sheet: a photo or a PDF of a receipt and a bank statement are picked from here. «Траты»
       // stays the current section of both screens.
@@ -89,5 +88,5 @@ export function menuItems(session: Session, route: Route): Menu {
     ] },
     { key: 'settings', title: 'Настройки', items: [...settings, health] },
   ]
-  return { primary, more: groups.flatMap((group) => group.items), groups, add: true }
+  return { primary, header, more: groups.flatMap((group) => group.items), groups, add: true }
 }

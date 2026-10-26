@@ -79,9 +79,10 @@ const mainNav = (html: string) => {
 }
 const navLink = (html: string, text: string) => noIcons(html).match(new RegExp(`<a\\b[^>]*>${text}</a>`))?.[0] ?? ''
 /** The links of the header row; «Добавить трату» lives in the «＋» sheet, which a server render draws closed. */
-/** «Ещё» (a link to its screen, drawn in the phone's bar only), then «Деньги», «Данные» and «Настройки»: the family and the
- * account (accounts) before the health page (2026-10-13). */
-const menuWith = (...people: string[]) => ['Главная', 'Траты', 'Статистика', 'Ещё', 'Доходы', 'Платежи', 'Планы', 'Цели', 'Разбор месяца', 'Чат с ИИ', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины',
+/** «Ещё» (a link to its screen, drawn in the phone's bar only), then «Статистика» of the header row, «Данные» and
+ * «Настройки»: the family and the account (accounts) before the health page (2026-10-13; the money sections are the
+ * screen «Деньги» of the bar since 2026-10-26). */
+const menuWith = (...people: string[]) => ['Главная', 'Траты', 'Деньги', 'Ещё', 'Статистика', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины',
   'Правила выписок', 'Обработка чеков', 'Выгрузка', ...people, 'Состояние сервисов']
 const fullMenu = menuWith()
 
@@ -297,6 +298,8 @@ describe('local_single keeps the previous interface (SSR only, no browser intera
 describe('header row of a screen: «назад», the slots of a page, the heading, «✕» (SSR only; the pinning is CSS, checked by a person)', () => {
   const back = /<a class="ck-back ck-round" aria-label="([^"]*)" href="([^"]*)"><svg class="ck-icon" viewBox="0 0 24 24" width="20" height="20"/
   const slot = '<div class="intro-slot"></div>'
+  /** «Чат с ИИ» at the end of the row of every page of a signed-in person (2026-10-26; not on a focus screen). */
+  const chat = '<a class="ck-chat-link ck-chat-link-page" aria-label="Чат с ИИ" href="/chat"><svg[^>]*>.*?</svg></a>'
   /** The row up to its own end: after the heading come the slot of the page and, on a focus screen, «✕». */
   const intro = (html: string) => {
     const after = html.indexOf(`</h1>${slot}`) + `</h1>${slot}`.length
@@ -305,7 +308,7 @@ describe('header row of a screen: «назад», the slots of a page, the headi
 
   it('leads a nested page back to its list, before the heading in the same row', () => {
     const html = render(reader, { kind: 'receipt', receiptId: 7 }, '/receipts/7')
-    expect(intro(html)).toMatch(new RegExp(`^<div class="intro"><a class="ck-back ck-round" aria-label="Назад к тратам" href="/receipts"><svg[^>]*>.*</svg></a>${slot}<h1 id="page-heading" tabindex="-1">Чек</h1>${slot}</div>$`))
+    expect(intro(html)).toMatch(new RegExp(`^<div class="intro"><a class="ck-back ck-round" aria-label="Назад к тратам" href="/receipts"><svg[^>]*>.*?</svg></a>${slot}<h1 id="page-heading" tabindex="-1">Чек</h1>${slot}${chat}</div>$`))
   })
 
   it('returns to the very list the person came from', () => {
@@ -327,6 +330,7 @@ describe('header row of a screen: «назад», the slots of a page, the headi
   it('closes a focus screen with «✕» after the heading and no «назад»', () => {
     const fresh = intro(render(reader, { kind: 'expense-new' }, '/receipts/new'))
     expect(fresh).toMatch(new RegExp(`^<div class="intro">${slot}<h1 id="page-heading" tabindex="-1">Новая трата</h1>${slot}<a class="ck-close ck-round" aria-label="Закрыть" href="/"><svg[^>]*>.*</svg></a></div>$`))
+    expect(fresh).not.toContain('ck-chat-link')
     const edit = intro(render(reader, { kind: 'expense-edit', receiptId: 9 }, '/receipts/9/edit'))
     expect(edit).toContain('<h1 id="page-heading" tabindex="-1">Изменить трату</h1>')
     expect(edit).toContain('<a class="ck-close ck-round" aria-label="Закрыть" href="/receipts/9">')
@@ -336,6 +340,16 @@ describe('header row of a screen: «назад», the slots of a page, the headi
   it('keeps the note of the health page out of the pinned row', () => {
     const html = render(reader, { kind: 'health' }, '/health')
     expect(intro(html)).not.toContain('intro-note')
-    expect(html).toContain(`</h1>${slot}</div><p class="intro-note intro-note-after">Сводка о состоянии служб.</p>`)
+    expect(html).toMatch(new RegExp(`</h1>${slot}${chat}</div><p class="intro-note intro-note-after">Сводка о состоянии служб.</p>`))
+  })
+
+  it('offers «Чат с ИИ» from every page of a signed-in person: in the header strip and at the end of the row (2026-10-26)', () => {
+    const html = render(reader, { kind: 'catalog', query: { page: 1 } }, '/catalog')
+    expect(html.match(/<a class="ck-chat-link[^"]*" aria-label="Чат с ИИ" href="\/chat">/g)).toEqual([
+      '<a class="ck-chat-link" aria-label="Чат с ИИ" href="/chat">', '<a class="ck-chat-link ck-chat-link-page" aria-label="Чат с ИИ" href="/chat">',
+    ])
+    expect(html.indexOf('ck-chat-link"')).toBeLessThan(html.indexOf('ck-theme-toggle-header'))
+    // A guest has no chat: the health page shows the strip without it.
+    expect(render(guest, { kind: 'health' }, '/health')).not.toContain('ck-chat-link')
   })
 })

@@ -1,22 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { getDashboard } from '../../api/budget'
-import type { Dashboard, DashboardAllowance, DashboardBudget, DashboardCategory, DashboardCurrency, DashboardRecent, DashboardSubCategory } from '../../api/budget'
+import type { Dashboard, DashboardAttention, DashboardCategory, DashboardCurrency, DashboardRecent, DashboardSubCategory } from '../../api/budget'
 import type { ExcludedSpends } from '../../api/base-currency'
 import Icon from '../../components/Icon'
 import { HeaderSlot } from '../../components/PageHeader'
 import { usePageTitle } from '../../components/page-header'
 import RequestState from '../../components/RequestState'
 import type { Person } from '../../lib/people'
-import { useCoarsePointer } from '../../lib/cards'
+import Ring from '../../lib/charts/RingChart'
+import { pulse } from '../../lib/charts/pulse'
 import { Link } from '../../navigation'
-import { useQuickShot } from '../recognition/QuickShot'
-import RecurringDue from '../recurring/RecurringDue'
-import IncomeSummary from '../incomes/IncomeSummary'
-import PlannedCard from '../planned/PlannedCard'
 import {
-  allowanceView, capitalize, categoryIds, categoryTone, cents, compareMonths, currencyName, daysLeftText, dashboardErrorMessage, dashboardPeople, deviceDate, deviceMonth,
-  formatMoney, formatNumber, hasLimit, initials, inMonth, monthIsEmpty, monthSlide, monthTitle, progress, recentMeta, recentSource, shiftMonth,
+  capitalize, categoryIds, categoryTone, cents, currencyName, dashboardErrorMessage, dashboardPeople, deviceDate, deviceMonth,
+  formatMoney, hasLimit, initials, inMonth, monthIsEmpty, monthSlide, monthTitle, progress, recentMeta, recentSource, shiftMonth,
 } from './dashboard-state'
 import { useSpendIcon } from '../../lib/list-icons'
 import type { MonthSlide, Progress } from './dashboard-state'
@@ -25,6 +22,10 @@ import { baseTwin, currencySymbol } from '../../lib/money'
 import { collapsedHint, isExpanded, readExpanded, rowChildren, subListId, withChoice, writeExpanded } from './limit-collapse-state'
 import type { ExpandedChoices } from './limit-collapse-state'
 import { subCategoriesText } from './limits-state'
+import {
+  attentionBadge, attentionMeta, attentionMoreText, attentionRows, budgetShare, centsOf, hasPulse, heroFoot, legendOf, limitLine, percentText, pulseCaption, recentView, tilesOf, todayIn,
+} from './home-state'
+import type { TileView } from './home-state'
 import './Dashboard.css'
 
 const monthHref = (month: string) => `/?month=${month}`
@@ -37,100 +38,96 @@ function Bar({ value, label, small = false }: { value: Progress; label: string; 
   </div>
 }
 
-/** The header row of «Главная» (the shell's, components/PageHeader): «‹», the month as the heading of the page, «›»
- * while a later month is not in the future, and the family on the right. Drawn while the month loads too. */
+/** The header row of «Главная» (the shell's, components/PageHeader): the month as the heading of the page, then the two
+ * small round steps «‹ ›» (2026-10-26: both after the heading, «›» only while a later month is not in the future) and
+ * the family at the right edge. Drawn while the month loads too. */
 function MonthHeader({ month, today, people, family }: { month: string; today: string; people: Person[]; family: boolean }) {
   // An ordinary space: on a window narrower than the row «Сентябрь 2026» goes to two lines, never «Сентябрь 2 / 026».
   usePageTitle(monthTitle(month).replace('\u00a0', ' '))
-  return <>
-    <HeaderSlot side="start">
-      <Link className="ck-round dash-month-step" to={monthHref(shiftMonth(month, -1))} aria-label="Предыдущий месяц"><Icon name="back" size={20} /></Link>
-    </HeaderSlot>
-    <HeaderSlot side="end">
-      {month < today && <Link className="ck-round dash-month-step" to={monthHref(shiftMonth(month, 1))} aria-label="Следующий месяц"><Icon name="forward" size={20} /></Link>}
-      {people.length > 0 && <ul className="dash-family" aria-label={family ? 'Семья' : 'Кто тратит'}>
-        {people.map((person, index) => <li key={person.username} className={`dash-avatar dash-cat-${(index % 6) + 1}`} title={person.display_name}>
-          <span aria-hidden="true">{initials(person.display_name)}</span><span className="dash-visually-hidden">{person.display_name}</span>
-        </li>)}
-      </ul>}
-    </HeaderSlot>
-  </>
+  return <HeaderSlot side="end">
+    <span className="dash-month-steps">
+      <Link className="ck-round dash-month-step" to={monthHref(shiftMonth(month, -1))} aria-label="Предыдущий месяц"><Icon name="back" size={18} /></Link>
+      {month < today && <Link className="ck-round dash-month-step" to={monthHref(shiftMonth(month, 1))} aria-label="Следующий месяц"><Icon name="forward" size={18} /></Link>}
+    </span>
+    {people.length > 0 && <ul className="dash-family" aria-label={family ? 'Семья' : 'Кто тратит'}>
+      {people.map((person, index) => <li key={person.username} className={`dash-avatar dash-cat-${(index % 6) + 1}`} title={person.display_name}>
+        <span aria-hidden="true">{initials(person.display_name)}</span><span className="dash-visually-hidden">{person.display_name}</span>
+      </li>)}
+    </ul>}
+  </HeaderSlot>
 }
 
-/** «Осталось 112 550 ₸ из 400 000 ₸» or the overspend («Сверх лимита на …», of the budget — `over`). */
-function LimitLeft({ value, total, currency, over = 'Сверх лимита на' }: { value: Progress; total: string; currency: string; over?: string }) {
-  return value.over
-    ? <span className="dash-over">{over} <span className="dash-value">{formatMoney(value.overBy, currency)}</span></span>
-    : <span>Осталось <span className="dash-value dash-strong">{formatMoney(value.remaining, currency)}</span> из <span className="dash-value">{formatMoney(total, currency)}</span></span>
-}
-
-/** «Можно тратить в день» of the current month under the hero figure; gone below zero — «Перерасход», never a negative day. */
-function AllowanceRow({ value }: { value: DashboardAllowance }) {
-  const view = allowanceView(value)
-  return <div className={`dash-allowance${view.over ? ' dash-allowance-over' : ''}`}>
-    <p className="dash-allowance-line">
-      <span className="dash-allowance-label">{view.label}</span>
-      <span className="dash-allowance-value ck-figures">{formatMoney(view.amount, value.currency)}</span>
+/** The pulse of the month under the ring: a bar a day, today in the accent, the days ahead flat, the average day dashed. */
+function Pulse({ data, currency, current, date }: { data: Dashboard; currency: string; current: boolean; date: string }) {
+  const today = current ? todayIn(data.month, date) : undefined
+  const drawn = pulse((data.by_day ?? []).map((item) => ({ day: item.day, spent: centsOf(item.spent) })), today, data.average_day ? centsOf(data.average_day) : 0)
+  const caption = pulseCaption(data, currency, today)
+  const middle = [caption.middle.today, caption.middle.average].filter((part): part is string => part !== null)
+  return <div className="dash-pulse-block">
+    <div className="dash-pulse" role="img" aria-label={`Траты по дням ${inMonth(data.month)}`}>
+      {drawn.average !== null && <span className="dash-pulse-average" style={{ bottom: `${drawn.average}%` }} aria-hidden="true" />}
+      {drawn.bars.map((bar) => <i key={bar.day} className={`dash-pulse-day dash-pulse-${bar.state}`} style={bar.state === 'future' ? undefined : { height: `${bar.height}%` }} />)}
+    </div>
+    <p className="dash-pulse-x" aria-hidden="true">
+      <span>{caption.start}</span>
+      <span className="dash-pulse-x-middle">{middle.map((part, index) => <span key={part} className={index === 0 && caption.middle.today ? 'dash-pulse-today' : undefined}>{index > 0 && ' · '}{part}</span>)}</span>
+      <span>{caption.end}</span>
     </p>
-    <p className="dash-note">{view.note}</p>
   </div>
 }
 
-/** «Бюджет месяца» over the limits of the categories: one amount of the family in the base currency and its bar. */
-function BudgetRow({ budget }: { budget: DashboardBudget }) {
-  const bar = progress(budget.spent, budget.amount)
-  return <div className="dash-budget">
-    <div className="dash-limit-head">
-      <span className="dash-limit-name">Бюджет месяца</span>
-      <LimitValue spent={budget.spent} limit={budget.amount} currency={budget.currency} over={Boolean(bar?.over)} />
-    </div>
-    {bar && <Bar value={bar} label={`Потрачено ${bar.percent}% бюджета месяца`} />}
-    {bar && <p className="dash-note">{bar.over
-      ? <span className="dash-over">Сверх бюджета на <span className="dash-value">{formatMoney(bar.overBy, budget.currency)}</span></span>
-      : <>Осталось <span className="dash-value dash-strong">{formatMoney(bar.remaining, budget.currency)}</span></>}</p>}
-  </div>
-}
-
-/** The first currency of the month: the hero figure of the screen, the comparison, the budget of the month and its
- * days. The limits of categories are no bar here (2026-10-13): one limit on the flat read as the budget of the family. */
-function HeroCard({ block, data, family, current }: { block: DashboardCurrency; data: Dashboard; family: boolean; current: boolean }) {
-  const comparison = compareMonths(block.spent, block.previous_spent, data.previous_month)
-  const budget = data.budget?.currency === block.currency ? data.budget : null
-  const total = budget ? progress(budget.spent, budget.amount) : undefined
+/** The first currency of the month: the ring of the categories with what is left of the budget as the gap, the legend,
+ * the pulse of the days (a server of 2026-10-26) and the line of the budget, the days and «в день». */
+function HeroCard({ block, data, family, current, date }: { block: DashboardCurrency; data: Dashboard; family: boolean; current: boolean; date: string }) {
+  const legend = legendOf(block, data.budget)
+  const share = budgetShare(block.spent, data.budget?.currency === block.currency ? data.budget : null)
+  const foot = heroFoot(data, block, current)
+  const ringLabel = legend.all.length ? `Потрачено ${formatMoney(block.spent, block.currency)}: ${legend.all.map((row) => `${row.name} ${formatMoney(row.amount, block.currency)}`).join(', ')}` : `Потрачено ${formatMoney(block.spent, block.currency)}`
   return <section className="ck-panel dash-card dash-hero" aria-label={`Потрачено, ${block.currency}`}>
-    <div className="ck-panel-head">
-      <p className="dash-label">{family ? 'Потрачено семьёй' : 'Потрачено'}</p>
-      <Link className="dash-card-link" to="/stats/trends">Динамика</Link>
+    <div className="dash-ring-wrap">
+      <Ring items={legend.all.map((row) => ({ key: row.key, value: centsOf(row.amount), tone: row.tone }))} remainder={legend.remainder === null ? 0 : Number(legend.remainder)} label={ringLabel}>
+        <span className="dash-ring-label">{family ? 'Потрачено семьёй' : 'Потрачено'}</span>
+        <span className="dash-ring-value ck-figures">{formatMoney(block.spent, block.currency)}</span>
+        <span className={`dash-ring-label${share !== null && share > 100 ? ' dash-over' : ''}`}>{share === null ? 'за месяц' : `${percentText(share)} бюджета`}</span>
+      </Ring>
+      <ul className="dash-legend" aria-label="По категориям">
+        {legend.rows.map((row) => <li key={row.key} className={`dash-legend-row dash-cat-${row.tone}`}>
+          <i className="dash-legend-swatch" aria-hidden="true" />
+          {row.categoryId === null ? <span className="dash-legend-name">{row.name}</span>
+            : <Link className="dash-legend-name" to={categorySpendsHref(row.categoryId, data.month)}>{row.name}</Link>}
+          <b className="dash-legend-amount ck-figures">{formatMoney(row.amount, block.currency)}</b>
+        </li>)}
+        {legend.more > 0 && <li className="dash-legend-row dash-legend-rest"><i className="dash-legend-swatch" aria-hidden="true" /><Link className="dash-legend-name" to="/stats">ещё {legend.more}</Link></li>}
+        {legend.remainder !== null && <li className="dash-legend-row dash-legend-rest">
+          <i className="dash-legend-swatch" aria-hidden="true" />
+          <span className="dash-legend-name">{legend.remainder < 0n ? 'Сверх бюджета' : 'Остаток бюджета'}</span>
+          <b className={`dash-legend-amount ck-figures${legend.remainder < 0n ? ' dash-over' : ''}`}>{formatMoney(legend.remainder < 0n ? -legend.remainder : legend.remainder, block.currency)}</b>
+        </li>}
+      </ul>
     </div>
-    <p className="dash-total ck-hero-figure">{formatMoney(block.spent, block.currency)}</p>
-    {comparison && <p className={`dash-compare dash-compare-${comparison.tone}`}>{comparison.text}</p>}
-    {total && budget && <div className="dash-hero-limit">
-      <Bar value={total} label={`Потрачено ${total.percent}% бюджета месяца`} />
-      <p className="dash-left">
-        <LimitLeft value={total} total={budget.amount} currency={budget.currency} over="Сверх бюджета на" />
-        {current && data.days_left > 0 && <span className="dash-days">{daysLeftText(data.days_left)}</span>}
-      </p>
+    {hasPulse(data) && <Pulse data={data} currency={block.currency} current={current} date={date} />}
+    {(foot.left.length > 0 || foot.right) && <div className="dash-hero-foot">
+      <span className={foot.leftOver ? 'dash-hero-budget dash-over' : 'dash-hero-budget'}>{foot.left.join(' · ')}</span>
+      {foot.right && <span className={`dash-hero-day${foot.right.over ? ' dash-over' : ''}`} title={foot.right.title ?? undefined}>
+        {foot.right.label} <b className="ck-figures">{foot.right.amount}</b>
+        {foot.right.title && <span className="dash-visually-hidden">. {foot.right.title}</span>}
+      </span>}
     </div>}
-    {current && data.allowance && <AllowanceRow value={data.allowance} />}
   </section>
 }
 
 /** Another currency of the month: one compact row each, never a second hero and never added to the first. */
-function OtherCurrencies({ blocks, data }: { blocks: DashboardCurrency[]; data: Dashboard }) {
+function OtherCurrencies({ blocks }: { blocks: DashboardCurrency[] }) {
   return <section className="ck-panel dash-card dash-others" aria-labelledby="dash-others-heading">
     <div className="ck-panel-head"><h2 id="dash-others-heading">Другие валюты</h2></div>
     <ul className="ck-list">
       {blocks.map((block) => {
-        const total = block.limited_spent != null ? progress(block.limited_spent, block.limit_total) : null
-        const comparison = compareMonths(block.spent, block.previous_spent, data.previous_month)
-        const meta = total && block.limit_total
-          ? <LimitLeft value={total} total={block.limit_total} currency={block.currency} />
-          : comparison?.text
+        const total = block.limited_spent != null && block.limit_total ? limitLine(block.limited_spent, block.limit_total, block.currency) : null
         return <li key={block.currency} className="ck-row dash-other" aria-label={`Потрачено, ${block.currency}`}>
           <span className="ck-row-badge dash-currency-badge" aria-hidden="true">{currencySymbol(block.currency)}</span>
           <span className="ck-row-main">
             <span className="ck-row-title">{currencyName(block.currency)}</span>
-            {meta && <span className="ck-row-meta">{meta}</span>}
+            {total && <span className={`ck-row-meta${total.over ? ' dash-over' : ''}`}>{total.text}</span>}
           </span>
           <span className="ck-row-amount ck-figures dash-other-amount">{formatMoney(block.spent, block.currency)}</span>
         </li>
@@ -157,20 +154,47 @@ function Unconverted({ items }: { items: ExcludedSpends[] }) {
   </section>
 }
 
-/** The two big actions of the artifact: the camera of «Снять чек» and «＋ Добавить» — the form that opens on «Трата» with
- * «Доход» beside it. Not pinned: they stand in the page under the total, the «＋» of the bottom bar is always at hand.
- * A mouse gets the file dialog from the same button, so there the word is «Загрузить чек» (a Node render keeps the
- * touch word). */
-function Actions() {
-  // Without `capture` the system offers everything at once: iOS «Снять фото · Медиатека · Выбрать файлы», Android its
-  // chooser with the camera, a computer the file dialog — a photo or a PDF.
-  const shot = useQuickShot('gallery')
-  const coarse = useCoarsePointer()
-  return <div className="dash-actions">
-    <button type="button" className="dash-action dash-action-shot" onClick={shot.open}><Icon name="camera" />{coarse ? 'Снять чек' : 'Загрузить чек'}</button>
-    {shot.field}
-    <Link className="dash-action dash-action-spend" to="/receipts/new"><Icon name="plus" />Добавить</Link>
-  </div>
+/** «Требует внимания» (2026-10-26): up to three rows the server picked — a payment due, the income not entered, a limit
+ * near or over, a verdict of the model — each a link; «ещё N» leads to «Деньги». No rows — no card. */
+function AttentionCard({ rows, more }: { rows: DashboardAttention[]; more: number | undefined }) {
+  const moreText = attentionMoreText(more)
+  return <section className="ck-panel dash-card dash-attention" aria-labelledby="dash-attention-heading">
+    <div className="ck-panel-head">
+      <h2 id="dash-attention-heading">Требует внимания</h2>
+      {moreText && <Link className="dash-card-link" to="/money">{moreText}</Link>}
+    </div>
+    <ul className="ck-list">
+      {rows.map((row, index) => {
+        const badge = attentionBadge(row.kind)
+        return <li key={`${row.kind}-${index}`}>
+          <Link className="ck-row dash-attention-row" to={row.href} data-kind={row.kind}>
+            <span className={`ck-row-badge dash-attention-badge dash-attention-${badge.tone}`} aria-hidden="true"><Icon name={badge.icon} size={20} /></span>
+            <span className="ck-row-main">
+              <span className="ck-row-title">{row.title}</span>
+              <span className="ck-row-meta">{attentionMeta(row)}</span>
+            </span>
+            <Icon name="forward" size={18} className="ck-icon dash-attention-go" />
+          </Link>
+        </li>
+      })}
+    </ul>
+  </section>
+}
+
+/** The three tiles «Платежи · Планы · Цели» (2026-10-26): the whole tile is a link; a mini bar of parts under the words. */
+function Tiles({ tiles }: { tiles: TileView[] }) {
+  return <ul className="dash-tiles" aria-label="Платежи, планы и цели">
+    {tiles.map((tile) => <li key={tile.key}>
+      <Link className={`dash-tile dash-tile-${tile.key}`} to={tile.to}>
+        <span className="dash-tile-title">{tile.title}</span>
+        <span className="dash-tile-value ck-figures">{tile.value}</span>
+        <span className="dash-tile-note">{tile.note}</span>
+        {tile.bar.length > 0 && <span className="dash-mini" role="img" aria-label={tile.label}>
+          {tile.bar.map((part) => <i key={part.key} className={`dash-mini-part dash-cat-${part.tone}${part.on ? ' dash-mini-on' : ''}`} style={{ flex: part.flex }} />)}
+        </span>}
+      </Link>
+    </li>)}
+  </ul>
 }
 
 /** The heading of a category row: a link to what its money went on this month («Траты категории»); a row without
@@ -180,14 +204,10 @@ function RowHead({ categoryId, month, className = 'dash-limit-head', children }:
     : <Link className={`${className} dash-limit-link`} to={categorySpendsHref(categoryId, month)}>{children}</Link>
 }
 
-/** «92 300 / 120 000 ₸» on one line, the spent part in the colour of an overspend when it is one; without a limit
- * what was spent. */
-function LimitValue({ spent, limit, currency, over, sub = false }: { spent: string; limit: string | null; currency: string; over: boolean; sub?: boolean }) {
-  return <span className={`dash-limit-value${sub ? ' dash-sublimit-value' : ''} ck-figures`}>
-    {limit === null ? formatMoney(spent, currency)
-      : <><span className={over ? 'dash-limit-spent dash-limit-spent-over' : 'dash-limit-spent'}>{formatNumber(spent)}</span>
-        <span className="dash-limit-of"> / {formatMoney(limit, currency)}</span></>}
-  </span>
+/** «92 % · 112 000 из 120 000 ₸» on one line, in the colour of an overspend when it is one; without a limit what was spent. */
+function LimitValue({ spent, limit, currency, sub = false }: { spent: string; limit: string | null; currency: string; sub?: boolean }) {
+  const line = limitLine(spent, limit, currency)
+  return <span className={`dash-limit-value${sub ? ' dash-sublimit-value' : ''}${line.over ? ' dash-limit-spent-over' : ''} ck-figures`}>{line.text}</span>
 }
 
 /** Folds and unfolds the direct sub-categories of a row: a button of its own, beside the link of the row, so a tap on
@@ -229,57 +249,44 @@ function SubLimitRow({ row, currency, month, fold }: { row: DashboardSubCategory
   return <li className="dash-sublimit">
     <RowHead categoryId={row.category_id} month={month}>
       <span className="dash-sublimit-name">{row.name}</span>
-      <LimitValue spent={row.spent} limit={row.limit} currency={currency} over={Boolean(bar?.over)} sub />
+      <LimitValue spent={row.spent} limit={row.limit} currency={currency} sub />
     </RowHead>
     {bar && <Bar small value={bar} label={`${row.name}: потрачено ${bar.percent}% лимита`} />}
-    {bar?.over && <p className="dash-over dash-sublimit-over">Сверх лимита на <span className="dash-value">{formatMoney(bar.overBy, currency)}</span></p>}
     <SubLimits row={row} currency={currency} month={month} fold={fold} />
   </li>
 }
 
+/** A category with a limit: the name, «N % · spent из limit» and a bar in its colour (the overspend colour over it). */
 function LimitRow({ category, currency, month, fold }: { category: DashboardCategory; currency: string; month: string; fold: Fold }) {
   const bar = progress(category.spent, category.limit)
   return <li className={`dash-limit dash-cat-${categoryTone(category.category_id)}`}>
     <RowHead categoryId={category.category_id} month={month}>
-      <span className="dash-dot" aria-hidden="true" />
       <span className="dash-limit-name">{category.name}</span>
-      <LimitValue spent={category.spent} limit={category.limit} currency={currency} over={Boolean(bar?.over)} />
+      <LimitValue spent={category.spent} limit={category.limit} currency={currency} />
     </RowHead>
     {bar && <Bar value={bar} label={`${category.name}: потрачено ${bar.percent}% лимита`} />}
-    {bar?.over && <p className="dash-over">Сверх лимита на <span className="dash-value">{formatMoney(bar.overBy, currency)}</span></p>}
     <SubLimits row={category} currency={currency} month={month} fold={fold} />
   </li>
 }
 
-/** A category without any limit: one compact line, its colour, its name and what it spent, no bar. */
-function PlainRow({ category, currency, month }: { category: DashboardCategory; currency: string; month: string }) {
-  return <li className={`dash-plain dash-cat-${categoryTone(category.category_id)}`}>
-    <RowHead categoryId={category.category_id} month={month} className="dash-plain-head">
-      <span className="dash-dot" aria-hidden="true" />
-      <span className="dash-plain-name">{category.name}</span>
-      <span className="dash-plain-value ck-figures">{formatMoney(category.spent, currency)}</span>
-    </RowHead>
-  </li>
-}
-
-function LimitsCard({ block, several, month, fold, budget }: { block: DashboardCurrency; several: boolean; month: string; fold: Fold; budget?: DashboardBudget | null }) {
+/** «Лимиты» compact (2026-10-26): the limited categories only, a row each; without any limit the card is one link. */
+function LimitsCard({ block, several, month, fold }: { block: DashboardCurrency; several: boolean; month: string; fold: Fold }) {
   const headingId = `dash-limits-${block.currency}`
   const limited = block.categories.filter(hasLimit)
-  const plain = block.categories.filter((category) => !hasLimit(category))
   const key = (category: DashboardCategory) => category.category_id ?? `none-${category.name}`
+  if (!limited.length) {
+    return <Link className="ck-panel dash-card dash-limits dash-limits-empty" to="/budget/limits" aria-label="Лимиты: задать лимиты">
+      <span className="dash-limits-empty-title">Лимиты{several && <span className="dash-currency"> · {currencySymbol(block.currency)}</span>}</span>
+      <span className="dash-limits-empty-note">Задать лимиты</span>
+      <Icon name="forward" size={18} className="ck-icon dash-attention-go" />
+    </Link>
+  }
   return <section className="ck-panel dash-card dash-limits" aria-labelledby={headingId}>
     <div className="ck-panel-head">
       <h2 id={headingId}>Лимиты{several && <span className="dash-currency"> · {currencySymbol(block.currency)}</span>}</h2>
       <Link className="dash-card-link" to="/budget/limits">Изменить</Link>
     </div>
-    {budget && budget.currency === block.currency && <BudgetRow budget={budget} />}
-    {limited.length > 0 && <ul className="dash-limit-list">{limited.map((category) => <LimitRow key={key(category)} category={category} currency={block.currency} month={month} fold={fold} />)}</ul>}
-    {block.limit_total === null && <p className="dash-note">Лимиты не заданы. <Link className="dash-inline-link" to="/budget/limits">Задать лимиты</Link></p>}
-    {plain.length > 0 && <div className="dash-plain-block">
-      {limited.length > 0 && <h3 className="dash-plain-title">Без лимита</h3>}
-      <ul className="dash-plain-list">{plain.map((category) => <PlainRow key={key(category)} category={category} currency={block.currency} month={month} />)}</ul>
-    </div>}
-    {!block.categories.length && <p className="dash-note">Трат по категориям нет.</p>}
+    <ul className="dash-limit-list">{limited.map((category) => <LimitRow key={key(category)} category={category} currency={block.currency} month={month} fold={fold} />)}</ul>
   </section>
 }
 
@@ -311,7 +318,7 @@ export type DashboardViewProps = {
   slide?: MonthSlide
   /** Opened and closed rows of «Лимиты» to start with; the saved ones of this browser by default. */
   expanded?: ExpandedChoices
-  /** The date of the device: «сегодня» and «вчера» of the latest spends. */
+  /** The date of the device: «сегодня» and «вчера» of the latest spends, today on the pulse. */
   date?: string
 }
 
@@ -333,13 +340,15 @@ export function DashboardView({ data, today = deviceMonth(), family = data.membe
   }
   const spent = data.currencies.filter((block) => cents(block.spent) !== 0n || block.limit_total !== null)
   const [hero, ...others] = spent
-  // The budget of the month is the bar of the hero card; only without that card does it stand in «Лимиты».
-  const budget = !empty && hero && data.budget?.currency === hero.currency ? null : data.budget
+  const currency = data.base_currency ?? hero?.currency ?? data.currencies[0]?.currency ?? ''
   // The main currency always gets its limits card; another one only when it has limits (its spends are in «Другие валюты»).
   const limits = data.currencies.filter((block, index) => block.limit_total !== null || (index === 0 && block.categories.length))
-  // Two columns on a wide screen: the month, the spends and the latest spends at the left; the limits, the income of
-  // the month and the recurring payments at the right. A phone reads them as one column in today's order — the money,
-  // the actions, the income, the payments, the limits, the latest spends (the `order` rules of Dashboard.css).
+  const attention = attentionRows(data)
+  const tiles = tilesOf(data, currency)
+  const recent = recentView(data.recent, data.month, date)
+  // Two columns on a wide screen: the ring, «Требует внимания» and the latest spends at the left; the limits and the
+  // tiles at the right. A phone reads one column in the order of the mockup — the ring, the attention, the tiles, the
+  // spends of today and yesterday, the limits (the `order` rules of Dashboard.css).
   return <div className={`dash${slide ? ` dash-slide-${slide}` : ''}`}>
     <MonthHeader month={data.month} today={today} people={dashboardPeople(data)} family={family} />
     <div className="dash-column dash-column-main">
@@ -349,32 +358,29 @@ export function DashboardView({ data, today = deviceMonth(), family = data.membe
           {current && <p className="dash-note">Снимите чек или добавьте трату — сумма появится здесь.</p>}
           <Link className="dash-empty-action" to="/receipts/new">Добавить трату</Link>
         </section>
-        : <HeroCard block={hero} data={data} family={family} current={current} />}
-      {!empty && others.length > 0 && <OtherCurrencies blocks={others} data={data} />}
+        : <HeroCard block={hero} data={data} family={family} current={current} date={date} />}
+      {!empty && others.length > 0 && <OtherCurrencies blocks={others} />}
       {unconverted.length > 0 && <Unconverted items={unconverted} />}
-      <Actions />
+      {attention.length > 0 && <AttentionCard rows={attention} more={data.attention_more} />}
       <section className="ck-panel dash-card dash-recent" aria-labelledby="dash-recent-heading">
         <div className="ck-panel-head">
-          <h2 id="dash-recent-heading">Последние траты</h2>
-          <Link className="dash-card-link" to="/receipts">Все</Link>
+          <h2 id="dash-recent-heading">{recent.title}</h2>
+          <Link className="dash-card-link" to="/receipts">Все траты</Link>
         </div>
-        {data.recent.length
-          ? <ul className="ck-list dash-recent-list">{data.recent.map((item) => <RecentItem key={item.id} item={item} date={date} base={data.base_currency}
-            tone={categoryTone(item.category_name === null ? null : ids.get(item.category_name))} />)}</ul>
-          : <p className="dash-note">Трат пока нет.</p>}
+        {recent.empty
+          ? <p className="dash-note">{current ? 'Сегодня трат нет.' : 'Трат не было.'}</p>
+          : <ul className="ck-list dash-recent-list">{recent.items.map((item) => <RecentItem key={item.id} item={item} date={date} base={data.base_currency}
+            tone={categoryTone(item.category_name === null ? null : ids.get(item.category_name))} />)}</ul>}
       </section>
     </div>
     <div className="dash-column dash-column-side">
-      <IncomeSummary month={data.month} />
-      <RecurringDue month={data.month} />
-      <PlannedCard planned={data.planned} month={data.month} currency={data.base_currency ?? hero?.currency ?? data.currencies[0]?.currency ?? ''} current={current}
-        categoryNames={new Map([...ids].map(([name, id]) => [id, name]))} />
-      {limits.map((block) => <LimitsCard key={block.currency} block={block} several={several} month={data.month} fold={fold} budget={budget} />)}
-      {(!data.currencies.length || (budget && !limits.length)) && <section className="ck-panel dash-card dash-limits" aria-label="Лимиты">
-        <div className="ck-panel-head"><h2>Лимиты</h2><Link className="dash-card-link" to="/budget/limits">Изменить</Link></div>
-        {budget ? <BudgetRow budget={budget} />
-          : <p className="dash-note">Лимиты на месяц помогают видеть, сколько ещё можно потратить.</p>}
-      </section>}
+      {tiles && <Tiles tiles={tiles} />}
+      {limits.map((block) => <LimitsCard key={block.currency} block={block} several={several} month={data.month} fold={fold} />)}
+      {!data.currencies.length && <Link className="ck-panel dash-card dash-limits dash-limits-empty" to="/budget/limits" aria-label="Лимиты: задать лимиты">
+        <span className="dash-limits-empty-title">Лимиты</span>
+        <span className="dash-limits-empty-note">Задать лимиты</span>
+        <Icon name="forward" size={18} className="ck-icon dash-attention-go" />
+      </Link>}
     </div>
   </div>
 }

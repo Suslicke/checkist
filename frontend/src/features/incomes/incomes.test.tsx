@@ -38,9 +38,9 @@ describe('the income line of «Главная» (Vitest/SSR, not browser visual 
     expect(line).toContain('<dt>Отложено</dt><dd class="ck-figures">750 000 ₸<span class="inc-summary-note"> (79 %)</span></dd>')
     expect(line).toContain('<a class="inc-summary-link" href="/incomes?month=2026-10">Доходы</a>')
   })
-  it('is one line of the dashboard, right before the regular payments', () => {
+  it('is no card of «Главная» any more (2026-10-26): the income is a tile of «Деньги» and a row of «Требует внимания»', () => {
     const source = readFileSync(new URL('../dashboard/DashboardPage.tsx', import.meta.url), 'utf8')
-    expect(source).toContain('      <IncomeSummary month={data.month} />\n      <RecurringDue month={data.month} />\n')
+    expect(source).not.toContain('IncomeSummary')
   })
 })
 

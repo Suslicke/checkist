@@ -44,14 +44,14 @@ describe('«Главная» in the base currency', () => {
     }
   }
   it('shows «20 $» with «≈ 8 978,80 ₸» under it, and the spends without a rate in their own card', () => {
-    const html = renderToStaticMarkup(<DashboardView data={data()} today="2026-10" date="2026-10-20" />)
+    const html = renderToStaticMarkup(<DashboardView data={data()} today="2026-10" date="2026-10-12" />)
     expect(html).toContain(`<span class="ck-row-amount ck-figures">${nb('20 $')}<span class="dash-recent-twin">${nb('≈ 8 978,80 ₸')}</span></span>`)
     expect(html).toContain(`<span class="ck-row-amount ck-figures">${nb('4 500 ₸')}</span>`)
     expect(html).toContain('<h2 id="dash-unconverted-heading">Без курса</h2>')
     expect(html).toContain('Нет курса Нацбанка на дату покупки — не в итоге')
     expect(html).not.toContain('Другие валюты')
-    // One hero: the month in tenge.
-    expect(html.match(/ck-hero-figure/g)).toHaveLength(1)
+    // One ring: the month in tenge.
+    expect(html.match(/ck-ring-centre/g)).toHaveLength(1)
   })
   it('a month with only spends without a rate does not say «трат не было»', () => {
     const html = renderToStaticMarkup(<DashboardView data={{ ...data(), currencies: [] }} today="2026-10" date="2026-10-20" />)

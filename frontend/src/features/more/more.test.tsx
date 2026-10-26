@@ -22,14 +22,14 @@ describe('«Ещё» as a screen of its own (2026-10-13, Vitest/SSR, not browser
     expect(buildRoute({ kind: 'more' })).toBe('/more')
   })
 
-  it('shows the person and the family, «Деньги» as tiles, then «Данные» and «Настройки» with the theme', () => {
+  it('shows the person and the family, then «Данные» and «Настройки» with the theme; the money sections are the screen «Деньги» (2026-10-26)', () => {
     const html = view(person)
     expect(html).toContain('<a class="ck-panel more-profile" aria-label="Аккаунт: Андрей" href="/account"><span class="more-avatar" aria-hidden="true">А</span>')
     expect(html).toContain('Семья «Пустовые» · пароль и уведомления')
-    expect(html).toContain('<section aria-label="Деньги"><ul class="more-tiles"><li><a class="more-tile" href="/incomes">Доходы</a></li>')
+    expect(html).not.toContain('more-tiles')
+    expect(html).not.toContain('href="/incomes"')
     expect(html).toContain('<h2 id="more-data" class="more-title">Данные</h2>')
-    expect(links(html)).toEqual(['/account', '/incomes', '/recurring', '/planned', '/goals', '/review', '/chat', '/receipts/upload', '/statements/new', '/catalog', '/stores', '/statements/rules',
-      '/recognition/jobs', '/export', '/family', '/health'])
+    expect(links(html)).toEqual(['/account', '/receipts/upload', '/statements/new', '/catalog', '/stores', '/statements/rules', '/recognition/jobs', '/export', '/family', '/health'])
     // The account is the card on top, not a row again; the theme and the pictures of the spends end «Настройки».
     expect(html.match(/href="\/account"/g)).toHaveLength(1)
     expect(html).toMatch(/<h2 id="more-settings" class="more-title">Настройки<\/h2>.*<div class="more-toggles"><button type="button" class="ck-theme-toggle ck-theme-toggle-menu"/)
@@ -43,11 +43,13 @@ describe('«Ещё» as a screen of its own (2026-10-13, Vitest/SSR, not browser
   })
 
   it('is the way back of a section opened from it, and only of such a one', () => {
-    expect(headerAction({ route: { kind: 'goals' } }, '/more', true)).toEqual({ kind: 'back', to: '/more', label: 'Назад в «Ещё»' })
-    expect(headerAction({ route: { kind: 'export', query: {} } }, '/more', true)).toEqual({ kind: 'back', to: '/more', label: 'Назад в «Ещё»' })
-    expect(headerAction({ route: { kind: 'goals' } }, '/', false)).toBeUndefined()
+    expect(headerAction({ route: { kind: 'stores' } }, '/more', '/more')).toEqual({ kind: 'back', to: '/more', label: 'Назад в «Ещё»' })
+    expect(headerAction({ route: { kind: 'export', query: {} } }, '/more', '/more')).toEqual({ kind: 'back', to: '/more', label: 'Назад в «Ещё»' })
+    expect(headerAction({ route: { kind: 'stores' } }, '/')).toBeUndefined()
+    // «Цели» are a section of «Деньги» now: from «Ещё» they are not reached, so they never go back to it.
+    expect(headerAction({ route: { kind: 'goals' } }, '/more', '/more')).toBeUndefined()
     // A nested page keeps its own parent; a page outside of «Ещё» never goes back to it.
-    expect(headerAction({ route: { kind: 'goal', goalId: 4 } }, '/goals', true)).toEqual({ kind: 'back', to: '/goals', label: 'Назад к целям' })
-    expect(headerAction({ route: { kind: 'dashboard' } }, '/more', true)).toBeUndefined()
+    expect(headerAction({ route: { kind: 'product', productId: 4, query: { page: 1 } } }, '/catalog', '/more')).toEqual({ kind: 'back', to: '/catalog', label: 'Назад в каталог' })
+    expect(headerAction({ route: { kind: 'dashboard' } }, '/more', '/more')).toBeUndefined()
   })
 })

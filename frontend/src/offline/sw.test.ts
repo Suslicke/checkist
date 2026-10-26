@@ -116,6 +116,9 @@ describe('sw.js routing', () => {
     expect(route('/api/insights/threads/')).toBe('bypass')
     expect(route('/api/insights/threads/5/')).toBe('bypass')
     expect(route('/api/planned/?month=2026-10')).toBe('api')
+    // «Деньги» (2026-10-26): a read of the month, shown from the cache without network like «Главная».
+    expect(route('/api/money/?month=2026-10')).toBe('api')
+    expect(route('/api/money/')).toBe('api')
     expect(route('/media/receipts/1.jpg')).toBe('bypass')
     expect(route('/admin/', { mode: 'navigate' })).toBe('bypass')
     expect(route('/media/receipts/1.jpg', { mode: 'navigate' })).toBe('bypass')

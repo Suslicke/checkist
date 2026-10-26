@@ -16,7 +16,7 @@ describe('«Главная» and «Лимиты» styles (text of the rules, not
   it('reads only theme tokens, each defined for the dark theme and, for colours, again for the light one', () => {
     const dark = new Set(names(block(':root')))
     // Sizes, fonts and the tooth of the tape are the same in both themes: only colours come again for the light one.
-    const light = new Set([...names(block(':root[data-theme="light"]')), ...[...dark].filter((name) => /^--ck-(text-(xs|sm|base|lg|xl|hero)|font-|tape-)/.test(name))])
+    const light = new Set([...names(block(':root[data-theme="light"]')), ...[...dark].filter((name) => /^--ck-(text-(2xs|xs|sm|base|lg|xl|hero)|font-|tape-)/.test(name))])
     const used = [...new Set([...css.matchAll(/var\((--ck-[a-z0-9-]+)/g)].map((match) => match[1]))]
     expect(used.filter((name) => !dark.has(name))).toEqual([])
     expect(used.filter((name) => !light.has(name) && !name.startsWith('--ck-radius'))).toEqual([])
@@ -36,28 +36,50 @@ describe('«Главная» and «Лимиты» styles (text of the rules, not
     }
     expect(body('.dash-cat-0')).toContain('--dash-cat: var(--ck-text-muted)')
   })
-  it.each(['.dash-total', '.dash-value', '.dash-limit-value', '.limits-current', '.dash-action', '.dash-chip', '.limits-input-currency', '.dash-sub-count', '.dash-sub-hint',
-    '.dash-plain-value', '.dash-days', '.cat-spends-month', '.cat-part-amount', '.cat-spend-amount'])(
+  it.each(['.dash-total', '.dash-value', '.dash-limit-value', '.limits-current', '.dash-chip', '.limits-input-currency', '.dash-sub-count', '.dash-sub-hint',
+    '.dash-ring-value', '.dash-legend-amount', '.dash-tile-value', '.dash-hero-budget', '.dash-hero-day', '.cat-spends-month', '.cat-part-amount', '.cat-spend-amount'])(
     'keeps the value %s on one line', (selector) => {
       expect(body(selector)).toContain('white-space: nowrap')
     })
-  it('keeps touch targets at 44 px, the big actions at 64 px and the overspend in its own colours', () => {
-    // The round steps of a month are the .ck-round control of the shell (App.css, 44 px).
+  it('keeps touch targets at 44 px and the overspend in its own colours', () => {
+    // The round steps of a month are the .ck-round control of the shell (App.css, 44 px); the steps of 2026-10-26 are
+    // 36 px in the row of the phone and keep their own rule.
     expect(read('../../App.css')).toMatch(/\.ck-round \{[^}]*width: 44px; height: 44px;/)
+    expect(body('.dash-month-steps .dash-month-step')).toContain('width: 36px; height: 36px;')
     expect(body('.ck-panel-head > .dash-card-link')).toContain('min-height: 44px')
     expect(body('.dash-chip')).toContain('min-height: 44px')
     expect(body('.dash-sub-toggle')).toContain('min-height: 44px')
     expect(body('.dash-limit-link')).toContain('min-height: 44px')
-    expect(body('.dash-action')).toContain('min-height: 64px')
+    expect(body('.dash-tile')).toContain('min-height: 44px')
+    expect(body('.dash-attention-row')).toContain('min-height: 56px')
+    expect(body('.dash-limits-empty')).toContain('min-height: 56px')
     expect(body('.dash-empty-action')).toContain('min-height: 52px')
     expect(body('.limits-save')).toContain('min-height: 56px')
     expect(body('.dash-over')).toContain('color: var(--ck-over-text)')
     expect(body('.dash-limit-spent-over')).toContain('color: var(--ck-over-text)')
     expect(body('.dash-bar-over .dash-bar-fill')).toContain('background: var(--ck-over-bar)')
     expect(body('.dash-bar')).toContain('background: var(--ck-track)')
-    // «Снять чек» on the fill of the main action, «Трата» an outline in the colour of links (the artifact).
-    expect(body('.dash-action-shot')).toContain('background: var(--ck-primary); color: var(--ck-on-primary);')
-    expect(body('.dash-action')).toContain('border: 1.5px solid var(--ck-link);')
+    // The actions of the old home are gone: «＋» of the bar adds a spend.
+    expect(css).not.toContain('.dash-action')
+  })
+  it('draws the ring, the pulse and the tiles by the tokens of the mockup', () => {
+    expect(body('.dash-ring-wrap')).toContain('grid-template-columns: 132px minmax(0, 1fr);')
+    expect(body('.dash-pulse')).toContain('height: 44px;')
+    expect(body('.dash-pulse-day')).toContain('background: var(--ck-cat-1-tint);')
+    expect(body('.dash-pulse-on')).toContain('background: var(--ck-cat-1);')
+    expect(body('.dash-pulse-today')).toContain('background: var(--ck-accent);')
+    expect(body('.dash-pulse-future')).toContain('height: 3px; background: var(--ck-track);')
+    expect(body('.dash-pulse-average')).toContain('border-top: 1.5px dashed var(--ck-text-muted);')
+    expect(body('.dash-legend-rest .dash-legend-swatch')).toContain('background: var(--ck-track);')
+    expect(body('.dash-tiles')).toContain('grid-template-columns: repeat(3, minmax(0, 1fr));')
+    expect(body('.dash-mini')).toContain('height: 5px;')
+    expect(body('.dash-attention-warn')).toContain('background: var(--ck-warning-bg); color: var(--ck-warning-text);')
+    expect(body('.dash-attention-ai')).toContain('background: var(--ck-accent-bg); color: var(--ck-accent-text);')
+    expect(body('.dash-attention-success')).toContain('background: var(--ck-success-bg); color: var(--ck-success-text);')
+    // The ring itself is a chart of lib/charts: its colours are the category tokens there.
+    const charts = read('../../lib/charts/Charts.css')
+    for (let tone = 1; tone <= 6; tone += 1) expect(charts).toContain(`.ck-ring-tone-${tone} { --ck-ring: var(--ck-cat-${tone}); }`)
+    expect(charts).toContain('.ck-ring-track { stroke: var(--ck-track); }')
   })
   it('draws letters on a category tint in the main text colour, never in the category colour', () => {
     for (const selector of ['.dash-avatar', '.dash-badge', '.cat-spend-badge']) {
@@ -79,13 +101,16 @@ describe('«Главная» and «Лимиты» styles (text of the rules, not
     expect(css.replace(motion, '')).not.toMatch(/animation|@keyframes|transition/)
     expect(motion).toContain('.dash-slide-forward { animation: dash-slide-forward 200ms ease-out; }')
     expect(motion).toContain('.dash-slide-back { animation: dash-slide-back 200ms ease-out; }')
-    // A phone reads one column in the order of the artifact: the money and the actions, the limits, the latest spends.
+    // A phone reads one column in the order of the mockup: the ring, the attention, the tiles, the spends of today and
+    // yesterday, the limits.
     expect(body('.dash-column')).toContain('display: contents;')
     expect(body('.dash-column-side > *')).toContain('order: 1;')
     expect(body('.dash-recent')).toContain('order: 2;')
-    // On a wide screen «Лимиты» stay the first card of the side column: the income line and the recurring cards follow.
+    expect(body('.dash-column-side > .dash-limits')).toContain('order: 3;')
+    // On a wide screen «Лимиты» are the first card of the side column, the tiles under them.
     const wide = css.slice(css.indexOf('@media (min-width: 960px)'), css.indexOf('@media (max-width: 540px)'))
     expect(wide).toContain('.dash-column-side > .dash-limits { order: 0; }')
+    expect(wide).toContain('.dash-column-side > .dash-tiles { order: 1; }')
   })
   it('lays «Лимиты» out in two columns from 960 px only: the list at the left, the history at the right, a row on one line', () => {
     const base = css.slice(0, css.indexOf('@media'))
@@ -118,7 +143,9 @@ describe('«Главная» and «Лимиты» styles (text of the rules, not
   })
   it('sizes text only by the tokens of the type scale, a field never under 16 px', () => {
     const sizes = [...css.matchAll(/font-size:\s*([^;]+);/g)].map((match) => match[1].trim())
-    expect(sizes.filter((size) => !/^var\(--ck-text-(xs|sm|base|lg|xl|hero)\)$/.test(size))).toEqual([])
+    // 12 px (--ck-text-2xs) only for the captions of the ring, the pulse and the tiles (the mockup of 2026-10-26).
+    expect(sizes.filter((size) => !/^var\(--ck-text-(2xs|xs|sm|base|lg|xl|hero)\)$/.test(size))).toEqual([])
+    expect(sizes.filter((size) => size === 'var(--ck-text-2xs)').length).toBeLessThanOrEqual(6)
     expect(body('.limits-input input')).toContain('font-size: var(--ck-text-lg)')
     expect(body('.limits-add-row input')).toContain('font-size: var(--ck-text-base)')
   })

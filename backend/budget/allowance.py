@@ -47,12 +47,13 @@ def _sum(values):
     return sum((value for value in values if value is not None), _ZERO)
 
 
-def daily(user, month, *, income=None, today=None):
-    """daily(user, month, *, income=None) -> Allowance | None; ``None`` — не текущий месяц либо основы нет.
+def daily(user, month, *, income=None, today=None, payments=None):
+    """daily(user, month, *, income=None, payments=None) -> Allowance | None; ``None`` — не текущий месяц либо основы нет.
 
     ``month`` — ``budget.dashboard.Month`` либо дата внутри месяца; ``income`` — доход месяца в основной
     валюте (``incomes.services.month_income``) либо функция без аргументов, которая его вернёт: основа только
-    без бюджета, и функция зовётся только тогда.
+    без бюджета, и функция зовётся только тогда. ``payments`` — готовый список ``recurring.services.unpaid``
+    (Главная сверяет платежи один раз, 2026-10-26); без него платежи читаются здесь.
     """
     from planned.services import open_total  # planned и recurring зависят от budget: импорт внутри
     from recurring.access import as_request
@@ -72,7 +73,8 @@ def daily(user, month, *, income=None, today=None):
     budget = budget_at(limits_q(request), month.first)
     if budget is not None and budget.amount is None:
         budget = None
-    payments = unpaid(user, month, today)
+    if payments is None:
+        payments = unpaid(user, month, today)
     converter = convert.converter(base, {
         *((currency, day) for currency, day, _total in spends),
         *((payment["currency"], today) for payment in payments),
