@@ -12,18 +12,20 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
-from accounts.access import request_user, visible_receipts_q
+from accounts.access import owner_q, request_user, visible_receipts_q
 from accounts.people import display_name
-from budget import allowance, dashboard, history
+from budget import allowance, dashboard, history, home
 from budget.access import limit_owner, limits_q, people
 from budget.models import BudgetLimit, BudgetLimitChange
 from catalog.models import Category
 from config.exceptions import InvalidParameter
+from incomes.models import Income
 from incomes.services import month_income
 from planned import services as planned_services
 from rates.convert import request_base_currency
 from receipts import spending
 from receipts.models import Receipt
+from recurring import services as recurring_services
 from stores.models import Currency
 
 from .. import common, stats_common
@@ -302,6 +304,43 @@ def _allowance_object(value):
     }
 
 
+# --- Главная после переработки (2026-10-26): пульс, «Требует внимания», плитки ---
+
+def income_entered(request, month):
+    """Есть ли у семьи доход в месяце (``owner_q``, как ``incomes.services.month_income``); один ``EXISTS``."""
+    return Income.objects.filter(owner_q(request, since="received_on"), received_on__gte=month.first,
+                                 received_on__lte=month.last).exists()
+
+
+def by_day_objects(totals, month):
+    return [{"day": common.iso_date(day), "spent": common.amount(value)} for day, value in home.by_day(totals, month)]
+
+
+def attention_object(row):
+    return {"kind": row.kind, "title": row.title, "meta": row.meta, "href": row.href,
+            "amount": common.amount(row.amount), "currency": row.currency}
+
+
+def attention_fields(rows):
+    """``attention`` — первые три строки, ``attention_more`` — сколько осталось за ними."""
+    return {"attention": [attention_object(row) for row in rows[:home.ATTENTION_ROWS]],
+            "attention_more": max(0, len(rows) - home.ATTENTION_ROWS)}
+
+
+def payments_tile_object(tile):
+    if tile is None:
+        return None
+    return {"paid": tile.paid, "total": tile.total, "left": common.amount(tile.left), "currency": tile.currency,
+            "segments": [{"paid": paid} for paid in tile.segments]}
+
+
+def goals_tile_object(tile):
+    if tile is None:
+        return None
+    return {"count": tile.count, "share": tile.share, "saved": common.amount(tile.saved), "currency": tile.currency,
+            "top": [{"name": name, "share": share} for name, share in tile.top]}
+
+
 def month_limits(request, month, today):
     """Лимиты месяца дашборда по ``pk``: текущий и будущие — нынешние, прошлый — суммы того месяца по журналу."""
     limits = visible_limits(request).order_by("pk")
@@ -317,7 +356,9 @@ class DashboardView(LocalAPIView):
 
     ``currencies`` — по валютам, как раньше (валюты не складываются); ``base`` — всё в основной
     валюте семьи (``base_currency``) по курсу дня покупки, ``excluded`` — траты месяца без курса.
-    Число запросов от объёма данных не зависит.
+    С 2026-10-26 — ``by_day`` (пульс месяца), ``average_day``, ``attention`` / ``attention_more`` и
+    ``tiles`` (``budget.home``); платежи и планы читаются один раз на всё: ``allowance`` получает готовый
+    список неоплаченных, ``planned`` — готовый ``MonthView``. Число запросов от объёма данных не зависит.
     """
 
     def get(self, request):
@@ -336,13 +377,17 @@ class DashboardView(LocalAPIView):
         family = people(request)
         rate_day = dashboard.limit_day(month, today)
         budget = history.budget_at(limits_q(request), month.first)
-        converter = stats_common.converter(request, found.needs() | {
+        loaded = home.load(request, month, today)
+        converter = stats_common.converter(request, found.needs() | loaded.needs(today) | {
             *((limit.currency_id, rate_day) for limit in limits),
             *(((budget.currency_id, rate_day),) if budget is not None else ()),
             *((row.currency_id, row.purchased_on) for row, _name, _icon in latest)})
         blocks = dashboard.currency_blocks(found, limits, month, tree)
         in_base = dashboard.currency_blocks(found, limits, month, tree, converter, today)
         block = stats_common.base_block(in_base, converter.base)
+        user = request_user(request)
+        totals = home.day_totals(found.data.day_totals, converter)
+        card = planned_card(planned_services.card_of(loaded.plans))
         return Response({
             "month": month.label(), "previous_month": month.previous().label(),
             "days_left": dashboard.days_left(month, today),
@@ -354,8 +399,18 @@ class DashboardView(LocalAPIView):
             # Общий бюджет месяца и «можно тратить в день» (только текущий месяц) — в основной валюте.
             "budget": _month_budget(budget, converter, rate_day, block),
             "allowance": _allowance_object(allowance.daily(
-                request_user(request), month, today=today,
-                income=lambda: month_income(request_user(request), month))),
-            # Планы месяца (ожидаемые разовые траты, 2026-10-26): null — планов месяца нет.
-            "planned": planned_card(planned_services.dashboard_card(request, month, today)),
+                user, month, today=today, income=lambda: month_income(user, month),
+                payments=recurring_services.unpaid_rows(loaded.payments))),
+            # Планы месяца (ожидаемые разовые траты, 2026-10-26): null — планов месяца нет; прежнее поле — для
+            # старых клиентов, то же — в ``tiles.plans``.
+            "planned": card,
+            # Пульс месяца и средний день — в основной валюте, без трат без курса.
+            "by_day": by_day_objects(totals, month),
+            "average_day": common.amount(home.average_day(totals, month, today)),
+            **attention_fields(home.attention(loaded, block, month, today, lambda: income_entered(request, month))),
+            "tiles": {
+                "payments": payments_tile_object(home.payments_tile(loaded, converter, today)),
+                "plans": card,
+                "goals": goals_tile_object(home.goals_tile(loaded, converter, today)),
+            },
         })

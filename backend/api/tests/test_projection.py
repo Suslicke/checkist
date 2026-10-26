@@ -542,7 +542,7 @@ class NoForeignReceiptIdTests(ProjectionMixin, TestCase):
             "/api/product-merges/", "/api/product-classifications/", "/api/product-classifications/status/",
             "/api/product-classifications/runs/", "/api/budget/limits/", "/api/budget/limits/history/", "/api/budget/month/",
             "/api/dashboard/",
-            "/api/dashboard/?month=2026-06", "/api/export/",
+            "/api/dashboard/?month=2026-06", "/api/money/", "/api/money/?month=2026-06", "/api/export/",
             "/api/export/?include=receipts,lines,media,stores,summary", "/api/recurring/",
             "/api/statements/", "/api/statements/rules/",
             "/api/incomes/", "/api/incomes/summary/", "/api/incomes/categories/", "/api/stats/trends/incomes/", "/api/stats/incomes/",

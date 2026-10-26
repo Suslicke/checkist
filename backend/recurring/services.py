@@ -356,7 +356,11 @@ def unpaid(user, month, today=None):
     """
     if isinstance(month, date):
         month = Month.of(month)
-    view = month_view(as_request(user), month, today, suggestions=False)
+    return unpaid_rows(month_view(as_request(user), month, today, suggestions=False))
+
+
+def unpaid_rows(view):
+    """Неоплаченные платежи готового ``MonthView`` в форме ``unpaid`` (без БД): Главная считает платежи один раз."""
     return [
         {"id": row.payment.pk, "name": row.payment.name, "amount": row.payment.amount,
          "currency": row.payment.currency_id, "due_date": row.due, "overdue": row.state == OVERDUE}

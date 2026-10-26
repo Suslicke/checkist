@@ -209,7 +209,11 @@ def open_total(user, month, today=None):
 
 def dashboard_card(request, month, today=None):
     """Карточка «Планируем в месяце» для дашборда; ``None`` — планов месяца нет."""
-    view = month_view(request, month, today)
+    return card_of(month_view(request, month, today))
+
+
+def card_of(view):
+    """Та же карточка из готового ``MonthView`` (Главная читает планы один раз, 2026-10-26)."""
     if not view.rows:
         return None
     open_rows = [plan for plan in view.rows if not plan.done][:DASHBOARD_ROWS]
