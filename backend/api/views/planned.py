@@ -47,6 +47,7 @@ MESSAGES = {
     "category": "Категория не найдена.",
     "note": f"Комментарий не длиннее {NOTE_MAX} символов.",
     "goal": "Цель не найдена.",
+    "goal_scope": "Цель должна быть видна всем, кто видит план: семейному плану — цель семьи.",
     "receipt": "Трата не найдена.",
     "empty": "Укажите хотя бы одно поле.",
     "option": "Вариант — lump_fixed, monthly_flexible или invest, и он должен быть доступен.",
@@ -77,8 +78,9 @@ def _due(value, today):
     return day if EARLIEST <= day <= _latest(today) else None
 
 
-def read_plan(data, request, *, partial, today):
-    """Проверенные поля тела (только присланные при ``partial``); ``receipt_id`` — только у правки."""
+def read_plan(data, request, *, partial, today, owner):
+    """Проверенные поля тела (только присланные при ``partial``); ``receipt_id`` — только у правки; ``owner`` — владелец
+    плана (``{"household", "user"}``) для проверки цели."""
     errors, values = {}, {}
     for key in data:
         if key not in FIELDS or (key == "receipt_id" and not partial):
@@ -129,6 +131,8 @@ def read_plan(data, request, *, partial, today):
             goal = Goal.objects.filter(goals_q(request), pk=_id(value)).first() if value is not None else None
             if value is not None and goal is None:
                 errors[key] = [MESSAGES["goal"]]
+            elif goal is not None and not services.goal_allowed(owner, goal):
+                errors[key] = [MESSAGES["goal_scope"]]
             values["goal"] = goal
         else:
             receipt = (Receipt.objects.filter(visible_receipts_q(request), pk=_id(value)).select_related("store__merchant").first()
@@ -164,16 +168,16 @@ def apply(plan, values):
     return plan
 
 
-def _receipt(receipt):
-    if receipt is None:
+def _receipt(receipt, visible):
+    if receipt is None or receipt.pk not in visible:
         return None
     return {"id": receipt.pk, "total": common.amount(receipt.total), "currency": receipt.currency_id,
             "purchased_on": common.iso_date(receipt.purchased_on),
             "store_name": common.store_name(receipt.store) if receipt.store_id is not None else None}
 
 
-def _goal(plan, saved):
-    if plan.goal_id is None:
+def _goal(plan, saved, goals):
+    if plan.goal_id is None or plan.goal_id not in goals:
         return None
     share = int(saved * 100 // plan.amount) if saved else 0
     return {"id": plan.goal.pk, "name": plan.goal.name, "kind": plan.goal.kind, "saved": common.amount(saved),
@@ -186,13 +190,15 @@ def _ai(plan):
     return {"verdict": plan.ai_verdict, "reason": plan.ai_reason, "at": common.utc_datetime(plan.ai_at)}
 
 
-def plan_object(plan, tree, saved):
+def plan_object(plan, tree, saved, visible, goals):
+    """План; закрывшая трата — только если её id в ``visible`` (``services.visible_receipt_ids``), цель — только если
+    её id в ``goals`` (``services.visible_goal_ids``), иначе ``null``."""
     return {
         "id": plan.pk, "name": plan.name,
         "category": None if plan.category_id is None else {
             "id": plan.category_id, "name": plan.category.name, "icon": tree.icon(plan.category_id) if plan.category_id in tree else None},
         "currency": plan.currency_id, "amount": common.amount(plan.amount), "due": common.iso_date(plan.due),
-        "due_exact": plan.due_exact, "note": plan.note, "receipt": _receipt(plan.receipt), "goal": _goal(plan, saved),
+        "due_exact": plan.due_exact, "note": plan.note, "receipt": _receipt(plan.receipt, visible), "goal": _goal(plan, saved, goals),
         "ai": _ai(plan), "created_by": person(plan.created_by) if plan.created_by else None,
         "created_at": common.utc_datetime(plan.created_at),
     }
@@ -219,7 +225,9 @@ def planned_card(card):
 def one(request, plan, today):
     """Объект одного плана: цель и отложенное — свежим чтением."""
     plan = services.plans(request).get(pk=plan.pk)
-    return plan_object(plan, common.CategoryTree.load(), services.saved_map([plan], today)[plan.pk])
+    goals = services.visible_goal_ids(request, [plan])
+    return plan_object(plan, common.CategoryTree.load(), services.saved_map(request, [plan], today, goals)[plan.pk],
+                       services.visible_receipt_ids(request, [plan]), goals)
 
 
 class PlansView(LocalAPIView):
@@ -237,8 +245,10 @@ class PlansView(LocalAPIView):
         tree = common.CategoryTree.load()
         return Response({
             "month": month.label(), "today": common.iso_date(today), "currency": view.base["currency"],
-            "rows": [plan_object(plan, tree, view.saved[plan.pk]) for plan in view.rows],
-            "undated": [plan_object(plan, tree, view.saved[plan.pk]) for plan in view.undated],
+            "rows": [plan_object(plan, tree, view.saved[plan.pk], view.visible_receipts, view.visible_goals)
+                     for plan in view.rows],
+            "undated": [plan_object(plan, tree, view.saved[plan.pk], view.visible_receipts, view.visible_goals)
+                        for plan in view.undated],
             "base": base_object(view.base),
             "months": [{**item, "month": item["month"].label(), "expected": common.amount(item["expected"]),
                         "segments": _segments(item["segments"])} for item in view.months],
@@ -246,8 +256,9 @@ class PlansView(LocalAPIView):
 
     def post(self, request):
         today = timezone.localdate()
-        values = read_plan(manual_body(request), request, partial=False, today=today)
-        plan = apply(PlannedSpend(**owner_fields(request), created_by=request_user(request)), values)
+        owner = owner_fields(request)
+        values = read_plan(manual_body(request), request, partial=False, today=today, owner=owner)
+        plan = apply(PlannedSpend(**owner, created_by=request_user(request)), values)
         return Response(one(request, plan, today), status=status.HTTP_201_CREATED)
 
 
@@ -264,7 +275,8 @@ class PlanView(LocalAPIView):
     def patch(self, request, pk):
         today = timezone.localdate()
         plan = common.get_or_404(services.plans(request), path_id(pk))
-        apply(plan, read_plan(manual_body(request), request, partial=True, today=today))
+        apply(plan, read_plan(manual_body(request), request, partial=True, today=today,
+                              owner={"household": plan.household, "user": plan.user}))
         return Response(one(request, plan, today))
 
     def delete(self, request, pk):
@@ -290,7 +302,7 @@ class AdviceView(LocalAPIView):
 
     def get(self, request, pk):
         plan = common.get_or_404(services.plans(request), path_id(pk))
-        return Response(advice_object(services.advice(plan, timezone.localdate())))
+        return Response(advice_object(services.advice(request, plan, timezone.localdate())))
 
 
 class DepositView(LocalAPIView):

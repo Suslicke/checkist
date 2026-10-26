@@ -130,11 +130,25 @@ class LinkTests(Fixture):
         Contribution.objects.create(goal=goal, amount=D("20000"), currency_id="KZT", date=date(2026, 10, 1), user=self.owner)
         Contribution.objects.create(goal=goal, amount=D("10"), currency_id="USD", date=TODAY, user=self.owner)
         services.set_goal(self.jacket, goal)
-        self.assertEqual(services.saved(self.jacket, TODAY), D("25000.00"))
+        self.assertEqual(services.saved(self.request, self.jacket, TODAY), D("25000.00"))
         # План в долларах, цель в тенге: 25 000 ₸ / 500 = 50 $.
         services.set_goal(self.hosting, goal)
-        self.assertEqual(services.saved(self.hosting, TODAY), D("50.00"))
-        self.assertIsNone(services.saved(self.gift, TODAY))
+        self.assertEqual(services.saved(self.request, self.hosting, TODAY), D("50.00"))
+        self.assertIsNone(services.saved(self.request, self.gift, TODAY))
+
+
+class GoalScopeTests(Fixture):
+    def test_goal_allowed(self):
+        from accounts.models import Household
+        family = Household.objects.create(name="Демо-семья")
+        stranger = make_user("synthetic-user-nine")
+        own = Goal.objects.create(user=self.owner, name="Своя", amount=D("1"), currency_id="KZT")
+        shared = Goal.objects.create(household=family, name="Семейная", amount=D("1"), currency_id="KZT")
+        foreign = Goal.objects.create(user=stranger, name="Чужая", amount=D("1"), currency_id="KZT")
+        household_plan = {"household": family, "user": None}
+        personal_plan = {"household": None, "user": self.owner}
+        self.assertEqual([services.goal_allowed(household_plan, goal) for goal in (own, shared, foreign)], [False, True, False])
+        self.assertEqual([services.goal_allowed(personal_plan, goal) for goal in (own, shared, foreign)], [True, True, False])
 
 
 class DepositTests(Fixture):

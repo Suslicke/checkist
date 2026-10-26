@@ -6,6 +6,12 @@
 месяцев, последний день — у прошлого (как у лимитов дашборда); факт закрытой траты — по курсу дня покупки.
 План без курса не входит в суммы и считается в ``excluded``; план без срока (``due`` NULL) — в ``undated``, не в
 месяце и не в «можно тратить в день». Число запросов от числа планов не зависит.
+
+Видимость сквозь план (2026-10-26): закрывшая трата показывается и считается фактом только когда её видит сам
+запрос (``visible_receipts_q``; скрытый главным платёж — только главному, строки раньше «видит с» — нет), иначе план
+закрыт суммой плана и без траты (``visible_receipt_ids``). Цель плана видна только тем, кому видна сама цель
+(``goals.access.goals_q``): личная цель одного члена семьи у семейного плана остальным не показывается и «отложено»
+у них — ноль; привязать к плану можно только цель, видимую всем, кто видит план (``goal_allowed``).
 """
 from dataclasses import dataclass, field
 from datetime import date
@@ -15,13 +21,14 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from accounts.access import request_user
+from accounts.access import request_user, visible_receipts_q
 from budget.dashboard import Month
 from catalog.models import Category
 from goals import services as goals_services
-from goals.access import goal_owner
+from goals.access import goals_q
 from goals.models import Goal
 from rates import convert
+from receipts.models import Receipt
 from stores.models import Currency
 
 from . import advice as advisor
@@ -54,6 +61,8 @@ class MonthView:
     base: dict  # суммы месяца в основной валюте
     months: list = field(default_factory=list)  # месяцы с планами от текущего вперёд
     saved: dict = field(default_factory=dict)  # {plan.pk: Decimal | None} — отложено на цели в валюте плана
+    visible_receipts: set = field(default_factory=set)  # id закрывших трат, которые видит запрос
+    visible_goals: set = field(default_factory=set)  # id целей планов, которые видит запрос
 
 
 def plans(request):
@@ -71,7 +80,32 @@ def _segment(plan, amount):
     return {"id": plan.pk, "name": plan.name, "category_id": plan.category_id, "amount": amount, "done": plan.done}
 
 
-def _sums(rows, converter, day):
+def visible_receipt_ids(request, rows):
+    """id закрывших трат планов ``rows``, которые видит запрос (главный — и скрытые им); один запрос либо ни одного."""
+    ids = {plan.receipt_id for plan in rows if plan.receipt_id is not None}
+    if not ids:
+        return set()
+    return set(Receipt.objects.filter(visible_receipts_q(request, include_hidden=True), pk__in=ids)
+               .values_list("pk", flat=True))
+
+
+def visible_goal_ids(request, rows):
+    """id целей планов ``rows``, которые видит запрос (``goals_q``); один запрос либо ни одного."""
+    ids = {plan.goal_id for plan in rows if plan.goal_id is not None}
+    if not ids:
+        return set()
+    return set(Goal.objects.filter(goals_q(request), pk__in=ids).values_list("pk", flat=True))
+
+
+def goal_allowed(owner, goal):
+    """Можно ли привязать ``goal`` к плану владельца ``owner`` (``{"household", "user"}``): цель должна быть видна
+    всем, кто видит план — семейному плану только цель его семьи, личному — своя либо семейная."""
+    if owner["household"] is not None:
+        return goal.household_id == owner["household"].pk
+    return goal.user_id == owner["user"].pk or goal.household_id is not None
+
+
+def _sums(rows, converter, day, visible=frozenset()):
     expected = done = left = ZERO
     excluded = done_count = 0
     segments = []
@@ -85,7 +119,9 @@ def _sums(rows, converter, day):
         expected += amount
         segments.append(_segment(plan, amount))
         if plan.done:
-            fact = converter.convert(plan.receipt.total, plan.receipt.currency_id, plan.receipt.purchased_on)
+            # Невидимая запросу трата — план закрыт суммой плана, её итог не раскрывается.
+            fact = (converter.convert(plan.receipt.total, plan.receipt.currency_id, plan.receipt.purchased_on)
+                    if plan.receipt_id in visible else None)
             done += fact if fact is not None else amount
         else:
             left += amount
@@ -93,18 +129,18 @@ def _sums(rows, converter, day):
             "done_count": done_count, "segments": segments}
 
 
-def _needs(rows, day):
+def _needs(rows, day, visible):
     needs = {(plan.currency_id, day) for plan in rows}
-    needs |= {(plan.receipt.currency_id, plan.receipt.purchased_on) for plan in rows if plan.done}
+    needs |= {(plan.receipt.currency_id, plan.receipt.purchased_on) for plan in rows if plan.receipt_id in visible}
     return needs
 
 
-def saved_map(rows, today):
-    """{plan.pk: Decimal | None} — отложено на цели плана в валюте плана по курсу сегодня; без цели — ``None``.
-
-    Взносы всех целей — один запрос (``goals.services.progress``), курсы — по запросу на валюту плана.
+def saved_map(request, rows, today, visible=None):
+    """{plan.pk: Decimal | None} — отложено на цели плана в валюте плана по курсу сегодня; без цели либо цель не видна
+    запросу — ``None``. Взносы всех целей — один запрос (``goals.services.progress``), курсы — по запросу на валюту плана.
     """
-    with_goal = [plan for plan in rows if plan.goal_id is not None]
+    visible = visible_goal_ids(request, rows) if visible is None else visible
+    with_goal = [plan for plan in rows if plan.goal_id in visible]
     result = {plan.pk: None for plan in rows}
     if not with_goal:
         return result
@@ -120,9 +156,9 @@ def saved_map(rows, today):
     return result
 
 
-def saved(plan, today=None):
-    """Отложено на цели плана в валюте плана; ``None`` — цели нет или нет курса."""
-    return saved_map([plan], today or timezone.localdate())[plan.pk]
+def saved(request, plan, today=None):
+    """Отложено на цели плана в валюте плана; ``None`` — цели нет, она не видна запросу или нет курса."""
+    return saved_map(request, [plan], today or timezone.localdate())[plan.pk]
 
 
 def month_view(request, month, today=None):
@@ -137,17 +173,20 @@ def month_view(request, month, today=None):
         if plan.due is not None and plan.due >= current.first:
             later.setdefault((plan.due.year, plan.due.month), []).append(plan)
     base = convert.request_base_currency(request)
-    needs = _needs(in_month, rate_day(month, today))
+    visible = visible_receipt_ids(request, rows)
+    goals = visible_goal_ids(request, rows)
+    needs = _needs(in_month, rate_day(month, today), visible)
     for (year, number), items in later.items():
-        needs |= _needs(items, rate_day(Month(year, number), today))
+        needs |= _needs(items, rate_day(Month(year, number), today), visible)
     converter = convert.converter(base, needs)
     months = []
     for key in sorted(later):
         item = Month(*key)
-        sums = _sums(later[key], converter, rate_day(item, today))
+        sums = _sums(later[key], converter, rate_day(item, today), visible)
         months.append({"month": item, **{name: sums[name] for name in ("expected", "count", "done_count", "segments")}})
-    return MonthView(month, today, in_month, undated, {"currency": base, **_sums(in_month, converter, rate_day(month, today))},
-                     months, saved_map(rows, today))
+    return MonthView(month, today, in_month, undated,
+                     {"currency": base, **_sums(in_month, converter, rate_day(month, today), visible)},
+                     months, saved_map(request, rows, today, goals), visible, goals)
 
 
 def open_total(user, month, today=None):
@@ -204,20 +243,20 @@ def set_goal(plan, goal):
     return plan
 
 
-def advice(plan, today=None):
-    """Совет «как накопить»: ``planned.advice.options`` по ставкам ``settings.PLANNED_RATES`` плюс ``currency``."""
+def advice(request, plan, today=None):
+    """Совет «как накопить»: ``planned.advice.options`` по ставкам ``settings.PLANNED_RATES`` плюс ``currency``;
+    «отложено» — только с видимой запросу цели."""
     today = today or timezone.localdate()
-    result = advisor.options(plan.amount, saved(plan, today) or ZERO, plan.due, today, settings.PLANNED_RATES)
+    result = advisor.options(plan.amount, saved(request, plan, today) or ZERO, plan.due, today, settings.PLANNED_RATES)
     return {**result, "currency": plan.currency_id}
 
 
 def deposit(request, plan, option, today=None):
-    """Открыть депозит по варианту совета: общая цель семьи ``kind=deposit`` на недостающее к сроку плана, привязать.
-
-    Вариант неизвестен или сейчас недоступен — ``ValueError`` с причиной.
+    """Открыть депозит по варианту совета: цель ``kind=deposit`` владельца плана (семейному плану — семьи, личному —
+    пользователя) на недостающее к сроку, привязать. Вариант неизвестен или сейчас недоступен — ``ValueError`` с причиной.
     """
     today = today or timezone.localdate()
-    result = advice(plan, today)
+    result = advice(request, plan, today)
     chosen = next((row for row in result["options"] if row["key"] == option), None)
     if chosen is None:
         raise ValueError("unknown option")
@@ -225,7 +264,7 @@ def deposit(request, plan, option, today=None):
         raise ValueError(chosen["reason"])
     with transaction.atomic():
         goal = Goal.objects.create(
-            **goal_owner(request, True), name=plan.name, amount=result["missing"], currency_id=plan.currency_id,
+            household=plan.household, user=plan.user, name=plan.name, amount=result["missing"], currency_id=plan.currency_id,
             deadline=plan.due, kind=Goal.Kind.DEPOSIT, rate=chosen["rate"], capitalization=Goal.Capitalization.MONTHLY,
             created_by=request_user(request))
         set_goal(plan, goal)

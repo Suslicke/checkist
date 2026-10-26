@@ -193,7 +193,7 @@ class PlannedLocalTests(TestCase):
 @tag("integration")
 @accounts_mode()
 class PlannedFamilyTests(TwoUsers, TestCase):
-    """``first`` и ``third`` — одна семья, ``second`` вне её."""
+    """``first`` и ``third`` (главный) — одна семья, ``second`` вне её."""
 
     @classmethod
     def setUpTestData(cls):
@@ -201,8 +201,8 @@ class PlannedFamilyTests(TwoUsers, TestCase):
         cls.third = make_user("synthetic-user-three")
         cls.clothes = Category.objects.create(name="Демо-одежда")
         cls.family = Household.objects.create(name="Демо-семья")
-        for account in (cls.first, cls.third):
-            Membership.objects.create(user=account, household=cls.family)
+        Membership.objects.create(user=cls.first, household=cls.family)
+        Membership.objects.create(user=cls.third, household=cls.family, role=Membership.Role.HEAD)
 
     def create(self, account, **values):
         with today():
@@ -230,6 +230,57 @@ class PlannedFamilyTests(TwoUsers, TestCase):
             refused = self.client_of(self.first, csrf=True).patch(f"{URL}{plan['id']}/", {"receipt_id": foreign.pk}, format="json")
         self.assertEqual(linked.json()["receipt"]["id"], own.pk)
         self.assertEqual((refused.status_code, list(fields(refused))), (400, ["receipt_id"]))
+
+    def test_hidden_receipt_is_not_revealed_to_members(self):
+        plan = self.create(self.first)
+        receipt = spend(self.third, self.clothes, 48000, date(2026, 10, 10))
+        with today():
+            self.client_of(self.third, csrf=True).patch(f"{URL}{plan['id']}/", {"receipt_id": receipt.pk}, format="json")
+        Receipt.objects.filter(pk=receipt.pk).update(hidden=True)  # главный скрыл платёж
+        with today():
+            member = self.client_of(self.first).get(URL).json()
+            head = self.client_of(self.third).get(URL).json()
+            one = self.client_of(self.first).get(f"{URL}{plan['id']}/").json()
+        # Члену семьи — план закрыт суммой плана, трата не раскрыта; главному — трата и её факт.
+        self.assertIsNone(one["receipt"])
+        self.assertIsNone(member["rows"][0]["receipt"])
+        self.assertEqual((member["base"]["done"], member["base"]["done_count"], member["base"]["segments"][0]["done"]),
+                         ("50000.00", 1, True))
+        self.assertEqual(head["rows"][0]["receipt"]["id"], receipt.pk)
+        self.assertEqual(head["base"]["done"], "48000.00")
+
+    def test_personal_goal_of_a_member_stays_private(self):
+        from planned import services
+        plan = self.create(self.first)
+        personal = Goal.objects.create(user=self.third, name="Своя", amount=D("50000"), currency_id="KZT")
+        Contribution.objects.create(goal=personal, amount=D("20000"), currency_id="KZT", date=date(2026, 10, 1), user=self.third)
+        shared = Goal.objects.create(household=self.family, name="Общая", amount=D("50000"), currency_id="KZT")
+        head = self.client_of(self.third, csrf=True)
+        with today():
+            refused = head.patch(f"{URL}{plan['id']}/", {"goal_id": personal.pk}, format="json")
+            linked = head.patch(f"{URL}{plan['id']}/", {"goal_id": shared.pk}, format="json")
+        # Семейному плану — только цель семьи; личная цель главного не привязывается.
+        self.assertEqual((refused.status_code, list(fields(refused))), (400, ["goal_id"]))
+        self.assertEqual(linked.json()["goal"]["id"], shared.pk)
+        services.set_goal(PlannedSpend.objects.get(pk=plan["id"]), personal)  # в обход API
+        with today():
+            member = self.client_of(self.first).get(f"{URL}{plan['id']}/").json()
+            advice = self.client_of(self.first).get(f"{URL}{plan['id']}/advice/").json()
+            owner = self.client_of(self.third).get(f"{URL}{plan['id']}/").json()
+        self.assertIsNone(member["goal"])
+        self.assertEqual((advice["saved"], advice["missing"]), ("0.00", "50000.00"))
+        self.assertEqual((owner["goal"]["id"], owner["goal"]["saved"]), (personal.pk, "20000.00"))
+
+    def test_deposit_of_a_household_plan_is_a_household_goal(self):
+        plan = self.create(self.first, name="Отпуск", amount="600000", due="2027-04-13")
+        with today():
+            created = self.client_of(self.third, csrf=True).post(f"{URL}{plan['id']}/deposit/", {"option": "lump_fixed"},
+                                                                 format="json")
+        self.assertEqual(created.status_code, 201, created.content)
+        goal = Goal.objects.get(pk=created.json()["goal"]["id"])
+        self.assertEqual((goal.household, goal.user), (self.family, None))
+        with today():
+            self.assertEqual(self.client_of(self.first).get(f"{URL}{plan['id']}/").json()["goal"]["id"], goal.pk)
 
     def test_outsider_sees_nothing_and_gets_404(self):
         plan = self.create(self.first)
