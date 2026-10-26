@@ -206,8 +206,9 @@ def _chat_actions(data, context):
 def answer_from_output(kind, data, context=None):
     """Ответ модели -> ``answer`` строки либо ``OutputError``; пустой текст — тоже ошибка.
 
-    У беседы (``context`` — сводка строки с ``plans``) ответ несёт ещё ``verdicts`` (вердикт неизвестному плану
-    остаётся в тексте, но ``chat.apply_verdicts`` его пропустит) и ``actions`` — список к записи в ``row.actions``.
+    У беседы (``context`` — сводка строки с ``plans``) ответ несёт ещё ``verdicts`` с ``name`` плана из входа (вердикт
+    неизвестному плану остаётся в тексте без имени, ``chat.apply_verdicts`` его пропустит) и ``actions`` — список к
+    записи в ``row.actions``.
     """
     data = _flat(data)
     try:
@@ -218,10 +219,13 @@ def answer_from_output(kind, data, context=None):
         if not data["answer"]:
             raise OutputError()
         verdicts, seen = [], set()
+        names = {plan["id"]: plan["name"] for plan in (context or {}).get("plans") or []}
         for item in data.get("verdicts") or []:
             if item["plan_id"] not in seen:
                 seen.add(item["plan_id"])
-                verdicts.append({"plan_id": item["plan_id"], "verdict": item["verdict"], "reason": item["reason"]})
+                # ``name`` — план из входа модели, как его видел человек; вердикт неизвестному плану — без имени.
+                verdicts.append({"plan_id": item["plan_id"], "verdict": item["verdict"], "reason": item["reason"],
+                                 "name": names.get(item["plan_id"])})
         return {"answer": data["answer"], "verdicts": verdicts or None, "actions": _chat_actions(data, context)}
     if kind == Kind.ASK:
         if not data["answer"]:

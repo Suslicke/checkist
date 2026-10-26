@@ -36,6 +36,7 @@ from .access import as_request, owner_fields, plans_q
 from .models import PlannedSpend
 
 ZERO = Decimal("0.00")
+NBSP = "\u00a0"
 DASHBOARD_ROWS = 3
 AMOUNT_MAX = Decimal("999999999999.99")
 GENITIVE = ("января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября",
@@ -274,8 +275,9 @@ def deposit(request, plan, option, today=None):
 # --- действия чата ---
 
 def money(amount, currency):
-    text = f"{amount:,.2f}".replace(",", " ")
-    return f"{text[:-3] if text.endswith('.00') else text} {currency}"
+    """«48 000 KZT» с неразрывными пробелами: текст стоит в заголовке беседы и в ответе действия, число не рвётся."""
+    text = f"{amount:,.2f}".replace(",", NBSP)
+    return f"{text[:-3] if text.endswith('.00') else text}{NBSP}{currency}"
 
 
 def when(due, due_exact):

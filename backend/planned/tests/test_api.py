@@ -86,7 +86,7 @@ class PlannedLocalTests(TestCase):
         plan = self.create(due="2026-11-20", due_exact=False, currency="usd")
         self.assertEqual((plan["due"], plan["due_exact"], plan["currency"]), ("2026-11-01", False, "USD"))
         undated = self.create(due=None)
-        self.assertEqual((undated["due"], undated["due_exact"]), (None, True))
+        self.assertEqual((undated["due"], undated["due_exact"]), (None, False))  # без срока «к дате» не бывает
 
     def test_invalid_bodies(self):
         with today():

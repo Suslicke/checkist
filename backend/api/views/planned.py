@@ -198,7 +198,8 @@ def plan_object(plan, tree, saved, visible, goals):
         "category": None if plan.category_id is None else {
             "id": plan.category_id, "name": plan.category.name, "icon": tree.icon(plan.category_id) if plan.category_id in tree else None},
         "currency": plan.currency_id, "amount": common.amount(plan.amount), "due": common.iso_date(plan.due),
-        "due_exact": plan.due_exact, "note": plan.note, "receipt": _receipt(plan.receipt, visible), "goal": _goal(plan, saved, goals),
+        # Без срока «к дате» не бывает: клиент отвергает ``due: null`` с ``due_exact: true``.
+        "due_exact": plan.due is not None and plan.due_exact, "note": plan.note, "receipt": _receipt(plan.receipt, visible), "goal": _goal(plan, saved, goals),
         "ai": _ai(plan), "created_by": person(plan.created_by) if plan.created_by else None,
         "created_at": common.utc_datetime(plan.created_at),
     }

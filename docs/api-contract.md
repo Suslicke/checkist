@@ -2196,7 +2196,8 @@ Line несёт ещё `category` (`{"id","name"}` либо `null`, после `
   вопроса (без вопроса — «Беседа»); `last_answer_preview` — первые 120 знаков последнего готового ответа, `null` без него.
 - Сообщение — строка запроса (`id, kind: "chat", month, question, status, answer, unverified, error, created_at,
   finished_at, executor`) плюс `thread_id` и `actions`. `answer` у `succeeded` — `{answer, verdicts}`: текст модели (до 1200
-  знаков) и вердикты планам `[{plan_id, verdict: keep|wait|drop, reason}]` либо `null`. `actions` — действия, предложенные
+  знаков) и вердикты планам `[{plan_id, name, verdict: keep|wait|drop, reason}]` либо `null` (`name` — имя плана из входа
+  модели, `null` у неизвестного плана). `actions` — действия, предложенные
   моделью (до 5; `null`, пока ответа нет): `{kind: move_plan|delete_plan|change_amount|create_plan, label, plan_id?, due?,
   due_exact?, amount?, name?, category_id?, done_at, result}` — только с полями своего вида и только о планах, которые
   модель видела (неполные и выдуманные сервер отбрасывает). **Модель сама ничего не меняет:** действие исполняется
@@ -2754,7 +2755,7 @@ Gold"}` либо null (одним запросом; в списке поля н�
 План: `{"id", "name", "category": {"id", "name", "icon"} | null, "currency", "amount", "due", "due_exact", "note",
 "receipt": {"id", "total", "currency", "purchased_on", "store_name"} | null, "goal": {"id", "name", "kind", "saved",
 "share"} | null, "ai": {"verdict", "reason", "at"} | null, "created_by": {"username", "display_name"} | null,
-"created_at"}`. `due` — срок (`null` — без срока); `due_exact: true` — «к 20 октября», `false` — «в октябре» (сервер
+"created_at"}`. `due` — срок (`null` — без срока, тогда `due_exact` всегда `false`); `due_exact: true` — «к 20 октября», `false` — «в октябре» (сервер
 ставит `due` первым числом месяца). `receipt` — закрывшая трата (план закрыт); `goal` — цель, на которой копят:
 `saved` — отложено на ней в валюте плана по курсу сегодня, `share` — доля плана, уже отложенная (0–100). Закрывшая трата
 показывается (и считается фактом в `base`) только тому, кто её видит сам (`visible_receipts_q`: скрытый главным платёж —

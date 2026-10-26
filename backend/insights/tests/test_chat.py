@@ -87,7 +87,7 @@ class ThreadTests(ChatData, TestCase):
         opener = plans.requests.get()
         self.assertEqual((plans.title, opener.question, opener.kind, opener.status), ("Планы", chat.PLANS_OPENER, "chat", "queued"))
         thread = chat.create_thread(self.owner, "spend", receipt=self.receipt)
-        self.assertEqual((thread.title, thread.receipt_id, thread.requests.count()), ("Трата: Склад · 48 000 KZT", self.receipt.pk, 0))
+        self.assertEqual((thread.title, thread.receipt_id, thread.requests.count()), ("Трата: Склад · 48\u00a0000\u00a0KZT", self.receipt.pk, 0))
         month = chat.create_thread(self.owner, "month", month=Month(2026, 10))
         self.assertEqual((month.title, month.month), ("Октябрь 2026", date(2026, 10, 1)))
         with self.assertRaises(ValueError):
@@ -147,7 +147,7 @@ class ThreadTests(ChatData, TestCase):
         self.assertEqual(thread.requests.count(), queue.MAX_UNFINISHED)
 
     def test_answer_from_output_accepts_and_rejects(self):
-        context = {"plans": [{"id": self.jacket.pk}]}
+        context = {"plans": [{"id": self.jacket.pk, "name": "Пальто"}]}
         move = action(kind="move_plan", label="Перенести пальто", plan_id=self.jacket.pk, due="2026-12-01", due_exact=False)
         answer = queue.answer_from_output("chat", chat_output(
             verdicts=[{"plan_id": self.jacket.pk, "verdict": "wait", "reason": "Лимит превышен."},
@@ -155,7 +155,8 @@ class ThreadTests(ChatData, TestCase):
             actions=[move, action(kind="move_plan", label="Чужой", plan_id=999999, due="2026-12-01"),
                      action(kind="create_plan", label="Без суммы", name="Шины")]), context)
         self.assertEqual(answer["answer"], "Хорошая трата.")
-        self.assertEqual([item["plan_id"] for item in answer["verdicts"]], [self.jacket.pk, 999999])  # unknown is kept for the text
+        # The unknown plan is kept for the text, without a name; the known one carries the name the model saw.
+        self.assertEqual([(item["plan_id"], item["name"]) for item in answer["verdicts"]], [(self.jacket.pk, "Пальто"), (999999, None)])
         # Unknown plan / incomplete actions are dropped; stored actions carry only the values the model gave.
         self.assertEqual(answer["actions"], [{"kind": "move_plan", "label": "Перенести пальто", "plan_id": self.jacket.pk,
                                               "due": "2026-12-01", "due_exact": False, "done_at": None, "result": None}])
@@ -291,7 +292,7 @@ class LocalApiTests(ChatData, TestCase):
         created = self.post(THREADS, {"kind": "spend", "receipt_id": self.receipt.pk, "question": "Дорого?"})
         self.assertEqual(created.status_code, 201, created.content)
         self.assertEqual((created.json()["thread"]["title"], created.json()["thread"]["receipt_id"], len(created.json()["messages"])),
-                         ("Трата: Склад · 48 000 KZT", self.receipt.pk, 1))
+                         ("Трата: Склад · 48\u00a0000\u00a0KZT", self.receipt.pk, 1))
         month = self.post(THREADS, {"kind": "month", "month": "2026-09"}).json()["thread"]
         self.assertEqual((month["title"], month["month"]), ("Сентябрь 2026", "2026-09"))
         cases = [
