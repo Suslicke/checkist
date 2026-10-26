@@ -41,6 +41,8 @@
 .ins-note, .ins-text > .ins-note { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-xs); line-height: 1.4; }
 .ins-link { display: inline-flex; align-self: flex-start; align-items: center; min-height: 44px; color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; }
 .ins-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* «Обсудить» (a thread of the month, features/chat) beside «Спросить о тратах». */
+.ins-links { display: flex; flex-wrap: wrap; gap: 0 20px; }
 
 /* «Вопрос о тратах»: the field and «Спросить» in one row, the answer, the person's past questions. */
 .ins-ask-row { display: flex; gap: 8px; min-width: 0; }

@@ -6,7 +6,6 @@ import { getReview, isAsk, isReview } from '../../api/insights'
 import type { Ask, Review, ReviewFigures } from '../../api/insights'
 import { aiTexts } from '../../lib/ai'
 import { buildRoute, parseRoute } from '../../navigation'
-import { AskView } from './AskPage'
 import { ReviewView } from './ReviewPage'
 import {
   defaultReviewMonth, delta, insightErrorMessage, insightTexts, modelText, monthIsEmpty, outcome, requestFailureMessage, WAIT_MS,
@@ -74,15 +73,13 @@ describe('words and states of the month review and the questions', () => {
     expect(defaultReviewMonth(new Date(2026, 0, 3))).toBe('2025-12')
   })
 
-  it('opens /review and /ask by their addresses: a wrong month is dropped, the question is kept', () => {
+  it('opens /review by its address: a wrong month is dropped; the old /ask is «Чат с ИИ» now', () => {
     expect(parseRoute('/review?month=2026-09')).toEqual({ kind: 'review', month: '2026-09' })
     expect(parseRoute('/review?month=2026-13')).toEqual({ kind: 'review' })
     expect(parseRoute('/review')).toEqual({ kind: 'review' })
-    expect(parseRoute('/ask?q=%20Сколько%20на%20кафе%3F%20')).toEqual({ kind: 'ask', q: 'Сколько на кафе?' })
-    expect(parseRoute('/ask?q=')).toEqual({ kind: 'ask' })
+    expect(parseRoute('/ask?q=%20Сколько%20на%20кафе%3F%20')).toEqual({ kind: 'chat', q: 'Сколько на кафе?' })
+    expect(parseRoute('/ask?q=')).toEqual({ kind: 'chat' })
     expect(buildRoute({ kind: 'review', month: '2026-09' })).toBe('/review?month=2026-09')
-    expect(buildRoute({ kind: 'ask', q: 'кафе & такси' })).toBe('/ask?q=%D0%BA%D0%B0%D1%84%D0%B5+%26+%D1%82%D0%B0%D0%BA%D1%81%D0%B8')
-    expect(buildRoute({ kind: 'ask' })).toBe('/ask')
   })
 
   it('accepts an answer only with succeeded and an error only with failed', async () => {
@@ -114,7 +111,9 @@ describe('markup of the month review', () => {
     expect(markup).toContain('&lt;b&gt;Не&lt;/b&gt; берите такси по утрам.')
     expect(markup).toContain('<a class="ck-round" aria-label="Предыдущий месяц" href="/review?month=2026-08">')
     expect(markup).toContain('href="/review?month=2026-10"')
-    expect(markup).toContain('<a class="ins-link" href="/ask">Спросить о тратах</a>')
+    expect(markup).toContain('<a class="ins-link" href="/chat">Спросить о тратах</a>')
+    // «Обсудить» starts a thread of the month in «Чат с ИИ»; an empty month has nothing to discuss.
+    expect(markup).toContain('<button type="button" class="ins-link chat-start-link" data-chat-start="month">Обсудить</button>')
     expect(markup).not.toContain('ins-unverified')
   })
 
@@ -131,25 +130,6 @@ describe('markup of the month review', () => {
     const empty = html(<ReviewView month="2026-09" figures={figures({ spent: '0.00', previous: '0.00', categories: [], limits: [], places: [] })} review={null} status={{ kind: 'idle' }} />)
     expect(empty).toContain(insightTexts.empty)
     expect(empty).not.toContain('Обновить')
-  })
-})
-
-describe('markup of a question', () => {
-  it('shows the answer, the person\'s past questions and a refusal', () => {
-    const past = [ask({ id: 12, question: 'Почему этот месяц дороже?', answer: { answer: 'Еда выросла на 73 893 ₸.' } }), ask()]
-    const markup = html(<AskView text="" current={{ question: ask().question, row: ask(), message: null }} history={past} />)
-    const text = words(markup)
-    expect(text).toContain('Сколько ушло на кафе в сентябре? В сентябре на кафе ушло 49 819 ₸.')
-    expect(text).toContain('Прошлые вопросы Разбор месяца Почему этот месяц дороже? Еда выросла на 73 893 ₸.')
-    expect(markup.match(/Сколько ушло на кафе в сентябре\?/g)).toHaveLength(1)  // the current one is not repeated below
-    expect(markup).toContain('maxLength="300"')
-    expect(markup).toContain('disabled="">Спросить</button>')  // nothing typed
-    const waiting = html(<AskView text="и ещё" current={{ question: 'Сколько?', row: null, message: null }} history={[]} />)
-    expect(waiting).toContain(`role="status">${insightTexts.thinking}</p>`)
-    expect(waiting).toContain('readOnly=""')
-    const refused = html(<AskView text="Сколько?" current={{ question: 'Сколько?', row: null, message: aiTexts.disabled }} history={[]} />)
-    expect(refused).toContain(`role="alert">${aiTexts.disabled}</p>`)
-    expect(refused).not.toContain('disabled="">Спросить')
   })
 })
 

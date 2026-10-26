@@ -26,7 +26,7 @@ describe('the search line of «Траты» (2026-10-13)', () => {
     const asked = renderToStaticMarkup(<SpendSearch query={{ page: 1, q: 'сколько на кафе?' }} />)
     expect(asked).toContain('name="q" value="сколько на кафе?"')
     expect(asked).toContain(`<a class="spends-ask" href="${askHref('сколько на кафе?')}">Спросить</a>`)
-    expect(askHref('кофе & чай')).toBe('/ask?q=%D0%BA%D0%BE%D1%84%D0%B5%20%26%20%D1%87%D0%B0%D0%B9')
+    expect(askHref('кофе & чай')).toBe('/chat?q=%D0%BA%D0%BE%D1%84%D0%B5%20%26%20%D1%87%D0%B0%D0%B9')
   })
 
   it('stands above the chips and the filters on every width', () => {

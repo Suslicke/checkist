@@ -1,5 +1,6 @@
 /** «Разбор месяца» and «Вопрос о тратах»: the words of the screens and what a request shows. No network, no React. */
-import type { Ask, InsightStatus, Review, ReviewFigures } from '../../api/insights'
+import type { InsightStatus, ReviewFigures } from '../../api/insights'
+import type { Executor } from '../../api/recognition-types'
 import type { Decimal, LocalApiFailure } from '../../api/types'
 import { aiRefusalText } from '../../lib/ai'
 import { formatMoney } from '../../lib/money'
@@ -51,11 +52,14 @@ export function requestFailureMessage(failure: Pick<LocalApiFailure, 'reason' | 
 
 export const isActive = (row: { status: InsightStatus }) => row.status === 'queued' || row.status === 'running'
 
+/** What `outcome` and `follow` read of a request of the model: a review, a question or a message of «Чат с ИИ». */
+export type Settling = { status: InsightStatus; error: { code: string } | null; executor: Executor }
+
 export type Outcome = { kind: 'working' } | { kind: 'done' } | { kind: 'failed'; message: string }
 
 /** What a request shows as read: waiting; waiting with no worker at all or longer than `WAIT_MS` — a message;
  * `succeeded` — done; `failed` — the message of its code. */
-export function outcome(row: Review | Ask, elapsedMs = 0): Outcome {
+export function outcome(row: Settling, elapsedMs = 0): Outcome {
   if (row.status === 'succeeded') return { kind: 'done' }
   if (row.status === 'failed') return { kind: 'failed', message: insightErrorMessage(row.error?.code ?? '') }
   if (row.status === 'queued' && row.executor.state === 'absent') return { kind: 'failed', message: insightTexts.unavailable }
