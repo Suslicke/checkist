@@ -55,6 +55,7 @@ describe('words and widths of the plans', () => {
     expect(plain(rowMeta(data.rows[1]).join(' · '))).toBe('Подарки · 24 октября · Technodom')
     expect(plain(rowMeta(data.rows[0]).join(' · '))).toBe('Одежда · в октябре · отложено 57 000 ₸ на депозите «Зима»')
     expect(savedText(data.undated[1])).toBe('ничего не отложено')
+    expect(savedText({ ...data.undated[1], goal: { id: 9, name: 'Диван', kind: 'deposit', saved: '0.00', share: 0 } })).toBe('депозит «Диван» открыт, пока пусто')
     expect(plain(rowMeta({ ...data.undated[0], category: null }).join(' · '))).toBe('Без категории · без срока · отложено 248 000 ₸ на депозите «Отпуск»')
   })
   it('pins the pill: more than planned, less than planned, the verdict of the model', () => {
@@ -129,7 +130,7 @@ describe('words and widths of the plans', () => {
     expect(plain(monthly.sum)).toBe('30 500 ₸')
     expect(monthly.under).toBe('в месяц × 3')
     expect(monthly.meta.map(plain)).toEqual(['взносы 91 500 ₸', 'банк добавит ≈ 1 500 ₸ · 15 % годовых', 'снять можно в любой день'])
-    expect(invest).toMatchObject({ available: false, sum: '—', under: 'Советуем только для планов дальше года и не на обязательные вещи.', bar: null, risk: 3 })
+    expect({ ...invest, under: plain(invest.under) }).toMatchObject({ available: false, sum: '—', under: 'не для 3 месяцев', bar: null, risk: 3, meta: ['Советуем только для планов дальше года и не на обязательные вещи.'] })
     // Without a date: the monthly option says the month the money is together by.
     const open = plannedAdviceFixture({ due: null, months: null, options: [{ ...advice.options[1], amount: '35000.00', times: 7, until: '2027-04' }] })
     expect(plain(optionView(open.options[0], open).under)).toBe('в месяц, хватит к апрелю')
@@ -263,11 +264,16 @@ describe('«Планируем в октябре» on «Главная» and the
     const source = readFileSync(new URL('../dashboard/DashboardPage.tsx', import.meta.url), 'utf8')
     expect(source).toContain('<RecurringDue month={data.month} />\n      <PlannedCard planned={data.planned}')
   })
-  it('counts the plans among the unpaid in the note of «можно тратить в день»', () => {
+  it('names the open plans of the month beside the unpaid payments in the note of «можно тратить в день»', () => {
+    // The server's `unpaid` is the payments only; `planned` is a separate sum — the note lists both.
     expect(plain(allowanceView({ ...allowance, planned: '40000.00', planned_count: 1 }).note))
-      .toBe('Бюджет месяца 700 000 ₸ минус траты и 3 платежа к оплате, из них 1 планируемая (63 000 ₸), поровну на 19 дней')
-    expect(plain(allowanceView({ ...allowance, planned: '40000.00', planned_count: 2 }).note)).toContain('из них 2 планируемые')
-    expect(plain(allowanceView({ ...allowance, planned_count: 5, unpaid_count: 5 }).note)).toContain('из них 5 планируемых')
+      .toBe('Бюджет месяца 700 000 ₸ минус траты, 3 платежа к оплате (63 000 ₸) и 1 планируемая трата (40 000 ₸), поровну на 19 дней')
+    expect(plain(allowanceView({ ...allowance, planned: '40000.00', planned_count: 2 }).note)).toContain('и 2 планируемые траты (40 000 ₸)')
+    expect(plain(allowanceView({ ...allowance, planned: '40000.00', planned_count: 5, unpaid_count: 5 }).note)).toContain('5 планируемых трат')
+    expect(plain(allowanceView({ ...allowance, planned: '40000.00', planned_count: 1, unpaid: '0.00', unpaid_count: 0 }).note))
+      .toBe('Бюджет месяца 700 000 ₸ минус траты и 1 планируемая трата (40 000 ₸), поровну на 19 дней')
+    expect(plain(allowanceView({ ...allowance, planned: '40000.00', planned_count: 1, per_day: null, overspent: '10.00' }).note))
+      .toBe('Траты, 3 платежа к оплате и 1 планируемая трата больше бюджета месяца 700 000 ₸')
     expect(plain(allowanceView({ ...allowance, planned: '0.00', planned_count: 0 }).note)).not.toContain('планируем')
     expect(plain(allowanceView(allowance).note)).toBe('Бюджет месяца 700 000 ₸ минус траты и 3 платежа к оплате (63 000 ₸), поровну на 19 дней')
   })

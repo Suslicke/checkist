@@ -102,9 +102,11 @@ export function doneText(plan: PlannedSpend): string {
   return [dayAndMonth(plan.receipt.purchased_on), plan.receipt.store_name].filter(Boolean).join(' · ')
 }
 
-/** «отложено 57 000 ₸ на депозите «Зима»», «ничего не отложено». */
+/** «отложено 57 000 ₸ на депозите «Зима»», «ничего не отложено»; a goal just opened, still empty — «депозит «Зима» открыт,
+ * пока пусто» so the row shows the tie before the first contribution. */
 export function savedText(plan: PlannedSpend): string {
-  if (!plan.goal || cents(plan.goal.saved) <= 0n) return 'ничего не отложено'
+  if (!plan.goal) return 'ничего не отложено'
+  if (cents(plan.goal.saved) <= 0n) return `${plan.goal.kind === 'deposit' ? 'депозит' : 'копилка'} «${plan.goal.name}» ${plan.goal.kind === 'deposit' ? 'открыт' : 'открыта'}, пока пусто`
   return `отложено ${formatMoney(plan.goal.saved, plan.currency)} ${plan.goal.kind === 'deposit' ? 'на депозите' : 'в копилке'} «${plan.goal.name}»`
 }
 
@@ -242,7 +244,7 @@ export function adviceSub(advice: PlannedAdvice): string {
 
 /** «3 месяца» between today and the date. */
 export function monthsText(months: number): string {
-  return glue(String(months), plural(months, 'месяц', 'месяца', 'месяцев'))
+  return months === 0 ? 'меньше месяца' : glue(String(months), plural(months, 'месяц', 'месяца', 'месяцев'))
 }
 
 export type OptionView = {
@@ -262,7 +264,8 @@ export type OptionView = {
 export function optionView(option: AdviceOption, advice: PlannedAdvice): OptionView {
   const name = optionNames[option.key]
   if (!option.available || option.amount === null) {
-    return { key: option.key, name, available: false, sum: '—', under: option.reason ?? (advice.months !== null ? `не для ${monthsText(advice.months)}` : 'не для плана без срока'), bar: null, meta: option.reason ? [option.reason] : [], risk: option.risk }
+    // The short «not for …» under the dash; the server's reason once, as the small print (never beside the sum: it would not fit).
+    return { key: option.key, name, available: false, sum: '—', under: advice.months === null ? 'не для плана без срока' : advice.months === 0 ? 'срок меньше месяца' : `не для ${glue(String(advice.months), plural(advice.months, 'месяца', 'месяцев', 'месяцев'))}`, bar: null, meta: option.reason ? [option.reason] : [], risk: option.risk }
   }
   const money = (value: string) => formatMoney(value, advice.currency)
   const times = option.times ?? 1
