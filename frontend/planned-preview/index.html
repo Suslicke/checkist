@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Планы — макет v5</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&display=swap" />
+<link rel="stylesheet" href="../src/theme/tokens.css" />
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ck-bg); color: var(--ck-text); font-family: var(--ck-font-body); font-size: var(--ck-text-base); line-height: 1.4; }
+h1, h2, h3, p, ul { margin: 0; }
+.page { max-width: 1200px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+.title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { font-size: var(--ck-text-xl); font-weight: 800; }
+.ck-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 20px; border: 0; border-radius: var(--ck-radius-button); background: var(--ck-primary); color: var(--ck-on-accent, #1a0c0a); font: inherit; font-size: var(--ck-text-sm); font-weight: 800; }
+.ghost { min-height: 36px; padding: 0 12px; font-size: var(--ck-text-xs); background: transparent; border: 1px solid var(--ck-border-field); color: var(--ck-link); }
+
+/* hero: the month as one segmented bar — every plan is a segment, done ones are solid, open ones are tinted */
+.pl-hero { gap: 4px; }
+.pl-eyebrow { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.pl-hero-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.pl-hero-word { font-size: var(--ck-text-sm); font-weight: 700; color: var(--ck-text-muted); }
+.pl-hero-sub { color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
+.pl-hero-sub b { color: var(--ck-text); font-weight: 700; }
+.pl-segments { display: flex; gap: 3px; height: 14px; margin-top: 14px; }
+.pl-segments > i { display: block; height: 100%; border-radius: 4px; background: var(--seg-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--seg) 45%, transparent); min-width: 6px; }
+.pl-segments > i.done { background: var(--seg); box-shadow: none; }
+.pl-segments > i:first-child { border-top-left-radius: 7px; border-bottom-left-radius: 7px; }
+.pl-segments > i:last-child { border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+.pl-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 600; }
+.pl-legend b { color: var(--ck-text); font-weight: 700; }
+.pl-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; background: var(--ck-cat-6); vertical-align: -1px; }
+.pl-legend i.open { background: var(--ck-cat-6-tint); box-shadow: inset 0 0 0 1px var(--ck-cat-6); }
+
+/* the months ahead as cards in a row (ChipScroller on the phone) */
+.pl-months { display: flex; gap: 8px; margin: 0; padding: 2px; list-style: none; overflow-x: auto; scrollbar-width: none; }
+.pl-months::-webkit-scrollbar { display: none; }
+.pl-month { flex: 0 0 132px; display: grid; gap: 2px; padding: 12px 14px; border-radius: var(--ck-radius-md, 16px); background: var(--ck-surface-raised); min-width: 0; }
+.pl-month.now { background: var(--ck-accent-bg); outline: 1.5px solid var(--ck-accent); }
+.pl-month-label { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; }
+.pl-month.now .pl-month-label { color: var(--ck-accent-text); }
+.pl-month-sum { font-size: var(--ck-text-base); font-weight: 800; white-space: nowrap; }
+.pl-month-sum.empty { color: var(--ck-text-muted); font-weight: 600; }
+.pl-month-meta { color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 600; }
+.pl-month-bar { display: flex; gap: 2px; height: 5px; margin-top: 8px; }
+.pl-month-bar > i { display: block; height: 100%; border-radius: 3px; background: var(--seg-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--seg) 45%, transparent); }
+.pl-month-bar > i.done { background: var(--seg); box-shadow: none; }
+
+/* rows: badge in the category tint, a soft rail underneath, the delta as a pill */
+.pl-row { align-items: flex-start; padding: 14px 0; }
+.pl-row .ck-row-main { gap: 7px; }
+.pl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.pl-badge { background: var(--seg-tint); color: var(--seg); font-size: 18px; }
+.pl-done .pl-badge { background: var(--seg); color: var(--ck-surface); }
+.pl-rail { position: relative; height: 6px; border-radius: 3px; background: var(--ck-track); overflow: hidden; }
+.pl-rail > b { position: absolute; left: 0; top: 0; height: 100%; border-radius: inherit; }
+.pl-rail > b.plan { background: var(--seg-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--seg) 35%, transparent); }
+.pl-rail > b.over { background: var(--ck-over-bar); }
+.pl-rail > b.fact { background: var(--seg); }
+.pl-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--ck-text-muted); font-size: var(--ck-text-xs); min-width: 0; }
+.pl-pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--ck-radius-pill); font-size: var(--ck-text-2xs); font-weight: 700; white-space: nowrap; }
+.pl-pill-over { background: var(--ck-warning-bg); color: var(--ck-over-text); }
+.pl-pill-under { background: var(--ck-success-bg); color: var(--ck-success-text); }
+.pl-pill-open { background: var(--ck-neutral-bg, var(--ck-surface-raised)); color: var(--ck-text-muted); }
+.pl-amount-plan { color: var(--ck-text-muted); font-weight: 600; margin-right: 8px; font-size: var(--ck-text-xs); }
+.pl-amount-plan::before { content: "план "; }
+
+.cat-1 { --seg: var(--ck-cat-1); --seg-tint: var(--ck-cat-1-tint); }
+.cat-2 { --seg: var(--ck-cat-2); --seg-tint: var(--ck-cat-2-tint); }
+.cat-3 { --seg: var(--ck-cat-3); --seg-tint: var(--ck-cat-3-tint); }
+.cat-4 { --seg: var(--ck-cat-4); --seg-tint: var(--ck-cat-4-tint); }
+.cat-5 { --seg: var(--ck-cat-5); --seg-tint: var(--ck-cat-5-tint); }
+.cat-6 { --seg: var(--ck-cat-6); --seg-tint: var(--ck-cat-6-tint); }
+
+.dash-note { color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
+.pl-rail > b.saved { background: var(--seg); }
+.pl-due { color: var(--ck-text-muted); }
+.pl-due.soon { color: var(--ck-over-text); font-weight: 700; }
+
+/* advisor: how to have the money by the date — options as stacked bars «вложено | проценты» */
+.adv { gap: 14px; }
+.adv-sub { color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
+.adv-sub b { color: var(--ck-text); font-weight: 700; }
+.adv-timeline { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; font-size: var(--ck-text-xs); font-weight: 700; color: var(--ck-text-muted); }
+.adv-timeline > i { position: relative; height: 4px; border-radius: 2px; background: var(--ck-track); }
+.adv-timeline > i::after { content: ""; position: absolute; left: 0; top: 0; height: 100%; width: 38%; border-radius: inherit; background: var(--ck-accent); }
+.adv-timeline > i > s { position: absolute; top: -18px; left: 38%; transform: translateX(-50%); color: var(--ck-text); text-decoration: none; white-space: nowrap; }
+.adv-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.adv-opt { display: grid; gap: 8px; padding: 14px; border-radius: var(--ck-radius-md, 16px); background: var(--ck-surface-raised); min-width: 0; }
+.adv-opt.best { outline: 1.5px solid var(--ck-accent); background: var(--ck-accent-bg); }
+.adv-opt.off { opacity: 0.6; }
+.adv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.adv-name { font-size: var(--ck-text-sm); font-weight: 800; }
+.adv-sum { font-size: var(--ck-text-base); font-weight: 800; white-space: nowrap; }
+.adv-sum small { display: block; font-size: var(--ck-text-2xs); font-weight: 600; color: var(--ck-text-muted); text-align: right; }
+.adv-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--ck-track); }
+.adv-bar > i { display: block; height: 100%; }
+.adv-bar > i.in { background: var(--ck-cat-4); }
+.adv-bar > i.gain { background: var(--ck-cat-2); }
+.adv-bar > i.risk { background: repeating-linear-gradient(135deg, var(--ck-cat-2) 0 4px, var(--ck-cat-2-tint) 4px 8px); }
+.adv-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 600; }
+.adv-meta i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; vertical-align: 0; }
+.adv-meta i.in { background: var(--ck-cat-4); } .adv-meta i.gain { background: var(--ck-cat-2); }
+.risk { display: inline-flex; gap: 2px; margin-left: 6px; vertical-align: -1px; }
+.risk > b { width: 6px; height: 6px; border-radius: 50%; background: var(--ck-track); }
+.risk > b.on { background: var(--ck-over-bar); }
+.adv-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.adv-actions .ck-button { min-height: 40px; padding: 0 14px; font-size: var(--ck-text-xs); }
+.adv-foot { color: var(--ck-text-muted); font-size: var(--ck-text-2xs); }
+
+/* AI look: a verdict per plan — keep / wait / talk out of it */
+.pl-cta { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.ai { gap: 12px; }
+.ai-sum { font-size: var(--ck-text-sm); line-height: 1.5; }
+.ai-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.ai-item { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 12px 0; border-top: 1px solid var(--ck-divider); align-items: start; }
+.ai-verdict { display: inline-flex; align-items: center; min-width: 108px; padding: 3px 10px; border-radius: var(--ck-radius-pill); font-size: var(--ck-text-2xs); font-weight: 800; white-space: nowrap; }
+.v-yes { background: var(--ck-success-bg); color: var(--ck-success-text); }
+.v-wait { background: var(--ck-warning-bg); color: var(--ck-warning-text); }
+.v-no { background: var(--ck-error-bg); color: var(--ck-error-text); }
+.ai-name { font-size: var(--ck-text-sm); font-weight: 700; }
+.ai-why { grid-column: 2; color: var(--ck-text-muted); font-size: var(--ck-text-xs); line-height: 1.45; }
+.ai-figures { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ai-fig { padding: 4px 10px; border-radius: var(--ck-radius-sm); background: var(--ck-surface-raised); font-size: var(--ck-text-2xs); font-weight: 700; }
+.ai-fig b { font-weight: 800; }
+.ai-foot { color: var(--ck-text-muted); font-size: var(--ck-text-2xs); }
+.pl-pill-ai { background: var(--ck-warning-bg); color: var(--ck-warning-text); }
+.pl-pill-ai.no { background: var(--ck-error-bg); color: var(--ck-error-text); }
+.col { display: contents; }
+.o1 { order: 1 } .o2 { order: 2 } .o3 { order: 3 } .o4 { order: 4 } .o5 { order: 5 } .o6 { order: 6 } .o7 { order: 7 } .o8 { order: 8 }
+@media (min-width: 960px) {
+  .page { grid-template-columns: 3fr 2fr; align-items: start; }
+  .title { grid-column: 1 / -1; }
+  .col { display: grid; gap: 16px; min-width: 0; }
+  .col-main { grid-column: 1; grid-row: 2; }
+  .col-side { grid-column: 2; grid-row: 2; }
+  .pl-months { flex-wrap: wrap; overflow: visible; }
+  .pl-month { flex: 1 1 128px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="title"><h1>Планы</h1><button class="ck-button ghost">Тема</button></div>
+  <div class="col col-side">
+    <section class="ck-panel pl-hero o1">
+      <p class="pl-eyebrow">Октябрь</p>
+      <p class="pl-hero-line"><span class="ck-hero-figure">285 000 ₸</span><span class="pl-hero-word">ещё ждём</span></p>
+      <p class="pl-hero-sub">из <b>360 000 ₸</b> запланированных · <b>2 из 5</b> сделано · учтено в «можно тратить в день»</p>
+      <div class="pl-segments" role="img" aria-label="План октября по пунктам">
+        <i class="cat-6" style="flex:150"></i>
+        <i class="cat-4 done" style="flex:52"></i>
+        <i class="cat-3" style="flex:120"></i>
+        <i class="cat-1 done" style="flex:28"></i>
+        <i class="cat-2" style="flex:15"></i>
+      </div>
+      <p class="pl-legend"><span><i></i>сделано <b>80 400 ₸</b></span><span><i class="open"></i>ждём <b>285 000 ₸</b></span></p>
+    </section>
+    <div class="pl-cta o2"><button class="ck-button">＋ Запланировать</button><button class="ck-button ghost" style="min-height:48px;padding:0 16px;font-size:var(--ck-text-sm)">✦ Спросить ИИ</button></div>
+    <ul class="pl-months o3" aria-label="Ближайшие месяцы">
+      <li class="pl-month now"><span class="pl-month-label">Октябрь</span><span class="pl-month-sum">360 000 ₸</span><span class="pl-month-meta">5 планов · 2 сделано</span><div class="pl-month-bar"><i class="cat-6" style="flex:150"></i><i class="cat-4 done" style="flex:52"></i><i class="cat-3" style="flex:120"></i><i class="cat-1 done" style="flex:28"></i><i class="cat-2" style="flex:15"></i></div></li>
+      <li class="pl-month"><span class="pl-month-label">Ноябрь</span><span class="pl-month-sum">320 000 ₸</span><span class="pl-month-meta">3 плана</span><div class="pl-month-bar"><i class="cat-4" style="flex:200"></i><i class="cat-6" style="flex:80"></i><i class="cat-2" style="flex:40"></i></div></li>
+      <li class="pl-month"><span class="pl-month-label">Декабрь</span><span class="pl-month-sum">90 000 ₸</span><span class="pl-month-meta">2 плана</span><div class="pl-month-bar"><i class="cat-1" style="flex:60"></i><i class="cat-5" style="flex:30"></i></div></li>
+      <li class="pl-month"><span class="pl-month-label">Январь</span><span class="pl-month-sum empty">пока пусто</span><span class="pl-month-meta">＋ добавить</span><div class="pl-month-bar"></div></li>
+      <li class="pl-month"><span class="pl-month-label">Февраль</span><span class="pl-month-sum">400 000 ₸</span><span class="pl-month-meta">1 план</span><div class="pl-month-bar"><i class="cat-3" style="flex:1"></i></div></li>
+    </ul>
+  <section class="ck-panel adv o6">
+    <div class="ck-panel-head"><h2>Как накопить на куртку</h2></div>
+    <p class="adv-sub">Нужно <b>150 000 ₸</b> к <b>1 февраля</b> · отложено <b>57 000 ₸</b> · не хватает <b>93 000 ₸</b></p>
+    <div class="adv-timeline"><span>сегодня</span><i><s>3 месяца</s></i><span>1 фев</span></div>
+    <ul class="adv-list">
+      <li class="adv-opt best">
+        <div class="adv-head"><span class="adv-name">Сразу на срочный депозит<span class="risk" aria-label="риск низкий"><b class="on"></b><b></b><b></b></span></span><span class="adv-sum">89 200 ₸<small>сегодня, один раз</small></span></div>
+        <div class="adv-bar"><i class="in" style="flex:89.2"></i><i class="gain" style="flex:3.8"></i></div>
+        <div class="adv-meta"><span><i class="in"></i>вложить 89 200</span><span><i class="gain"></i>банк добавит ≈ 3 800 · 17 % годовых</span><span>без снятия до 1 февраля</span></div>
+      </li>
+      <li class="adv-opt">
+        <div class="adv-head"><span class="adv-name">Понемногу каждый месяц<span class="risk"><b class="on"></b><b></b><b></b></span></span><span class="adv-sum">30 500 ₸<small>в месяц × 3</small></span></div>
+        <div class="adv-bar"><i class="in" style="flex:91.5"></i><i class="gain" style="flex:1.5"></i></div>
+        <div class="adv-meta"><span><i class="in"></i>взносы 91 500</span><span><i class="gain"></i>банк добавит ≈ 1 500 · 15 % годовых</span><span>снять можно в любой день</span></div>
+      </li>
+      <li class="adv-opt off">
+        <div class="adv-head"><span class="adv-name">Инвестиции или крипта<span class="risk"><b class="on"></b><b class="on"></b><b class="on"></b></span></span><span class="adv-sum">—<small>не для 3 месяцев</small></span></div>
+        <div class="adv-meta"><span>Советуем только для планов дальше года и не на обязательные вещи</span></div>
+      </li>
+    </ul>
+    <div class="adv-actions"><button class="ck-button">Открыть депозит на 89 200 ₸</button><button class="ck-button ghost">Пополнять «Зиму»</button></div>
+    <p class="adv-foot">Ставки примерные, задаются в «Семье». Для «Поездки в Грузию» без срока советчик покажет: «35 000 ₸ в месяц на депозит 15 % — хватит к апрелю», а для плана дальше года добавит вариант срочного депозита и инвестиций.</p>
+  </section>
+  <section class="ck-panel pl-preview o8">
+    <div class="ck-panel-head"><h2>На Главной</h2></div>
+    <p class="dash-note">Карточка на «Главной» рядом с платежами:</p>
+    <section class="ck-panel" style="padding:16px; border:1px solid var(--ck-border)">
+      <div class="ck-panel-head"><h2 style="font-size:var(--ck-text-base)">Планируем в октябре</h2><a href="#">Все планы</a></div>
+      <div class="pl-segments" style="height:10px; margin-top:0">
+        <i class="cat-6" style="flex:150"></i><i class="cat-4 done" style="flex:52"></i><i class="cat-3" style="flex:120"></i><i class="cat-1 done" style="flex:28"></i><i class="cat-2" style="flex:15"></i>
+      </div>
+      <p class="pl-legend" style="margin-top:0">ещё ждём <b>285 000 ₸</b> · <b>2 из 5</b> сделано</p>
+      <ul class="ck-list">
+        <li class="ck-row pl-row cat-6" style="min-height:0; padding:8px 0"><span class="ck-row-main" style="gap:2px"><span class="pl-head"><span class="ck-row-title">Зимняя куртка</span><span class="ck-row-amount ck-figures">150 000 ₸</span></span><span class="pl-meta">Одежда</span></span></li>
+        <li class="ck-row pl-row cat-3" style="min-height:0; padding:8px 0"><span class="ck-row-main" style="gap:2px"><span class="pl-head"><span class="ck-row-title">Шины на зиму</span><span class="ck-row-amount ck-figures">120 000 ₸</span></span><span class="pl-meta">Авто</span></span></li>
+        <li class="ck-row pl-row cat-2" style="min-height:0; padding:8px 0"><span class="ck-row-main" style="gap:2px"><span class="pl-head"><span class="ck-row-title">Лампа в спальню</span><span class="ck-row-amount ck-figures">15 000 ₸</span></span><span class="pl-meta">Дом</span></span></li>
+      </ul>
+    </section>
+  </section>
+  </div>
+  <div class="col col-main">
+    <section class="ck-panel o4">
+      <div class="ck-panel-head"><h2>Октябрь</h2><a href="#">Прошлые месяцы</a></div>
+      <ul class="ck-list">
+        <li class="ck-row pl-row pl-open cat-6">
+          <span class="ck-row-badge pl-badge">🧥</span>
+          <span class="ck-row-main">
+            <span class="pl-head"><span class="ck-row-title">Зимняя куртка</span><span class="ck-row-amount ck-figures">150 000 ₸</span></span>
+            <span class="pl-rail"><b class="plan" style="width:100%"></b><b class="saved" style="width:38%"></b></span>
+            <span class="pl-meta"><span>Одежда · <span class="pl-due">к 1 февраля</span> · отложено 57 000 на депозите «Зима»</span></span>
+          </span>
+        </li>
+        <li class="ck-row pl-row pl-done cat-4">
+          <span class="ck-row-badge pl-badge">✓</span>
+          <span class="ck-row-main">
+            <span class="pl-head"><span class="ck-row-title">Подарок маме</span><span class="ck-row-amount ck-figures"><span class="pl-amount-plan">45 000</span>52 400 ₸</span></span>
+            <span class="pl-rail"><b class="over" style="width:35%"></b><b class="fact" style="width:30%"></b></span>
+            <span class="pl-meta"><span>Подарки · 24 окт · Technodom</span><span class="pl-pill pl-pill-over">+7 400 ₸</span></span>
+          </span>
+        </li>
+        <li class="ck-row pl-row pl-open cat-3">
+          <span class="ck-row-badge pl-badge">🛞</span>
+          <span class="ck-row-main">
+            <span class="pl-head"><span class="ck-row-title">Шины на зиму</span><span class="ck-row-amount ck-figures">120 000 ₸</span></span>
+            <span class="pl-rail"><b class="plan" style="width:80%"></b></span>
+            <span class="pl-meta"><span>Авто · <span class="pl-due">к 20 октября</span></span></span>
+          </span>
+        </li>
+        <li class="ck-row pl-row pl-done cat-1">
+          <span class="ck-row-badge pl-badge">✓</span>
+          <span class="ck-row-main">
+            <span class="pl-head"><span class="ck-row-title">Стоматолог</span><span class="ck-row-amount ck-figures"><span class="pl-amount-plan">30 000</span>28 000 ₸</span></span>
+            <span class="pl-rail"><b class="fact" style="width:19%"></b></span>
+            <span class="pl-meta"><span>Здоровье · 11 окт · Dent Clinic</span><span class="pl-pill pl-pill-under">−2 000 ₸</span></span>
+          </span>
+        </li>
+        <li class="ck-row pl-row pl-open cat-2">
+          <span class="ck-row-badge pl-badge">💡</span>
+          <span class="ck-row-main">
+            <span class="pl-head"><span class="ck-row-title">Лампа в спальню</span><span class="ck-row-amount ck-figures">15 000 ₸</span></span>
+            <span class="pl-rail"><b class="plan" style="width:10%"></b></span>
+            <span class="pl-meta"><span>Дом · в октябре</span><span class="pl-pill pl-pill-ai no">ИИ: отговаривает</span></span>
+          </span>
+        </li>
+      </ul>
+    </section>
+    <section class="ck-panel o5">
+      <div class="ck-panel-head"><h2>Без срока</h2><a href="#">540 000 ₸ · 3 плана</a></div>
+      <ul class="ck-list">
+        <li class="ck-row pl-row pl-open cat-5">
+          <span class="ck-row-badge pl-badge">✈️</span>
+          <span class="ck-row-main">
+            <span class="pl-head"><span class="ck-row-title">Поездка в Грузию</span><span class="ck-row-amount ck-figures">400 000 ₸</span></span>
+            <span class="pl-rail"><b class="plan" style="width:100%"></b><b class="saved" style="width:62%"></b></span>
+            <span class="pl-meta"><span>Путешествия · отложено 248 000 на депозите «Отпуск» · при 35 000 в месяц хватит в апреле</span></span>
+          </span>
+        </li>
+        <li class="ck-row pl-row pl-open cat-4">
+          <span class="ck-row-badge pl-badge">💻</span>
+          <span class="ck-row-main">
+            <span class="pl-head"><span class="ck-row-title">Ноутбук</span><span class="ck-row-amount ck-figures">120 000 ₸</span></span>
+            <span class="pl-rail"><b class="plan" style="width:30%"></b></span>
+            <span class="pl-meta"><span>Техника · ничего не отложено</span><span class="pl-pill pl-pill-ai">ИИ: подождать</span></span>
+          </span>
+        </li>
+        <li class="ck-row pl-row pl-open cat-6">
+          <span class="ck-row-badge pl-badge">🛋️</span>
+          <span class="ck-row-main">
+            <span class="pl-head"><span class="ck-row-title">Диван</span><span class="ck-row-amount ck-figures">20 000 ₸</span></span>
+            <span class="pl-rail"><b class="plan" style="width:5%"></b></span>
+            <span class="pl-meta"><span>Дом · ничего не отложено</span><span class="pl-pill pl-pill-ai no">ИИ: отговаривает</span></span>
+          </span>
+        </li>
+      </ul>
+    </section>
+  <section class="ck-panel ai o7">
+    <div class="ck-panel-head"><h2>Взгляд со стороны</h2><a href="#">Обновить</a></div>
+    <p class="ai-sum">Из 900 000 ₸ планов на три месяца <b>540 000 ₸</b> уже покрыты депозитами, но ноябрь получается тяжёлым: 320 000 ₸ планов плюс обязательные платежи 356 000 ₸ при среднем доходе 1 050 000 ₸. Два плана я бы отложил, один убрал.</p>
+    <div class="ai-figures"><span class="ai-fig">планов до января <b>900 000 ₸</b></span><span class="ai-fig">отложено <b>540 000 ₸</b></span><span class="ai-fig">свободных в ноябре <b>≈ 180 000 ₸</b></span><span class="ai-fig">лимит «Дом» в октябре <b>112 %</b></span></div>
+    <ul class="ai-list">
+      <li class="ai-item"><span class="ai-verdict v-yes">Берите</span><span class="ai-name">Зимняя куртка · 150 000 ₸</span><span class="ai-why">Срок 1 февраля, 57 000 уже на депозите «Зима», остаток закрывается одним взносом. Холода не ждут.</span></li>
+      <li class="ai-item"><span class="ai-verdict v-yes">Берите</span><span class="ai-name">Шины на зиму · 120 000 ₸</span><span class="ai-why">Безопасность, срок 20 октября. В прошлом году шины обошлись в 98 000 ₸ — сравните цены в «Автодоме» и «Колесо», разница была 15 %.</span></li>
+      <li class="ai-item"><span class="ai-verdict v-wait">Подождите</span><span class="ai-name">Ноутбук · 120 000 ₸</span><span class="ai-why">Без срока и ничего не отложено. Если откладывать 30 000 в месяц на депозит с пополнением, к марту хватит без займа из бюджета ноября.</span></li>
+      <li class="ai-item"><span class="ai-verdict v-no">Отговариваю</span><span class="ai-name">Лампа в спальню · 15 000 ₸</span><span class="ai-why">Лимит «Дом» в октябре уже 112 %: 23 000 ₸ сверх. В сентябре вы покупали две лампы в Leroy Merlin на 18 400 ₸ — проверьте, не стоит ли одна из них до сих пор в коробке.</span></li>
+      <li class="ai-item"><span class="ai-verdict v-no">Отговариваю</span><span class="ai-name">Диван · 20 000 ₸</span><span class="ai-why">За 20 000 ₸ это будет не диван, а кресло. Либо отложить и поднять план до 150 000 ₸ к весне, либо убрать, чтобы не держать место в бюджете.</span></li>
+    </ul>
+    <p class="ai-foot">Ответ модели по вашим тратам, лимитам, доходу и депозитам за 12 месяцев · 26 октября · числа, которых нет в сводке, помечаются как непроверенные</p>
+  </section>
+  </div>
+</div>
+<script>document.querySelector('.ghost').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='light'?'dark':'light'}</script>
+</body>
+</html>
