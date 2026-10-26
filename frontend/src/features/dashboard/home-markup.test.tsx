@@ -103,7 +103,7 @@ describe('«Главная» of 2026-10-26 (Vitest/SSR, not browser visual accep
     expect(rows[1]).toContain('dash-attention-success"')
     expect(rows[2]).toContain('href="/chat"')
     expect(rows[2]).toContain('dash-attention-ai"')
-    expect(card).toContain('<span class="ck-row-title">Аренда квартиры через 2 дня</span><span class="ck-row-meta">220 000 ₸ · 5 ноября · Оплатил?</span>')
+    expect(card).toContain(`<span class="ck-row-title">Аренда квартиры через 2 дня</span><span class="ck-row-meta">${nb('220 000 ₸')} · Срок 5 ноября</span>`)
     // The other kinds and an unknown one.
     const kinds = attentionFixture().map((row, index) => ({ ...row, kind: ['payment_overdue', 'limit_over', 'limit_near', 'brand_new'][index] ?? 'plans_question' }))
     const more = between(view({ ...homeFixture(), attention: [...kinds, { ...kinds[0], kind: 'plans_question' }], attention_more: 0 }), 'dash-attention"', '</section>')

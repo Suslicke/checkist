@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { dashboardFixture, homeFixture } from '../../api/budget-test-support'
+import { attentionFixture, dashboardFixture, homeFixture } from '../../api/budget-test-support'
 import type { Dashboard } from '../../api/budget'
 import {
-  attentionBadge, attentionMoreText, attentionRows, budgetShare, daysInMonth, firstDayText, goalsTile, hasPulse, heroFoot, legendOf, limitLine, paymentsTile, percentText,
+  attentionBadge, attentionMeta, attentionMoreText, attentionRows, budgetShare, daysInMonth, firstDayText, goalsTile, hasPulse, heroFoot, legendOf, limitLine, paymentsTile, percentText,
   plansTile, pulseCaption, recentView, shareOf, tilesOf, todayIn, yesterdayOf,
 } from './home-state'
 
@@ -89,6 +89,12 @@ describe('the pulse captions and the foot of the hero', () => {
 describe('«Требует внимания»', () => {
   it('gives each kind its picture and colour, and a plain one to a kind it does not know', () => {
     expect(attentionBadge('payment_due')).toEqual({ icon: 'repeat', tone: 'warn' })
+    const row = attentionFixture()[0]
+    expect(attentionMeta(row).replace(/\u00a0/g, ' ')).toBe('220 000 ₸ · Срок 5 ноября')
+    expect(attentionMeta({ ...row, kind: 'limit_near', meta: 'Осталось до лимита', amount: '11500.00' }).replace(/\u00a0/g, ' ')).toBe('Осталось до лимита · 11 500 ₸')
+    expect(attentionMeta({ ...row, kind: 'limit_over', meta: '120 % лимита', amount: '20000.00' }).replace(/\u00a0/g, ' ')).toBe('120 % лимита · 20 000 ₸')
+    expect(attentionMeta({ ...row, amount: null, currency: null })).toBe('Срок 5 ноября')
+    expect(attentionMeta({ kind: 'plans_question', title: 'x', meta: 'Старый сервер', href: '/recurring' })).toBe('Старый сервер')
     expect(attentionBadge('payment_overdue')).toEqual({ icon: 'repeat', tone: 'over' })
     expect(attentionBadge('income_missing')).toEqual({ icon: 'income', tone: 'success' })
     expect(attentionBadge('limit_near')).toEqual({ icon: 'stats', tone: 'warn' })

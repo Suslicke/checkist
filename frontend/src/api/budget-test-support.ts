@@ -32,11 +32,12 @@ export function byDayFixture(): DashboardDay[] {
   return spent.map((value, index) => ({ day: `2026-10-${String(index + 1).padStart(2, '0')}`, spent: `${value}.00` }))
 }
 
-/** The rows of «Требует внимания» of the mockup: a payment in two days, the income of the month, a verdict of the model. */
+/** The rows of «Требует внимания» of the mockup as the server sends them (the words without the money, the money apart):
+ * a payment in two days, the income of the month, a verdict of the model. */
 export function attentionFixture(): DashboardAttention[] {
   return [
-    { kind: 'payment_due', title: 'Аренда квартиры через 2 дня', meta: '220 000 ₸ · 5 ноября · Оплатил?', href: '/recurring', amount: '220000.00', currency: 'KZT' },
-    { kind: 'income_missing', title: 'Доход за октябрь не внесён', meta: 'Зарплата обычно 1 050 000 ₸ · внести', href: '/receipts/new?kind=income', amount: '1050000.00', currency: 'KZT' },
+    { kind: 'payment_due', title: 'Аренда квартиры через 2 дня', meta: 'Срок 5 ноября', href: '/recurring', amount: '220000.00', currency: 'KZT' },
+    { kind: 'income_missing', title: 'Доход за октябрь не внесён', meta: 'Зарплата', href: '/receipts/new?kind=income', amount: '1050000.00', currency: 'KZT' },
     { kind: 'plan_verdict', title: 'Куртку лучше отложить до ноября', meta: 'лимит «Дом» уже 92 % · обсудить', href: '/chat', amount: null, currency: null },
   ]
 }

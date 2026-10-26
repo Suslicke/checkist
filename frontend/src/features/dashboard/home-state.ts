@@ -130,6 +130,16 @@ export function attentionMoreText(count: number | undefined): string | null {
   return count && count > 0 ? glue('ещё', String(count)) : null
 }
 
+/** The second line of a row of «Требует внимания»: the server sends the words without the money and the money apart
+ * (`amount`, `currency`), the client puts them together — the sum first («70 000 ₸ · Срок был 22 октября»), after the
+ * words of a limit («Осталось до лимита · 11 500 ₸», «120 % лимита · 20 000 ₸»); no sum — the words alone. */
+export function attentionMeta(row: DashboardAttention): string {
+  const money = row.amount && row.currency ? formatMoney(row.amount, row.currency) : null
+  if (!money) return row.meta
+  const parts = row.kind === 'limit_over' || row.kind === 'limit_near' ? [row.meta, money] : [money, row.meta]
+  return parts.filter(Boolean).join(' · ')
+}
+
 /** The rows of «Требует внимания»; none (or an older server) — no card. */
 export function attentionRows(data: Dashboard): DashboardAttention[] {
   return Object.hasOwn(data, 'attention') && Array.isArray(data.attention) ? data.attention : []

@@ -23,7 +23,7 @@ import { collapsedHint, isExpanded, readExpanded, rowChildren, subListId, withCh
 import type { ExpandedChoices } from './limit-collapse-state'
 import { subCategoriesText } from './limits-state'
 import {
-  attentionBadge, attentionMoreText, attentionRows, budgetShare, centsOf, hasPulse, heroFoot, legendOf, limitLine, percentText, pulseCaption, recentView, tilesOf, todayIn,
+  attentionBadge, attentionMeta, attentionMoreText, attentionRows, budgetShare, centsOf, hasPulse, heroFoot, legendOf, limitLine, percentText, pulseCaption, recentView, tilesOf, todayIn,
 } from './home-state'
 import type { TileView } from './home-state'
 import './Dashboard.css'
@@ -171,7 +171,7 @@ function AttentionCard({ rows, more }: { rows: DashboardAttention[]; more: numbe
             <span className={`ck-row-badge dash-attention-badge dash-attention-${badge.tone}`} aria-hidden="true"><Icon name={badge.icon} size={20} /></span>
             <span className="ck-row-main">
               <span className="ck-row-title">{row.title}</span>
-              <span className="ck-row-meta">{row.meta}</span>
+              <span className="ck-row-meta">{attentionMeta(row)}</span>
             </span>
             <Icon name="forward" size={18} className="ck-icon dash-attention-go" />
           </Link>
