@@ -450,6 +450,8 @@ SKIPPED_ROUTES = {
         "только POST",
     ),
     "family-ai-model": "только PATCH",
+    **dict.fromkeys(("auth-pocket-id", "auth-pocket-id-login", "auth-pocket-id-link", "auth-pocket-id-callback"),
+                    "вход через Pocket ID: 404, пока он выключен; id чеков в ответах нет"),
     "recurring-payment": "регулярный платёж семьи или пользователя; id чеков в нём нет",
     "statements-rule": "только PATCH и DELETE",
     "goal-contribution": "только PATCH и DELETE",
