@@ -187,7 +187,7 @@ class AttentionTests(Fixture, TestCase):
             "kind": "payment_due", "title": "Интернет через 2 дня", "meta": "Срок 10 октября",
             "href": "/recurring", "amount": "6700.00", "currency": "KZT"})
         self.assertEqual(rows[2], {
-            "kind": "limit_over", "title": "Лимит «Демо-дом» превышен", "meta": "116 % лимита",
+            "kind": "limit_over", "title": "Лимит «Демо-дом» превышен", "meta": "117 % лимита",
             "href": "/budget/limits", "amount": "10000.00", "currency": "KZT"})
         # Платежи отвечены, лимит дома поднят — следующие три.
         for row in (self.rent_payment, self.net):
@@ -255,6 +255,14 @@ class AttentionTests(Fixture, TestCase):
         self.assertEqual(self.rows()[0][0]["kind"], "limit_near")  # ровно 100 % — ещё не превышен
         BudgetLimit.objects.filter(pk=limit.pk).update(amount=D("41999.99"))
         self.assertEqual(self.rows()[0][0]["kind"], "limit_over")
+
+    def test_limit_percent_rounds_to_nearest_like_the_limits_card(self):
+        limit = BudgetLimit.objects.create(user=local_user(), category=self.food, currency_id="KZT", amount=D("49500"))
+        self.assertEqual(self.rows()[0][0]["title"], "Лимит «Демо-еда» 85 %")  # 84,85 %, не «84 %»
+        BudgetLimit.objects.filter(pk=limit.pk).update(amount=D("52800"))
+        self.assertEqual(self.rows()[0][0]["title"], "Лимит «Демо-еда» 80 %")  # 79,55 %: округление и порог вместе
+        BudgetLimit.objects.filter(pk=limit.pk).update(amount=D("36000"))
+        self.assertEqual(self.rows()[0][0]["meta"], "117 % лимита")  # 116,67 %
 
     def test_sub_limit_is_watched_too(self):
         BudgetLimit.objects.create(user=local_user(), category=self.rent, currency_id="KZT", amount=D("10000"))

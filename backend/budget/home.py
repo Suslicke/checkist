@@ -158,7 +158,8 @@ def _limit_rows(block):
         for row in rows:
             if row.limit is not None and row.limit > 0:
                 with price_context():
-                    percent = int(row.spent * 100 // row.limit)
+                    # До целого, как в карточке «Лимиты» клиента (`limitLine`): 84,67 % — «85 %», не «84 %».
+                    percent = int((row.spent * 200 + row.limit) // (row.limit * 2))
                 if row.spent > row.limit:
                     found.append((percent, Row("limit_over", f"Лимит «{row.name}» превышен", f"{percent} % лимита",
                                                "/budget/limits", row.spent - row.limit, block.currency)))
