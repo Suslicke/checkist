@@ -246,7 +246,8 @@ class DockerDeployFilesTests(SimpleTestCase):
     # Caddy
 
     def test_caddy_rules_equal_the_systemd_caddyfile(self):
-        # The same routes, headers and body limit; only the three deployment-specific values differ.
+        # The same routes, headers and body limit; only the three deployment-specific values differ, and the Docker
+        # Caddy also serves the other sites of the server (compose.sites.yaml, 3b21982): one trailing import line.
         expected = uncommented("Caddyfile")
         for old, new in (
             (f"{DOMAIN} {{", f"{SITE} {{"),
@@ -255,7 +256,7 @@ class DockerDeployFilesTests(SimpleTestCase):
         ):
             self.assertEqual(expected.count(old), 1, old)
             expected = expected.replace(old, new)
-        self.assertEqual(code("Caddyfile"), expected)
+        self.assertEqual(code("Caddyfile"), expected + "\nimport /etc/caddy/sites/*.caddy")
 
     def test_caddy_site_address_upstream_and_hsts_come_from_the_environment(self):
         caddy = code("Caddyfile")
