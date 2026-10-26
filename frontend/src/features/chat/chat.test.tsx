@@ -158,10 +158,10 @@ describe('markup of the chat (ChatView)', () => {
     expect(markup).toContain(`<h2 id="chat-thread-heading">${chatThreadFixture().thread.title}</h2>`)
   })
 
-  it('renders the verdicts as a card, the unchecked numbers, and the actions as buttons — done ones disabled', () => {
+  it('renders the verdicts as a card (the plan by its name, «План №N» without one), the unchecked numbers, and the actions as buttons — done ones disabled', () => {
     const markup = html(<ChatView threads={threads} threadId={6} thread={{ kind: 'ok', data: plansThreadFixture() }} text="" sending={false} notice={null} />)
     expect(markup).toContain(`<h3>${chatTexts.verdicts}</h3>`)
-    expect(markup).toContain('<span class="chat-verdict chat-verdict-yes">Берите</span><span class="chat-verdict-name">План №2</span>')
+    expect(markup).toContain('<span class="chat-verdict chat-verdict-yes">Берите</span><span class="chat-verdict-name">Поездка в Алматы</span>')
     expect(markup).toContain('<span class="chat-verdict chat-verdict-wait">Подождите</span>')
     expect(markup).toContain('<span class="chat-verdict chat-verdict-no">Отговариваю</span><span class="chat-verdict-name">План №9</span><span class="chat-verdict-why">Лимит «Дом» в октябре уже 112 %.</span>')
     expect(markup).toContain(`<p class="chat-unverified">${insightTexts.unverified} 356 000 ₸.</p>`)

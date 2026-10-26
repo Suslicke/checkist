@@ -12,6 +12,7 @@ export const chatTexts = {
   newThread: 'Новая беседа',
   noThreads: 'Бесед пока нет.',
   typing: 'печатает…',
+  noAnswer: 'Пока без ответа',
   placeholder: 'Напишите вопрос…',
   field: 'Сообщение',
   send: 'Отправить',

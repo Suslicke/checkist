@@ -24,7 +24,8 @@ export type ThreadSummary = {
 }
 export type Thread = ThreadSummary & { receipt_id: number | null; month: string | null }
 export type Verdict = 'keep' | 'wait' | 'drop'
-export type ChatVerdict = { plan_id: number; verdict: Verdict; reason: string }
+/** `name` — the plan as the server names it from the model's input; missing or null — the screen says «План №N». */
+export type ChatVerdict = { plan_id: number; verdict: Verdict; reason: string; name: string | null }
 export type ActionKind = 'move_plan' | 'delete_plan' | 'change_amount' | 'create_plan'
 /** An action the model offers; `done_at` and `result` are set by the server once the person confirmed it. */
 export type ChatAction = {
@@ -51,7 +52,8 @@ export type CreateThreadInput = { kind: ThreadKind; receipt_id?: number; month?:
 const THREAD_KINDS: ThreadKind[] = ['free', 'spend', 'plans', 'month']
 const ACTION_KINDS: ActionKind[] = ['move_plan', 'delete_plan', 'change_amount', 'create_plan']
 const isStatus = choice('queued', 'running', 'succeeded', 'failed')
-const isVerdict = object<ChatVerdict>({ plan_id: isId, verdict: choice('keep', 'wait', 'drop'), reason: text })
+type Raw = Record<string, unknown>
+const isVerdict = (value: unknown): value is Raw => record(value) && isId(value.plan_id) && choice('keep', 'wait', 'drop')(value.verdict) && text(value.reason)
 const isVerdicts = array(isVerdict)
 /** The worker as a request of «Разбор месяца» carries it; a message of a thread may come without it. */
 const IDLE_EXECUTOR: Executor = { available: true, state: 'idle', last_seen_at: null }
@@ -61,7 +63,6 @@ function optional<T>(value: Record<string, unknown>, key: string, check: (value:
   return Object.hasOwn(value, key) && check(value[key]) ? value[key] as T : fallback
 }
 
-type Raw = Record<string, unknown>
 const isRawAction = (value: unknown): value is Raw => record(value) && choice(...ACTION_KINDS)(value.kind) && text(value.label)
 const isRawAnswer = (value: unknown): value is Raw => record(value) && text(value.answer)
   && (!Object.hasOwn(value, 'verdicts') || value.verdicts === null || isVerdicts(value.verdicts))
@@ -77,6 +78,10 @@ const isRawCreated = (value: unknown): value is Raw => isRawDetail(value) || isR
 const isRawThreads = (value: unknown): value is unknown[] | { results: unknown[] } => (Array.isArray(value) && value.every(isRawThread))
   || (record(value) && Array.isArray(value.results) && value.results.every(isRawThread))
 const isEmpty = (value: unknown): value is null => value === null
+
+function toVerdict(raw: Raw): ChatVerdict {
+  return { plan_id: raw.plan_id as number, verdict: raw.verdict as Verdict, reason: raw.reason as string, name: optional(raw, 'name', text, null) }
+}
 
 function toAction(raw: Raw): ChatAction {
   const action: ChatAction = {
@@ -99,7 +104,7 @@ function toMessage(raw: Raw): ChatMessage {
     ?? (Object.hasOwn(raw, 'error_code') && text(raw.error_code) && raw.error_code ? { code: raw.error_code as string, message: '' } : null)
   return {
     id: raw.id as number, question: raw.question as string, status: raw.status as InsightStatus,
-    answer: answer === null ? null : { answer: answer.answer as string, verdicts: optional<ChatVerdict[] | null>(answer, 'verdicts', isVerdicts, null) ?? [] },
+    answer: answer === null ? null : { answer: answer.answer as string, verdicts: (optional<Raw[] | null>(answer, 'verdicts', isVerdicts, null) ?? []).map(toVerdict) },
     actions: (optional<Raw[] | null>(raw, 'actions', array(isRawAction), null) ?? []).map(toAction),
     unverified: optional(raw, 'unverified', array(text), []),
     error: raw.status === 'failed' ? error ?? { code: '', message: '' } : null,

@@ -35,9 +35,9 @@ export function plansThreadFixture(): ThreadDetail {
     answer: {
       answer: 'Ноябрь получается тяжёлым: 320 000 ₸ планов плюс обязательные платежи 356 000 ₸. Два плана я бы отложил, один убрал.',
       verdicts: [
-        { plan_id: 2, verdict: 'keep', reason: 'Срок 1 февраля, 57 000 ₸ уже на депозите «Зима».' },
-        { plan_id: 4, verdict: 'wait', reason: 'Без срока и ничего не отложено — к марту хватит без займа из бюджета ноября.' },
-        { plan_id: 9, verdict: 'drop', reason: 'Лимит «Дом» в октябре уже 112 %.' },
+        { plan_id: 2, name: 'Поездка в Алматы', verdict: 'keep', reason: 'Срок 1 февраля, 57 000 ₸ уже на депозите «Зима».' },
+        { plan_id: 4, name: 'Куртка', verdict: 'wait', reason: 'Без срока и ничего не отложено — к марту хватит без займа из бюджета ноября.' },
+        { plan_id: 9, name: null, verdict: 'drop', reason: 'Лимит «Дом» в октябре уже 112 %.' },
       ],
     },
     actions: chatActionsFixture(), unverified: ['356 000 ₸'],

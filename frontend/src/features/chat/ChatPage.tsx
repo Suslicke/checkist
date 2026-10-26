@@ -39,7 +39,7 @@ function ModelBubble({ message, failure, busyAction, actionErrors, onConfirm, on
       <h3>{chatTexts.verdicts}</h3>
       <ul className="chat-verdict-list">{answer.verdicts.map((item) => <li key={item.plan_id} className="chat-verdict-item">
         <span className={`chat-verdict chat-verdict-${verdictTones[item.verdict]}`}>{verdictWords[item.verdict]}</span>
-        <span className="chat-verdict-name">{numbered('План', item.plan_id)}</span>
+        <span className="chat-verdict-name">{item.name ?? numbered('План', item.plan_id)}</span>
         <span className="chat-verdict-why">{modelText(item.reason)}</span>
       </li>)}</ul>
     </div>}
@@ -117,7 +117,7 @@ export function ChatView({
         <Link className={`ck-row chat-thread${current ? ' chat-thread-current' : ''}`} to={threadHref(item.id)} aria-current={current ? 'page' : undefined}>
           <span className="ck-row-main">
             <span className="ck-row-title">{threadTitle(item)}</span>
-            <span className="ck-row-meta">{item.last_answer_preview ? modelText(item.last_answer_preview) : chatTexts.typing}</span>
+            <span className="ck-row-meta">{item.last_answer_preview ? modelText(item.last_answer_preview) : chatTexts.noAnswer}</span>
           </span>
           <time className="chat-thread-date" dateTime={item.updated_at}>{threadDate(item.updated_at)}</time>
         </Link>
@@ -153,7 +153,7 @@ export function ChatView({
           ? <li key={bubble.key} className="chat-bubble chat-bubble-person"><p>{bubble.text}</p></li>
           : <ModelBubble key={bubble.key} message={bubble.message} failure={failures[bubble.message.id]} busyAction={busyAction} actionErrors={actionErrors}
             onConfirm={onConfirm} onRetry={onRetry} />)}</ol>
-        <p className="chat-note">{chatTexts.note}</p>
+        {detail.messages.length > 0 && <p className="chat-note">{chatTexts.note}</p>}
       </section>}
       {(!open || detail) && <Composer text={text} busy={sending || waiting} notice={notice} autoFocus={!open} onText={onText} onSubmit={onSubmit} />}
     </div>
