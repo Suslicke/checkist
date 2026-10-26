@@ -1,12 +1,13 @@
 """«Можно тратить в день» на Главной (волна 2, 2026-10-13).
 
-(основа − потрачено − неоплаченные регулярные платежи) / оставшиеся дни месяца, включая сегодня; только
+(основа − потрачено − неоплаченные регулярные платежи − открытые планы месяца) / оставшиеся дни месяца, включая сегодня; только
 для текущего месяца. Основа — общий бюджет месяца (``MonthlyBudget``), без него — ``income`` (доход месяца
 в основной валюте; ``None`` — показателя нет). Лимиты категорий основой не бывают (2026-10-13, жалоба
 человека: лимит одной квартиры давал «438 ₸ в день» — остаток аренды на дни месяца). Потрачено — все
 видимые траты месяца (``visible_receipts_q``, без скрытых), как «Потрачено» Главной. Всё в основной валюте
-семьи (``rates.convert``): траты — по курсу дня покупки, бюджет и платежи — по сегодняшнему; сумма без
-курса не учитывается. Ушли в минус — ``overspent`` вместо ``per_day``.
+семьи (``rates.convert``): траты — по курсу дня покупки, бюджет, платежи и планы — по сегодняшнему; сумма без
+курса не учитывается. Планы (``planned.services.open_total``, 2026-10-26) — открытые планы со сроком в этом
+месяце; план без срока сюда не входит. Ушли в минус — ``overspent`` вместо ``per_day``.
 """
 from dataclasses import dataclass
 from datetime import date
@@ -35,6 +36,8 @@ class Allowance:
     spent: Decimal
     unpaid: Decimal
     unpaid_count: int
+    planned: Decimal  # открытые планы месяца (planned.services.open_total)
+    planned_count: int
     days_left: int
     per_day: Decimal | None  # None — перерасход
     overspent: Decimal | None
@@ -51,7 +54,8 @@ def daily(user, month, *, income=None, today=None):
     валюте (``incomes.services.month_income``) либо функция без аргументов, которая его вернёт: основа только
     без бюджета, и функция зовётся только тогда.
     """
-    from recurring.access import as_request  # recurring зависит от budget: импорт внутри
+    from planned.services import open_total  # planned и recurring зависят от budget: импорт внутри
+    from recurring.access import as_request
     from recurring.services import unpaid
 
     today = today or timezone.localdate()
@@ -83,12 +87,14 @@ def daily(user, month, *, income=None, today=None):
     spent = _sum(converter.convert(total, currency, day) for currency, day, total in spends)
     owed = [converter.convert(payment["amount"], payment["currency"], today) for payment in payments]
     unpaid_total = _sum(owed)
+    planned_total, planned_count = open_total(user, month, today)
     days = days_left(month, today)
-    rest = amount - spent - unpaid_total
+    rest = amount - spent - unpaid_total - planned_total
     over = rest < 0
     return Allowance(
         currency=base, basis=basis, amount=amount, spent=spent, unpaid=unpaid_total,
-        unpaid_count=sum(1 for value in owed if value is not None), days_left=days,
+        unpaid_count=sum(1 for value in owed if value is not None), planned=planned_total, planned_count=planned_count,
+        days_left=days,
         per_day=None if over else (rest / days).quantize(_CENT, rounding=ROUND_DOWN),
         overspent=-rest if over else None,
     )

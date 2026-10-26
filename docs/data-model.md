@@ -1099,3 +1099,15 @@ docker compose -p checkist_dev cp postgres:/tmp/checkist.dump ./checkist.dump
 обязательно, время на часах сохраняется, `fiscal_key`/номер/смена/касса не меняются; нарушение трёх ограничений
 дедупликации — отказ `receipt: duplicate`. Трата из выписки определяется строкой `statements.StatementRow.receipt`:
 способ — банк, комментарий кончается « · Выписка …».
+
+## Планы — ожидаемые разовые траты (`planned`, 2026-10-26, ветка `feature/planned-and-chat`)
+
+Приложение `planned` (миграция `planned.0001_initial`; откат — `migrate planned zero`, удаляет планы; траты и цели не
+трогает). `PlannedSpend` — владелец как у лимита: `household` либо `user` (ровно один, `planned_spend_one_owner`);
+`name` (100), `category` → `catalog.Category` (NULL, `PROTECT`), `currency` (`PROTECT`), `amount` > 0 (Decimal 14,2,
+`planned_spend_amount_positive`), `due` (NULL — без срока), `due_exact` (True — «к 20 октября», False — «в октябре»,
+`due` = первое число), `note` (300), `receipt` → `receipts.Receipt` (NULL, `SET_NULL`, `OneToOne`: одна трата — один
+план; без обратной связи у чека), `goal` → `goals.Goal` (NULL, `SET_NULL`, без обратной связи), `ai_verdict`
+(`""` | `keep` | `wait` | `drop`), `ai_reason` (300), `ai_at`, `created_by` (`SET_NULL`), `created_at`, `updated_at`;
+индексы `(household, due)` и `(user, due)`. Отложено на цели и суммы месяца не хранятся — расчёт при чтении
+(`planned.services`); правило доступа — `planned.access.plans_q` (= `budget.access.limits_q`).

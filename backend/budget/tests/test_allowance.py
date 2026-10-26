@@ -215,6 +215,7 @@ class MonthBudgetApiTests(TwoUsers, TestCase):
         self.assertEqual(body["budget"], {"amount": "500000.00", "currency": "KZT", "spent": "120000.00"})
         self.assertEqual(body["allowance"], {
             "currency": "KZT", "basis": "budget", "amount": "500000.00", "spent": "120000.00", "unpaid": "0.00",
-            "unpaid_count": 0, "days_left": 19, "per_day": "20000.00", "overspent": None,
+            "unpaid_count": 0, "planned": "0.00", "planned_count": 0, "days_left": 19, "per_day": "20000.00",
+            "overspent": None,
         })
         self.assertIsNone(self.get(self.second, DASHBOARD)["allowance"])

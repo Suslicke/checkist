@@ -3,6 +3,7 @@ import hashlib
 import os
 import re
 import tempfile
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -119,6 +120,7 @@ INSTALLED_APPS = [
     "incomes.apps.IncomesConfig",
     "goals.apps.GoalsConfig",
     "push.apps.PushConfig",
+    "planned.apps.PlannedConfig",
 ]
 MIDDLEWARE = [
     "config.robots.NoIndexMiddleware",
@@ -390,6 +392,22 @@ RATES_NBRK_URL = env_text("RATES_NBRK_URL", "https://nationalbank.kz/rss/get_rat
 RATES_FETCH_TIMEOUT_SECONDS = env_integer("RATES_FETCH_TIMEOUT_SECONDS", 20, 1, 120)
 RATES_LAZY_TIMEOUT_SECONDS = env_integer("RATES_LAZY_TIMEOUT_SECONDS", 3, 1, 30)
 RATES_AUTO_FETCH = env_flag("RATES_AUTO_FETCH", "1")
+
+
+def env_percent(name, default):
+    value = env_text(name, default)
+    if not re.fullmatch(r"[0-9]{1,3}(\.[0-9]{1,2})?", value) or not 0 <= Decimal(value) <= 100:
+        raise ImproperlyConfigured(f"{name}: expected a percent from 0 to 100 with at most 2 decimals.")
+    return Decimal(value)
+
+
+# Rates (% a year) of the deposit advice for planned spends (planned.advice): a fixed-term deposit without withdrawals,
+# a flexible one with top-ups and withdrawals, investing. ponytail: per-family rates when asked.
+PLANNED_RATES = {
+    "fixed": env_percent("PLANNED_RATE_FIXED", "17"),
+    "flexible": env_percent("PLANNED_RATE_FLEXIBLE", "15"),
+    "invest": env_percent("PLANNED_RATE_INVEST", "10"),
+}
 
 # Web push (push): a VAPID key pair from `manage.py push keys` and a contact (mailto: or https:). Without all three
 # push is off: the client says «не настроено на сервере» and `manage.py push tick` sends nothing.
