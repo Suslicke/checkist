@@ -13,6 +13,8 @@
 /* «Планы» (features/planned PlannedPage.tsx): the same — the side (hero, actions, months) comes first in DOM, the
    main (the lists) after it; a phone reads them in that order. */
 .planned-main, .planned-side { display: contents; }
+/* «Деньги» (features/money MoneyPage.tsx): the wrappers are boxless in Money.css already (its `order` rules put the
+   hub between the month and the chat on a phone); named here so the block below finds them. */
 
 @media (min-width: 960px) {
   /* Правила экранов добавляют свои задачи: Траты, Чек, Новая трата, Каталог, Платежи, Цели, Доходы, Магазины. */
@@ -148,6 +150,13 @@
   .stores-page > .stores-intro { max-width: 760px; }
   .stores-page > .stores-suggestions { grid-column: 2; }
   .stores-page > .ck-panel:not(.stores-suggestions) { grid-column: 1; }
+  /* «Деньги» (features/money MoneyPage.tsx, 2026-10-26): the month and the chat at the left (two fifths), the six tiles
+     at the right (three fifths, still two in a row). .money-page (0,1,0) later in cascade beats the 760 px cap of
+     Money.css; the wrappers become columns of cards with the gap of the page. */
+  .money-page { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; max-width: none; }
+  .money-main, .money-side { display: grid; gap: 16px; min-width: 0; }
+  .money-main { grid-column: 1; }
+  .money-side { grid-column: 2; }
   /* «Чат с ИИ» (features/chat ChatPage.tsx): the threads a 280 px rail at the left, the open thread (or the start of a
      new one, with the composer) at the right. Chat.css hides the rail beside an open thread below 960 px; the same
      selector here, later in the cascade, shows it again. The composer is pinned by Chat.css at every width. */

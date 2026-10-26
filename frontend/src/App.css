@@ -40,6 +40,11 @@ h2 { font-size: 1.35rem; letter-spacing: 0; }
 /* The emblem file is transparent: it lies straight on the header bar, with no backing and no rounded corners. */
 .brand-mark { flex: none; width: 44px; height: 44px; }
 .brand-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* «Чат с ИИ» from every screen (2026-10-26): a round mark of the model on the accent — in the header strip beside the
+   theme switch on a wide screen, in the header row of the page on a phone (the strip is not drawn there). */
+.ck-chat-link { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; min-height: 36px; border-radius: 50%; background: var(--ck-accent-bg); color: var(--ck-accent-text); text-decoration: none; }
+.ck-chat-link:where(:hover) { background: var(--ck-accent); color: var(--ck-on-accent); }
+.intro > .ck-chat-link-page { display: none; }
 .main-navigation { display: flex; flex-wrap: wrap; gap: 8px; }
 .main-navigation a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; border-radius: var(--ck-radius-pill); text-underline-offset: 4px; }
 .main-navigation a[aria-current] { color: var(--ck-accent-text); background: var(--ck-accent-bg); font-weight: 600; }
@@ -265,6 +270,9 @@ footer { border-top: 1px solid var(--ck-divider); color: var(--ck-text-muted); p
   .brand-bar > .brand, .brand-bar > .brand-actions { display: none; }
   /* The end of the page stays above the bar. */
   .page { padding: 0 max(16px, env(safe-area-inset-right, 0px)) var(--ck-bottom-occupied) max(16px, env(safe-area-inset-left, 0px)); }
+  /* The mark of the chat stands at the right edge of the header row of the page; the strip with its twin is not drawn. */
+  .intro > .ck-chat-link-page { display: inline-flex; margin-left: auto; }
+  .intro > .intro-slot:not(:empty) + .ck-chat-link-page { margin-left: 0; }
   /* The header row sticks to the top of the window, in the colour of the page, edge to edge, with no line under it. */
   .intro { position: sticky; top: 0; z-index: var(--ck-z-top-bar); min-height: var(--ck-top-bar-height); margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))) calc(-1 * max(16px, env(safe-area-inset-right, 0px))); padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); background: var(--ck-bg); }
   .brand-bar .main-navigation { position: fixed; inset: auto 0 0; z-index: var(--ck-z-bottom-nav); display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; align-items: center; gap: 0; width: auto; min-height: calc(var(--ck-bottom-nav-height) + var(--ck-safe-bottom)); margin: 0; padding: 0 max(4px, env(safe-area-inset-right, 0px)) 0 max(4px, env(safe-area-inset-left, 0px)); padding-bottom: var(--ck-safe-bottom); overflow: visible; border-top: 1px solid var(--ck-border); background: var(--ck-nav-bg); color: var(--ck-text-muted); }

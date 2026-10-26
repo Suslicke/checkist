@@ -12,7 +12,7 @@ import type { SkeletonShape } from './Skeleton'
  * form and the catalog keep `page` on purpose: their screens draw their own section cards or one form card. */
 export function ScreenSkeleton({ kind, message }: { kind: Route['kind']; message: string }) {
   const shape: SkeletonShape = kind === 'dashboard' ? 'home' : kind === 'receipts' ? 'spends'
-    : ['limits', 'recurring', 'goals', 'incomes', 'stores'].includes(kind) ? 'columns' : 'page'
+    : ['limits', 'recurring', 'goals', 'incomes', 'stores', 'money'].includes(kind) ? 'columns' : 'page'
   const state = <RequestState kind="loading" message={message} shape={shape} />
   return kind === 'receipts' ? <div className="ck-skel-screen"><SpendsTopSkeleton />{state}</div> : state
 }

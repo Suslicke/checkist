@@ -24,19 +24,23 @@
 .dash-inline-link, .dash-link { color: var(--ck-link); font-weight: 700; white-space: nowrap; }
 .dash-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .dash-value { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.dash-strong { font-weight: 800; color: var(--ck-text); }
 .dash-currency { color: var(--ck-text-muted); font-weight: 600; white-space: nowrap; }
 
-/* The two columns of a wide screen; one column of a phone in the order of the artifact: the money, the actions, the
-   limits, the latest spends. */
+/* The two columns of a wide screen; one column of a phone in the order of the mockup of 2026-10-26: the ring,
+   «Требует внимания», the tiles, the spends of today and yesterday, the limits. */
 .dash-column { display: contents; }
 .dash-column-side > * { order: 1; }
 .dash-recent { order: 2; }
+.dash-column-side > .dash-limits { order: 3; }
 /* «Лимиты»: the currency, the budget, the list and its save bar — one column of a wide screen, boxless otherwise. */
 .limits-main { display: contents; }
 
 /* The header row of the shell: «‹ Октябрь 2026 ›» and the family on the right; the new month slides in from its
-   side (only without reduced motion). */
+   side (only without reduced motion). The two steps «‹ ›» stand after the heading (2026-10-26), 36 px in the row of
+   the phone with a 44 px target through the shell's .ck-round. */
+.dash-month-steps { display: inline-flex; flex: none; gap: 4px; }
+.dash-month-steps .dash-month-step { width: 36px; height: 36px; min-height: 36px; border-color: transparent; background: var(--ck-surface-raised); color: var(--ck-text-muted); }
+.dash-month-steps .dash-month-step:where(:hover) { color: var(--ck-text); }
 .dash-family { display: flex; flex: none; margin: 0 0 0 auto; padding: 0; list-style: none; }
 /* A letter on a category tint is main text (4.5:1 needs --ck-text: a gold letter on its tint is 3.5:1 in the light
    theme); the frame in the colour of the page parts the overlapping circles. */
@@ -49,27 +53,68 @@
   @keyframes dash-slide-back { from { transform: translateX(-24px); opacity: 0.4; } }
 }
 
-/* Потрачено за месяц: the hero figure, the comparison in its colour, the overall limit (10 px) with what is left
-   on the left and the days on the right. */
+/* The hero (2026-10-26): the ring of the categories (lib/charts Ring.tsx, 132 px, the gap is what is left of the
+   budget) with the words in its middle, the legend beside it, the pulse of the days under both and the line of the
+   budget, the days and «в день» at the foot. The value in the ring is the one big figure of the screen. */
 .dash-hero { gap: 12px; }
 .dash-label { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; }
 .dash-total { margin: 0; line-height: 1.1; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.dash-compare { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; }
-.dash-compare-less { color: var(--ck-success-text); }
-.dash-compare-more { color: var(--ck-over-text); }
-.dash-hero-limit { display: grid; gap: 8px; margin-top: 4px; }
-.dash-left { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
-.dash-days { margin-left: auto; white-space: nowrap; }
+.dash-ring-wrap { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 12px; align-items: center; min-width: 0; }
+.dash-ring-label { color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 700; white-space: nowrap; }
+.dash-ring-value { font-family: var(--ck-font-display-figures); font-size: var(--ck-text-lg); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
+.dash-legend { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.dash-legend-row { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--ck-text-xs); }
+.dash-legend-swatch { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--dash-cat); }
+.dash-legend-rest .dash-legend-swatch { background: var(--ck-track); }
+.dash-legend-name { flex: 1 1 auto; min-width: 0; overflow: hidden; color: inherit; text-decoration: none; white-space: nowrap; text-overflow: ellipsis; }
+a.dash-legend-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dash-legend-rest { color: var(--ck-text-muted); }
+.dash-legend-amount { flex: none; font-weight: 700; white-space: nowrap; }
 .dash-over { margin: 0; color: var(--ck-over-text); font-size: var(--ck-text-xs); font-weight: 700; }
-/* «Можно тратить в день» (2026-10-13): под суммой-героем за чертой; перерасход — цветом «сверх лимита». */
-.dash-allowance { display: grid; gap: 4px; padding-top: 12px; border-top: 1px solid var(--ck-divider); }
-.dash-allowance-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin: 0; }
-.dash-allowance-label { font-size: var(--ck-text-sm); font-weight: 700; }
-.dash-allowance-value { font-size: var(--ck-text-xl); font-weight: 800; }
-.dash-allowance-over .dash-allowance-value { color: var(--ck-over-text); }
-.dash-allowance .dash-note, .dash-budget .dash-note { font-size: var(--ck-text-xs); }
-/* «Бюджет месяца» над лимитами категорий: полоса цвета главного действия, черта отделяет его от категорий. */
-.dash-budget { display: grid; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--ck-divider); }
+/* The pulse: a bar a day, the days with spends in the colour of the first category, today in the accent, the days
+   ahead a flat mark of the track; the dashed line is the average day. The captions under it: the 1st, today with the
+   average, the last day. */
+.dash-pulse-block { display: grid; gap: 4px; min-width: 0; }
+.dash-pulse { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 44px; margin-top: 4px; }
+.dash-pulse-day { flex: 1 1 0; min-width: 0; border-radius: 2px 2px 0 0; background: var(--ck-cat-1-tint); }
+.dash-pulse-on { background: var(--ck-cat-1); }
+.dash-pulse-today { background: var(--ck-accent); }
+.dash-pulse-future { height: 3px; background: var(--ck-track); }
+.dash-pulse-average { position: absolute; right: 0; left: 0; border-top: 1.5px dashed var(--ck-text-muted); opacity: 0.6; pointer-events: none; }
+.dash-pulse-x { display: flex; justify-content: space-between; gap: 8px; margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 700; white-space: nowrap; }
+.dash-pulse-x-middle { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.dash-pulse-x .dash-pulse-today { color: var(--ck-accent-text); background: none; }
+.dash-hero-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding-top: 10px; border-top: 1px solid var(--ck-divider); color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
+.dash-hero-budget { white-space: nowrap; }
+.dash-hero-day { margin-left: auto; white-space: nowrap; }
+.dash-hero-foot b { color: var(--ck-text); font-weight: 800; white-space: nowrap; }
+.dash-hero-foot .dash-over, .dash-hero-foot .dash-over b { color: var(--ck-over-text); font-size: var(--ck-text-xs); }
+
+/* «Требует внимания»: rows of the list brick, a badge in the colour of the kind (a warning, an overspend, an income,
+   the model), the chevron of a link at the right. */
+.dash-attention { gap: 4px; padding-block: 12px 4px; }
+.dash-attention .ck-panel-head { padding-top: 4px; }
+.dash-attention-row { min-height: 56px; padding-block: 8px; }
+.dash-attention-badge { width: 36px; height: 36px; }
+.dash-attention-warn { background: var(--ck-warning-bg); color: var(--ck-warning-text); }
+.dash-attention-over { background: var(--ck-cat-1-tint); color: var(--ck-over-text); }
+.dash-attention-success { background: var(--ck-success-bg); color: var(--ck-success-text); }
+.dash-attention-ai { background: var(--ck-accent-bg); color: var(--ck-accent-text); }
+.dash-attention-plain { background: var(--ck-surface-raised); color: var(--ck-text-muted); }
+.dash-attention-go { flex: none; color: var(--ck-text-muted); }
+.dash-attention-row:hover .ck-row-title { text-decoration: underline; text-underline-offset: 3px; }
+
+/* The tiles «Платежи · Планы · Цели»: three cards in a row, the whole card a link, a mini bar of parts at the foot. */
+.dash-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.dash-tile { display: grid; gap: 4px; min-width: 0; min-height: 44px; padding: 12px; border-radius: var(--ck-radius-sm); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); color: var(--ck-text); text-decoration: none; }
+.dash-tile:hover .dash-tile-title { text-decoration: underline; text-underline-offset: 3px; }
+.dash-tile-title { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; }
+.dash-tile-value { overflow: hidden; font-size: var(--ck-text-base); font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
+.dash-tile-note { overflow: hidden; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); white-space: nowrap; text-overflow: ellipsis; }
+.dash-mini { display: flex; gap: 2px; height: 5px; margin-top: 4px; }
+.dash-mini-part { display: block; min-width: 2px; height: 100%; border-radius: 3px; background: var(--dash-cat-tint); box-shadow: inset 0 0 0 1px var(--dash-cat); }
+.dash-mini-part.dash-cat-0 { background: var(--ck-track); box-shadow: none; }
+.dash-mini-on { background: var(--dash-cat); box-shadow: none; }
 
 /* Other currencies: a row each, the sign of the currency in the badge. */
 .dash-others { gap: 4px; padding-block: 12px 4px; }
@@ -84,40 +129,34 @@
 /* Полоса прогресса: дорожка и заполненная часть; сверх лимита — свой цвет. */
 .dash-bar { height: 10px; overflow: hidden; border-radius: 5px; background: var(--ck-track); }
 .dash-bar-fill { display: block; height: 100%; min-width: 0; border-radius: inherit; background: var(--ck-primary); }
-.dash-limit .dash-bar { height: 8px; border-radius: 4px; }
+.dash-limit .dash-bar { height: 6px; border-radius: 3px; }
 .dash-limit .dash-bar-fill { background: var(--dash-cat); }
 .dash-bar-over .dash-bar-fill, .dash-limit .dash-bar-over .dash-bar-fill { background: var(--ck-over-bar); }
 
-/* Two big actions of 64 px: the camera on the fill of the main action, the form as an outline in the link colour. */
-.dash-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.dash-action { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 64px; padding: 0 12px; border: 1.5px solid var(--ck-link); border-radius: var(--ck-radius-button); background: var(--ck-surface); color: var(--ck-link); font-size: var(--ck-text-base); font-weight: 800; text-decoration: none; white-space: nowrap; }
-.dash-action .ck-icon { flex: none; }
-.dash-action-shot { border-color: var(--ck-primary); background: var(--ck-primary); color: var(--ck-on-primary); }
-.dash-action-shot:hover:not(:disabled) { border-color: var(--ck-primary-hover); background: var(--ck-primary-hover); color: var(--ck-on-primary); }
-.dash-action-spend:hover { border-color: var(--ck-link-hover); background: var(--ck-surface-raised); color: var(--ck-link-hover); }
-
-/* Лимиты по категориям: a coloured dot and the name, «spent / limit» on one line at the right, an 8 px bar. */
-.dash-limit-list, .dash-plain-list, .limits-list { display: grid; margin: 0; padding: 0; list-style: none; }
-.dash-limit-list { gap: 18px; }
-.dash-limit { display: grid; gap: 8px; min-width: 0; }
+/* Лимиты компактно (2026-10-26): the name, «N % · spent из limit» at the right in the muted colour (the overspend
+   colour over the limit), a 6 px bar in the colour of the category. Without any limit the card is one row-link. */
+.dash-limit-list, .limits-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.dash-limit-list { gap: 14px; }
+.dash-limit { display: grid; gap: 6px; min-width: 0; }
 .dash-limit-head, .limits-row-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .dash-limit-name { overflow-wrap: normal; }
 .dash-limit-value { margin-left: auto; }
 .dash-dot { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: var(--dash-cat); }
-.dash-limit-name, .limits-name { flex: 1 1 auto; min-width: 0; font-size: var(--ck-text-sm); font-weight: 600; }
-.dash-limit-value, .limits-current { flex: 0 0 auto; font-size: var(--ck-text-sm); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.dash-limit-spent { color: var(--ck-text); font-weight: 700; }
-.dash-limit-spent-over { color: var(--ck-over-text); }
-.dash-limit-of { color: var(--ck-text-muted); font-weight: 500; }
+.dash-limit-name, .limits-name { flex: 1 1 auto; min-width: 0; font-size: var(--ck-text-sm); font-weight: 700; }
+.dash-limit-value, .limits-current { flex: 0 0 auto; color: var(--ck-text-muted); font-size: var(--ck-text-xs); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dash-limit-spent-over { color: var(--ck-over-text); font-weight: 700; }
+.dash-limits-empty { flex-direction: row; align-items: center; gap: 12px; min-height: 56px; color: var(--ck-text); text-decoration: none; }
+.dash-limits-empty-title { flex: none; font-size: var(--ck-text-lg); font-weight: 800; }
+.dash-limits-empty-note { flex: 1 1 auto; min-width: 0; color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; }
+.dash-limits-empty:hover .dash-limits-empty-note { text-decoration: underline; text-underline-offset: 3px; }
 
 /* Подкатегории под строкой корня: отступ до имени корня (точка 10 px + зазор 8 px), полоса тоньше; цвет полосы — цвет
-   корня (--dash-cat наследуется от .dash-limit). Глубже — ещё по 12 px. Текст не мельче 13 px. */
+   корня (--dash-cat наследуется от .dash-limit). Глубже — ещё по 12 px. Текст не мельче 12 px. */
 .dash-sublimit-list { display: grid; gap: 12px; margin: 2px 0 0; padding: 0 0 0 18px; list-style: none; }
 .dash-sublimit .dash-sublimit-list { padding-left: 12px; }
 .dash-sublimit { display: grid; gap: 6px; min-width: 0; }
 .dash-sublimit-name { flex: 1 1 auto; min-width: 0; overflow-wrap: normal; font-size: var(--ck-text-xs); font-weight: 600; }
-.dash-sublimit-value { font-size: var(--ck-text-xs); }
-.dash-sublimit-over { font-size: var(--ck-text-xs); }
+.dash-sublimit-value { font-size: var(--ck-text-2xs); }
 /* Подкатегории свёрнуты: своя кнопка под строкой (ссылка строки ведёт в «Траты категории»). 44 px по высоте, но
    поля отрицательные: в строке она занимает одну строчку текста. Шеврон поворачивается без анимации. */
 .dash-sub-toggle { display: flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; min-height: 44px; margin: -12px 0 -14px 12px; padding: 0 8px 0 0; border: 0; background: none; color: var(--ck-text-muted); font: inherit; font-size: var(--ck-text-xs); font-weight: 600; text-align: left; cursor: pointer; }
@@ -128,16 +167,9 @@
 .dash-sub-count { white-space: nowrap; }
 .dash-sub-hint { overflow: hidden; font-size: var(--ck-text-xs); font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
 .dash-sublimit-list[hidden] { display: none; }
-.dash-bar-small { height: 6px; border-radius: 3px; }
+.dash-bar-small { height: 4px; border-radius: 2px; }
 
-/* Categories without a limit: below the limited ones, one compact line each, no bars. */
-.dash-plain-block { display: grid; gap: 2px; padding-top: 14px; border-top: 1px solid var(--ck-divider); }
-.dash-plain-title { margin: 0 0 4px; color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; letter-spacing: 0.02em; }
-.dash-plain-head { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 40px; color: var(--ck-text); text-decoration: none; }
-.dash-plain-name { flex: 1 1 auto; min-width: 0; font-size: var(--ck-text-sm); font-weight: 500; overflow-wrap: normal; }
-.dash-plain-value { flex: none; color: var(--ck-text-muted); font-size: var(--ck-text-sm); white-space: nowrap; }
-
-/* Последние траты: rows of the list brick, a tinted badge in the colour of the category. */
+/* «Сегодня и вчера» (a past month — the last three): rows of the list brick, a tinted badge in the colour of the category. */
 .dash-recent { gap: 0; padding-block: 12px 4px; }
 .dash-recent .ck-panel-head { padding: 4px 0 8px; }
 .dash-recent .ck-list > li:first-child { border-top: 1px solid var(--ck-divider); }
@@ -149,7 +181,7 @@
 /* Строка категории на «Главной» — ссылка на её траты месяца: вся голова строки, не меньше 44 px. */
 .dash-limit-link { min-height: 44px; color: var(--ck-text); text-decoration: none; }
 .dash-limit-head.dash-limit-link { margin-block: -8px; }
-.dash-limit-link:hover .dash-limit-name, .dash-limit-link:hover .dash-sublimit-name, .dash-limit-link:hover .dash-plain-name { text-decoration: underline; text-underline-offset: 3px; }
+.dash-limit-link:hover .dash-limit-name, .dash-limit-link:hover .dash-sublimit-name { text-decoration: underline; text-underline-offset: 3px; }
 
 /* «Траты категории»: the name is the heading of the page; the categories above it, the month with its steps in the
    head of the first card, the hero total, what it consists of (parts link deeper), the spends and receipts. */
@@ -255,12 +287,13 @@
 .limits-history-up { color: var(--ck-over-text); }
 .limits-history-down { color: var(--ck-success-text); }
 
-/* A wide screen: the month and the spends on the left, the limits beside them — first in the side column, the income of
-   the month and the recurring payments under them. */
+/* A wide screen: the ring, «Требует внимания» and the latest spends on the left, the limits beside them — first in
+   the side column, the tiles under them (the PC layout of 2026-10-20). */
 @media (min-width: 960px) {
   .dash { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; max-width: none; }
   .dash-column { display: grid; gap: 16px; min-width: 0; }
   .dash-column-side > .dash-limits { order: 0; }
+  .dash-column-side > .dash-tiles { order: 1; }
   /* «Лимиты»: the currency, the budget, the list and its save bar at the left (three fifths), the history at the right;
      a row of the list is one line. The budget card (the same form markup) keeps its stacked layout. */
   .limits { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }

@@ -135,12 +135,13 @@ function AddMenu() {
   )
 }
 
-/** The main menu of the shell: one `nav` for every width. In the header it is a row of links with «Данные ▾» and
- * «Настройки ▾»; on a phone the stylesheet pins it to the bottom of the window: «Главная · Траты · ＋ · Статистика ·
- * Ещё», and «Ещё» is a link to its screen (`/more`, features/more) — the links after the third one live there.
+/** The main menu of the shell: one `nav` for every width. In the header it is a row of links — «Главная · Траты ·
+ * Деньги · Статистика» — with «Данные ▾» and «Настройки ▾»; on a phone the stylesheet pins it to the bottom of the
+ * window: «Главная · Траты · ＋ · Деньги · Ещё», and «Ещё» is a link to its screen (`/more`, features/more) — the links
+ * of the two sections live there, «Статистика» behind the tile of «Деньги».
  */
 export default function MainMenu({ session, route, menuRef }: { session: Session; route: Route; menuRef: RefObject<HTMLElement | null> }) {
-  const { primary, more, groups, add } = menuItems(session, route)
+  const { primary, header, more, groups, add } = menuItems(session, route)
   const currentInMore = more.find((entry) => entry.current)
   const onMore = route.kind === 'more'
 
@@ -154,11 +155,10 @@ export default function MainMenu({ session, route, menuRef }: { session: Session
         <Link className="main-more-toggle" to="/more" aria-current={onMore ? 'page' : undefined}
           aria-label={currentInMore ? `Ещё, текущий раздел: ${currentInMore.label}` : undefined}
           data-current={currentInMore ? '' : undefined}><Icon name="more" />Ещё</Link>
-        {/* The header row of a wide screen and the narrow strip: «Деньги» as links, «Данные ▾», «Настройки ▾». */}
+        {/* The header row of a wide screen and the narrow strip: «Статистика» as a link, «Данные ▾», «Настройки ▾». */}
         <div className="main-more-list">
-          {groups.map((group) => group.key === 'money'
-            ? <div key={group.key} className="main-more-tiles" role="group" aria-label={group.title}>{group.items.map(item)}</div>
-            : <MenuSection key={group.key} group={group} />)}
+          {header.map(item)}
+          {groups.map((group) => <MenuSection key={group.key} group={group} />)}
         </div>
       </div>}
     </nav>

@@ -59,6 +59,23 @@ export type DashboardPlanned = {
   segments: { id: number; name: string; category_id: number | null; amount: Decimal; done: boolean }[]
   rows: DashboardPlannedRow[]
 }
+/** One day of the month on the pulse of «Главная» (2026-10-26): what was spent that day in the base currency. */
+export type DashboardDay = { day: ISODate; spent: Decimal }
+/** The kinds of a row of «Требует внимания» the contract names; a kind this client does not know gets a plain badge. */
+export type AttentionKind = 'payment_due' | 'payment_overdue' | 'income_missing' | 'limit_near' | 'limit_over' | 'plan_verdict' | 'plans_question'
+/** A row of «Требует внимания»: the server already sorted them (only in the current month); `href` is where a tap
+ * leads — `/recurring`, `/budget/limits`, `/receipts/new?kind=income`, `/planned`. */
+export type DashboardAttention = {
+  kind: AttentionKind | string; title: string; meta: string; href: string
+  /** null — no amount to show (the overrun of a limit, the sum of a payment); missing from a leaner server. */
+  amount?: Decimal | null; currency?: CurrencyCode | null
+}
+/** The tile «Платежи»: `segments` — one part of the mini bar per payment of the month, in its order. */
+export type DashboardPaymentsTile = { paid: number; total: number; left: Decimal; currency: CurrencyCode; segments: { paid: boolean }[] }
+/** The tile «Цели»: `share` — the part of every goal that is saved, 0–100; `top` — the first goals by their share. */
+export type DashboardGoalsTile = { count: number; share: Decimal | number; saved: Decimal; currency: CurrencyCode; top: { name: string; share: Decimal | number }[] }
+/** The three tiles of «Главная» (2026-10-26); each null — nothing of that kind. */
+export type DashboardTiles = { payments: DashboardPaymentsTile | null; plans: DashboardPlanned | null; goals: DashboardGoalsTile | null }
 export type Dashboard = InBase & {
   /** The month in the base currency (null — nothing to show); read into `currencies` by `getDashboard`. */
   base?: DashboardCurrency | null
@@ -66,6 +83,15 @@ export type Dashboard = InBase & {
   budget?: DashboardBudget | null
   allowance?: DashboardAllowance | null
   planned?: DashboardPlanned | null
+  /** The pulse of the month (2026-10-26): every day of the month; `average_day` — the sum over the days passed (over
+   * all the days of a past month), null in a month without spends. Missing from an older server: the hero is drawn
+   * without the pulse. */
+  by_day?: DashboardDay[]
+  average_day?: Decimal | null
+  /** «Требует внимания»: up to three rows and how many more there are; missing from an older server. */
+  attention?: DashboardAttention[]
+  attention_more?: number
+  tiles?: DashboardTiles
   month: MonthCode; previous_month: MonthCode; days_left: number; members: string[]; people?: Person[]
   /** One block per currency from an older server; one block of the base currency (or none) from a newer one (api/base-currency.ts). */
   currencies: DashboardCurrency[]; recent: DashboardRecent[]

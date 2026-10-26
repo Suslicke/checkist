@@ -4,7 +4,8 @@ import { withBase } from './base-currency.ts'
 import type { InBase } from './base-currency.ts'
 import type {
   BudgetLimit, BudgetLimitChange, BudgetLimitHistory, BudgetLimitSeries, CategorySpendCurrency, CategorySpendItem, CategorySpendLine, CategorySpendPart, CategorySpends, Dashboard, DashboardAllowance,
-  DashboardBudget, DashboardCategory, DashboardCurrency, DashboardPlanned, DashboardPlannedRow, DashboardRecent, DashboardSubCategory, MonthBudget,
+  DashboardAttention, DashboardBudget, DashboardCategory, DashboardCurrency, DashboardDay, DashboardGoalsTile, DashboardPaymentsTile, DashboardPlanned, DashboardPlannedRow, DashboardRecent,
+  DashboardSubCategory, DashboardTiles, MonthBudget,
 } from './budget-types.ts'
 import { isPerson } from '../lib/people.ts'
 
@@ -35,7 +36,7 @@ const dashboardRecent = object<Omit<DashboardRecent, 'owner_name' | 'base_total'
 })
 const recentItem: Check = (value) => dashboardRecent(value) && optional(value, 'owner_name', text)
   && optional(value, 'base_total', nullable(amount))
-const dashboardShape = object<Omit<Dashboard, 'people' | 'base' | 'budget' | 'allowance' | 'planned' | keyof InBase>>({
+const dashboardShape = object<Omit<Dashboard, 'people' | 'base' | 'budget' | 'allowance' | 'planned' | 'by_day' | 'average_day' | 'attention' | 'attention_more' | 'tiles' | keyof InBase>>({
   month: isMonthCode, previous_month: isMonthCode, days_left: nonNegativeInteger, members: array(username),
   currencies: array(dashboardCurrency), recent: array(recentItem),
 })
@@ -50,10 +51,27 @@ const plannedSegment = object<DashboardPlanned['segments'][number]>({ id: isId, 
 const dashboardPlanned = object<DashboardPlanned>({
   expected: amount, left: amount, count: nonNegativeInteger, done_count: nonNegativeInteger, segments: array(plannedSegment), rows: array(plannedRow),
 })
-/** The month in the base currency too when the server sends it; an older server without it passes. */
+/** A share of 0–100 as the server counts it: a decimal string or a number. */
+const share: Check = (value) => amount(value) || (typeof value === 'number' && Number.isFinite(value))
+const dashboardDay = object<DashboardDay>({ day: isISODate, spent: amount })
+const attentionShape = object<Omit<DashboardAttention, 'amount' | 'currency'>>({ kind: text, title: text, meta: text, href: text })
+/** A row of «Требует внимания»: the words of the contract; a kind the client does not know still passes (a plain badge). */
+const dashboardAttention: Check = (value) => attentionShape(value) && optional(value, 'amount', nullable(amount)) && optional(value, 'currency', nullable(currency))
+const paymentsTile = object<DashboardPaymentsTile>({
+  paid: nonNegativeInteger, total: nonNegativeInteger, left: amount, currency, segments: array(object<{ paid: boolean }>({ paid: bool })),
+})
+const goalsTile = object<DashboardGoalsTile>({
+  count: nonNegativeInteger, share, saved: amount, currency, top: array(object<DashboardGoalsTile['top'][number]>({ name: text, share })),
+})
+const dashboardTiles = object<DashboardTiles>({ payments: nullable(paymentsTile), plans: nullable(dashboardPlanned), goals: nullable(goalsTile) })
+/** The month in the base currency too when the server sends it; an older server without it passes. The fields of the
+ * home of 2026-10-26 (`by_day`, `average_day`, `attention`, `attention_more`, `tiles`) are read when they are there. */
 export const isDashboard = withBase<Dashboard>((value): value is Dashboard => dashboardShape(value)
   && optional(value, 'people', array(isPerson)) && optional(value, 'budget', nullable(dashboardBudget))
-  && optional(value, 'allowance', nullable(dashboardAllowance)) && optional(value, 'planned', nullable(dashboardPlanned)), undefined, false)
+  && optional(value, 'allowance', nullable(dashboardAllowance)) && optional(value, 'planned', nullable(dashboardPlanned))
+  && optional(value, 'by_day', array(dashboardDay)) && optional(value, 'average_day', nullable(amount))
+  && optional(value, 'attention', array(dashboardAttention)) && optional(value, 'attention_more', nonNegativeInteger)
+  && optional(value, 'tiles', dashboardTiles), undefined, false)
 
 export const isMonthBudget = object<MonthBudget>({ amount: nullable(amount), currency: nullable(currency), base_currency: currency })
 

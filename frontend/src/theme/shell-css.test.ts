@@ -106,6 +106,8 @@ describe('state rules of the shell (text of the rules, not rendering)', () => {
       // The heading of the page takes the ring off itself: focused by script only (focus-ring-css.test.ts).
       'h1[tabindex="-1"]:focus-visible = 2',
       '.skip-link:focus = 2', '.skip-link:focus-visible = 2', '.brand-bar :focus-visible = 2',
+      // The mark of «Чат с ИИ» beside the theme switch (2026-10-26): as weak as its class.
+      '.ck-chat-link:where(:hover) = 1',
       '.brand-bar .main-navigation a:hover = 3',
       // The rows of the «＋» sheet and the round control of the header row (artifact design): as weak as their class.
       '.main-add-action:where(:hover) .main-add-title = 2',

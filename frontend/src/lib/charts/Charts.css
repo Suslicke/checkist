@@ -192,3 +192,20 @@
   .ck-pie-legend tbody tr[data-state="active"], .ck-pie-legend tbody tr.ck-pie-child:hover, .ck-pie-legend tbody tr.ck-pie-child:focus-within { outline: 2px solid Highlight; outline-offset: -2px; }
   .ck-line-marker[data-state="active"] { stroke: Highlight; }
 }
+
+/* The ring of «Главная» (Ring.tsx, 2026-10-26): stroked circles turned to start at twelve, the track in the colour of
+   the bars' track, a segment in the colour of its category (the same numbers as on «Главная» and in «Тратах»,
+   lib/category-tone.ts; 0 — no category). The words in the middle are a box over the drawing. */
+.ck-ring { position: relative; flex: none; }
+.ck-ring-svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ck-ring-track, .ck-ring-segment { fill: none; stroke-linecap: butt; }
+.ck-ring-track { stroke: var(--ck-track); }
+.ck-ring-segment { stroke: var(--ck-ring, var(--ck-series-other)); }
+.ck-ring-tone-0 { --ck-ring: var(--ck-series-other); }
+.ck-ring-tone-1 { --ck-ring: var(--ck-cat-1); }
+.ck-ring-tone-2 { --ck-ring: var(--ck-cat-2); }
+.ck-ring-tone-3 { --ck-ring: var(--ck-cat-3); }
+.ck-ring-tone-4 { --ck-ring: var(--ck-cat-4); }
+.ck-ring-tone-5 { --ck-ring: var(--ck-cat-5); }
+.ck-ring-tone-6 { --ck-ring: var(--ck-cat-6); }
+.ck-ring-centre { position: absolute; inset: 0; display: grid; place-content: center; gap: 2px; min-width: 0; text-align: center; }

@@ -25,6 +25,7 @@ export const ANSWER_LIMIT = 300
  * the state of a form. */
 const REMEMBERED: readonly RegExp[] = [
   /^dashboard\/$/,
+  /^money\/$/,
   /^receipts\/$/,
   /^receipts\/\d+\/$/,
   /^receipts\/\d+\/(lines|discounts|taxes)\/$/,

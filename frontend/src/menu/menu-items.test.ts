@@ -13,8 +13,8 @@ const catalog: Route = { kind: 'catalog', query: { page: 1 } }
 const health: Route = { kind: 'health' }
 const labels = (items: { label: string }[]) => items.map((item) => item.label)
 const current = (session: Session, route: Route) => {
-  const { primary, more } = menuItems(session, route)
-  return [...primary, ...more].filter((item) => item.current).map((item) => item.key)
+  const { primary, header, more } = menuItems(session, route)
+  return [...primary, ...header, ...more].filter((item) => item.current).map((item) => item.key)
 }
 
 describe('items of the main menu and their split for the bottom bar of a phone', () => {
@@ -33,13 +33,13 @@ describe('items of the main menu and their split for the bottom bar of a phone',
     expect(menu.add).toBe(false)
   })
 
-  it('local_single: «Главная · Траты · ＋ · Статистика» in the bar, «Деньги», «Данные» and «Настройки» behind «Ещё»', () => {
+  it('local_single: «Главная · Траты · ＋ · Деньги» in the bar, «Статистика» in the header row, «Данные» and «Настройки» behind «Ещё»', () => {
     const menu = menuItems(local, catalog)
-    expect(menu.primary.map((item) => [item.label, item.to])).toEqual([['Главная', '/'], ['Траты', '/receipts'], ['Статистика', '/stats']])
+    expect(menu.primary.map((item) => [item.label, item.to])).toEqual([['Главная', '/'], ['Траты', '/receipts'], ['Деньги', '/money']])
+    expect(menu.header.map((item) => [item.label, item.to])).toEqual([['Статистика', '/stats']])
     expect(menu.add).toBe(true)
     expect(ADD_AFTER).toBe(2)
     expect(menu.groups.map((group) => [group.title, group.items.map((item) => [item.label, item.to])])).toEqual([
-      ['Деньги', [['Доходы', '/incomes'], ['Платежи', '/recurring'], ['Планы', '/planned'], ['Цели', '/goals'], ['Разбор месяца', '/review'], ['Чат с ИИ', '/chat']]],
       ['Данные', [['Загрузить чек', '/receipts/upload'], ['Загрузить выписку', '/statements/new'], ['Каталог', '/catalog'], ['Магазины', '/stores'], ['Правила выписок', '/statements/rules'], ['Обработка чеков', '/recognition/jobs'], ['Выгрузка', '/export']]],
       ['Настройки', [['Состояние сервисов', '/health']]],
     ])
@@ -49,13 +49,13 @@ describe('items of the main menu and their split for the bottom bar of a phone',
 
   it('accounts: the same and the name of the person, the last one behind «Ещё»', () => {
     const menu = menuItems(reader, catalog)
-    expect(labels(menu.primary)).toEqual(['Главная', 'Траты', 'Статистика'])
+    expect(labels(menu.primary)).toEqual(['Главная', 'Траты', 'Деньги'])
     expect(menu.add).toBe(true)
-    expect(labels(menu.more)).toEqual(['Доходы', 'Платежи', 'Планы', 'Цели', 'Разбор месяца', 'Чат с ИИ', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов'])
-    expect(labels(menu.groups[2].items)).toEqual(['Семья', 'synthetic-reader', 'Состояние сервисов'])
-    expect(menu.more[14]).toEqual({ key: 'account', to: '/account', label: 'synthetic-reader', current: false, account: true, icon: 'account' })
-    // The pictures of the bottom bar and of the list behind «Ещё» (components/Icon.tsx).
-    expect([...menu.primary, ...menu.more].map((item) => item.icon)).toEqual(['home', 'list', 'stats', 'income', 'repeat', 'box', 'goal', 'insight', 'insight', 'image', 'statement', 'catalog', 'store', 'statement', 'jobs', 'export', 'family', 'account', 'health'])
+    expect(labels(menu.more)).toEqual(['Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов'])
+    expect(labels(menu.groups[1].items)).toEqual(['Семья', 'synthetic-reader', 'Состояние сервисов'])
+    expect(menu.more[8]).toEqual({ key: 'account', to: '/account', label: 'synthetic-reader', current: false, account: true, icon: 'account' })
+    // The pictures of the bottom bar, of the header link and of the list behind «Ещё» (components/Icon.tsx).
+    expect([...menu.primary, ...menu.header, ...menu.more].map((item) => item.icon)).toEqual(['home', 'list', 'bank', 'stats', 'image', 'statement', 'catalog', 'store', 'statement', 'jobs', 'export', 'family', 'account', 'health'])
   })
 
   it('never puts more into the bar than it holds, and keeps «Ещё» for at least two links', () => {
@@ -76,14 +76,15 @@ describe('items of the main menu and their split for the bottom bar of a phone',
     [{ kind: 'stats-incomes', query: {} }, 'stats'],
     [{ kind: 'jobs', query: { page: 1 } }, 'jobs'], [{ kind: 'job', jobId: 9 }, 'jobs'],
     [health, 'health'], [{ kind: 'account' }, 'account'], [{ kind: 'export', query: {} }, 'export'],
-    [{ kind: 'review' }, 'review'], [{ kind: 'review', month: '2026-09' }, 'review'], [{ kind: 'chat', q: 'кафе' }, 'chat'], [{ kind: 'chat', threadId: 5 }, 'chat'],
-    [{ kind: 'goals' }, 'goals'], [{ kind: 'goal', goalId: 4 }, 'goals'],
+    [{ kind: 'money' }, 'money'],
   ])('marks one current item at %j', (route, key) => {
     expect(current(reader, route)).toEqual([key])
   })
 
-  it('marks nothing on a page outside of the menu, and no account in local_single', () => {
+  it('marks nothing on a page outside of the menu, in a section of «Деньги», and no account in local_single', () => {
     expect(current(reader, { kind: 'not-found', path: '/missing' })).toEqual([])
+    // The money sections are reached from the hub (2026-10-26): «Деньги» of the bar is current on its own screen only.
+    for (const route of [{ kind: 'review' }, { kind: 'chat', threadId: 5 }, { kind: 'goals' }, { kind: 'incomes' }, { kind: 'recurring' }, { kind: 'planned' }] as Route[]) expect(current(reader, route), route.kind).toEqual([])
     expect(current(local, { kind: 'account' })).toEqual([])
     expect(current(guest, { kind: 'login' })).toEqual([])
   })

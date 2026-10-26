@@ -6,7 +6,7 @@ import { confirmAction, createThread, getMessage, isChatMessageShape, isThreadSh
 import { chatActionsFixture, chatMessageFixture, chatThreadFixture, chatThreadsFixture, plansThreadFixture } from '../../api/chat-test-support'
 import { aiTexts } from '../../lib/ai'
 import { buildRoute, parseRoute } from '../../navigation'
-import { isMoreSection } from '../../menu/back-target'
+import { isHubSection, isMoreSection } from '../../menu/back-target'
 import { backTarget } from '../../menu/back-target'
 import { insightTexts } from '../insights/insights-state'
 import { ChatView } from './ChatPage'
@@ -85,8 +85,9 @@ describe('routes and menu of the chat', () => {
     expect(buildRoute({ kind: 'chat', threadId: 5 })).toBe('/chat/5')
     expect(buildRoute({ kind: 'chat', q: 'кафе & такси' })).toBe('/chat?q=%D0%BA%D0%B0%D1%84%D0%B5+%26+%D1%82%D0%B0%D0%BA%D1%81%D0%B8')
   })
-  it('is a section of «Ещё»; a thread goes back to the list', () => {
-    expect(isMoreSection({ kind: 'chat' })).toBe(true)
+  it('is a section of «Деньги» (2026-10-26), not of «Ещё»; a thread goes back to the list', () => {
+    expect(isHubSection('/money', { kind: 'chat' })).toBe(true)
+    expect(isMoreSection({ kind: 'chat' })).toBe(false)
     expect(backTarget({ route: { kind: 'chat', threadId: 5 } })).toEqual({ to: '/chat', label: 'Назад к беседам' })
     expect(backTarget({ route: { kind: 'chat' } })).toBeUndefined()
   })

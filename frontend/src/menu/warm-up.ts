@@ -1,7 +1,7 @@
 /**
  * The warm-up of the bar screens («мгновенные экраны», 2026-10-13). Once the first screen is drawn and the person is
- * known, on the first idle moment, the first reads of «Главная» (the current month), «Траты» and «Статистика» — those
- * the person is not on — go to the memory of answers (`api/answer-cache.ts`): a tap on the bar then shows the screen at
+ * known, on the first idle moment, the first reads of «Главная» (the current month), «Траты» and «Деньги» — those the
+ * person is not on — go to the memory of answers (`api/answer-cache.ts`): a tap on the bar then shows the screen at
  * once. The reads are the very calls of the screens with the very parameters, so their keys match
  * (`warm-up.test.tsx` renders the screens and compares). A handful of requests, once per session; nothing when the
  * device is offline or saves data.
@@ -9,9 +9,8 @@
 import { useEffect, useRef } from 'react'
 import { getDashboard } from '../api/budget'
 import { getCountries } from '../api/countries'
-import { getIncomeSummary } from '../api/incomes'
 import { getReceipts } from '../api/receipts'
-import { getRecurringMonth } from '../api/recurring'
+import { getMoney } from '../api/money'
 import { getSpending } from '../api/stats'
 import { getStores } from '../api/stores'
 import { pageKey } from '../features/auth/auth-state'
@@ -33,13 +32,11 @@ type Read = (signal: AbortSignal) => Promise<unknown>
 export function firstReads(route: Route): Read[] {
   switch (route.kind) {
     case 'dashboard':
-      // «Главная» draws the income line and the payments of the month its answer names.
-      return [async (signal) => {
-        const result = await getDashboard(route.month, { signal })
-        if (result.kind !== 'ok') return
-        const month = result.data.month
-        await Promise.all([getIncomeSummary(month, { signal }), getRecurringMonth(month, { signal })])
-      }]
+      // «Главная» of 2026-10-26 reads one answer: the ring, the pulse, the attention and the tiles come in it.
+      return [(signal) => getDashboard(route.month, { signal })]
+    case 'money':
+      // «Деньги» reads its month (the thread of the chat is not kept in the memory: it is polled).
+      return [(signal) => getMoney(undefined, { signal })]
     case 'receipts': {
       const { page, store, product, country, currency, operation, date_from, date_to, q, owner, hidden, page_size, ordering } = route.query
       return [(signal) => getReceipts(receiptParams({

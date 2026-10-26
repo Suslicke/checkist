@@ -39,34 +39,34 @@ describe('«Можно тратить в день» (2026-10-13)', () => {
       .toBe('Траты и 1 платёж к оплате больше дохода месяца 700 000 ₸')
   })
 
-  it('stands in the hero card of the current month only', () => {
+  it('stands at the foot of the hero of the current month only, «Перерасход» in the overspend colour', () => {
     const html = view({ allowance })
     const hero = html.slice(html.indexOf('dash-hero'), html.indexOf('</section>', html.indexOf('dash-hero')))
-    expect(hero).toContain('<div class="dash-allowance"><p class="dash-allowance-line"><span class="dash-allowance-label">Можно тратить в день</span>')
-    expect(hero).toContain(`<span class="dash-allowance-value ck-figures">${nb('20 449,47 ₸')}</span>`)
-    expect(view({ allowance: { ...allowance, per_day: null, overspent: '100.00' } })).toContain('<div class="dash-allowance dash-allowance-over">')
+    expect(hero).toContain(`<span class="dash-hero-day" title="Бюджет месяца ${nb('700 000 ₸')} минус траты и ${nb('2 платежа к оплате')} (${nb('23 000 ₸')}), поровну на ${nb('19 дней')}">в день <b class="ck-figures">${nb('20 449,47 ₸')}</b>`)
+    expect(view({ allowance: { ...allowance, per_day: null, overspent: '100.00' } })).toContain('<span class="dash-hero-day dash-over"')
     // A past month: the server sends none, and a stale one is not drawn either.
-    expect(view({ allowance }, '2026-11')).not.toContain('dash-allowance')
-    expect(view({ allowance: null })).not.toContain('dash-allowance')
+    expect(view({ allowance }, '2026-11')).not.toContain('dash-hero-day')
+    expect(view({ allowance: null })).not.toContain('dash-hero-day')
   })
 })
 
-describe('«Бюджет месяца» over the limits (2026-10-13)', () => {
-  it('is the bar of the hero card, not a second row in «Лимиты»', () => {
+describe('«Бюджет месяца» on «Главная» (2026-10-26: the gap of the ring and the foot of the hero)', () => {
+  it('is the remainder of the ring and the line under it, not a row in «Лимиты»', () => {
     const html = view({ budget: { amount: '400000.00', currency: 'KZT', spent: '287450.00' } })
     const hero = html.slice(html.indexOf('dash-hero'), html.indexOf('</section>', html.indexOf('dash-hero')))
-    expect(hero).toContain('aria-label="Потрачено 71% бюджета месяца"')
-    expect(words(hero)).toContain('Осталось 112 550 ₸ из 400 000 ₸')
+    expect(words(hero)).toContain('Остаток бюджета112 550 ₸')
+    expect(words(hero)).toContain('из 400 000 ₸')
+    expect(words(hero)).toContain('72 % бюджета')
     expect(html.slice(html.indexOf('dash-limits'))).not.toContain('dash-budget')
     const over = view({ budget: { amount: '200000.00', currency: 'KZT', spent: '287450.00' } })
     expect(words(over)).toContain('Сверх бюджета на 87 450 ₸')
   })
 
-  it('stands alone in the card without limits and categories, and is absent without a budget', () => {
+  it('is not drawn in a month without spends, and is absent without a budget', () => {
     const empty = { currencies: [], recent: [] }
-    expect(words(view({ ...empty, budget: { amount: '400000.00', currency: 'KZT', spent: '0.00' } }))).toContain('Бюджет месяца')
-    expect(view(empty)).toContain('Лимиты на месяц помогают видеть')
-    expect(view({ budget: null })).not.toContain('dash-budget')
+    expect(view({ ...empty, budget: { amount: '400000.00', currency: 'KZT', spent: '0.00' } })).not.toContain('Остаток бюджета')
+    expect(view(empty)).toContain('Задать лимиты')
+    expect(view({ budget: null })).not.toContain('Остаток бюджета')
   })
 })
 
