@@ -1,11 +1,11 @@
 /** Follow one request of the model until it settles: poll it like «Трата словами», bounded by `WAIT_MS`. */
-import type { Ask, Review } from '../../api/insights'
 import type { LocalApiResult } from '../../api/types'
 import { createPollingRequest } from '../recognition/polling'
 import { insightTexts, isActive, outcome, requestFailureMessage, WAIT_MS } from './insights-state'
+import type { Settling } from './insights-state'
 
 /** `done` gets the settled row, `fail` the words of a failure; the result stops following (on leaving the screen). */
-export function follow<T extends Review | Ask>(
+export function follow<T extends Settling & { id: number }>(
   first: T, load: (id: number, signal: AbortSignal) => Promise<LocalApiResult<T>>,
   done: (row: T) => void, fail: (message: string) => void,
 ): () => void {

@@ -961,6 +961,19 @@ docker compose -p checkist_dev cp postgres:/tmp/checkist.dump ./checkist.dump
   `recover_expired`), промпты `insights/prompts/{review,ask}.txt`, схемы `insights/schemas/{review,ask}.schema.json`;
   fake — `INSIGHTS_FAKE_SCENARIO` (`simple|invalid_output|provider_error|timeout`), срок — `INSIGHTS_TIMEOUT_SECONDS`
   (120, читается через `getattr`, в settings не вынесен).
+## Чат с ИИ (`insights`, 2026-10-26, ветка `feature/planned-and-chat`)
+
+- `insights.InsightThread` — беседа: `owner` (CASCADE; видит только он), `kind` `free|spend|plans|month`, `title` (≤ 120),
+  `receipt` (FK `receipts.Receipt`, SET_NULL — удалённая трата оставляет беседу), `month` (1-е число месяца беседы
+  `month`), `created_at`, `updated_at` (обновляется сообщением, ответом и подтверждённым действием). `InsightRequest`
+  получил `thread` (FK, CASCADE — беседа удаляется с сообщениями), `kind` `chat` и `actions` (JSON: действия модели,
+  у каждого `done_at`/`result` после подтверждения; `null`, пока ответа нет). У `chat` `context` — сводка месяца беседы
+  плюс `plans` и `subject`. Миграция `insights.0002_chat`; откат — `migrate insights 0001_initial` (сообщения `chat`
+  удаляются, иначе прежняя проверка `kind` не вернётся; беседы уходят с таблицей).
+- Правило — `insights/chat.py`: `create_thread`, `send` (`use_ai` и лимиты как у вопроса), `subject`, `plans_input`,
+  `history`, `apply_verdicts` (после `succeeded` — `ai_verdict`/`ai_reason`/`ai_at` видимых владельцу планов),
+  `confirm_action` (единственный путь исполнения действия — `planned.services.apply_action`, повтор — `ActionDone`).
+  Сама модель данных не меняет. Промпт `insights/prompts/chat.txt`, схема `insights/schemas/chat.schema.json`.
 ## Доходы (`incomes`, 2026-10-13, ветка `feature/incomes`)
 
 - `incomes.IncomeCategory` — `name` (до 60), `household` / `user` — оба пусты у встроенных, иначе один из них (владелец
@@ -1099,3 +1112,15 @@ docker compose -p checkist_dev cp postgres:/tmp/checkist.dump ./checkist.dump
 обязательно, время на часах сохраняется, `fiscal_key`/номер/смена/касса не меняются; нарушение трёх ограничений
 дедупликации — отказ `receipt: duplicate`. Трата из выписки определяется строкой `statements.StatementRow.receipt`:
 способ — банк, комментарий кончается « · Выписка …».
+
+## Планы — ожидаемые разовые траты (`planned`, 2026-10-26, ветка `feature/planned-and-chat`)
+
+Приложение `planned` (миграция `planned.0001_initial`; откат — `migrate planned zero`, удаляет планы; траты и цели не
+трогает). `PlannedSpend` — владелец как у лимита: `household` либо `user` (ровно один, `planned_spend_one_owner`);
+`name` (100), `category` → `catalog.Category` (NULL, `PROTECT`), `currency` (`PROTECT`), `amount` > 0 (Decimal 14,2,
+`planned_spend_amount_positive`), `due` (NULL — без срока), `due_exact` (True — «к 20 октября», False — «в октябре»,
+`due` = первое число), `note` (300), `receipt` → `receipts.Receipt` (NULL, `SET_NULL`, `OneToOne`: одна трата — один
+план; без обратной связи у чека), `goal` → `goals.Goal` (NULL, `SET_NULL`, без обратной связи), `ai_verdict`
+(`""` | `keep` | `wait` | `drop`), `ai_reason` (300), `ai_at`, `created_by` (`SET_NULL`), `created_at`, `updated_at`;
+индексы `(household, due)` и `(user, due)`. Отложено на цели и суммы месяца не хранятся — расчёт при чтении
+(`planned.services`); правило доступа — `planned.access.plans_q` (= `budget.access.limits_q`).

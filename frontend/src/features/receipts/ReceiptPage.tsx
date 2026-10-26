@@ -16,6 +16,7 @@ import { ReceiptBlock, ReceiptPagination } from './ReceiptBlock'
 import { ReceiptDeleteActions } from './ReceiptDeleteActions'
 import { ReceiptHideAction } from './ReceiptHideAction'
 import { ReceiptPhoto } from './ReceiptPhoto'
+import { StartChat } from '../chat/StartChat'
 import { useNarrow } from '../../lib/cards'
 import { ReceiptDiscounts, ReceiptHeader, ReceiptImages, ReceiptLines, ReceiptTaxes } from './ReceiptContent'
 import { lineCategories } from './line-facts'
@@ -77,6 +78,8 @@ export function ReceiptView({ receiptId, returnTo, header, images, lines, discou
     <ReceiptBlock title={numbered(manual ? 'Трата' : 'Чек', receiptId)} className="receipt-hero" state={header.state} retry={header.retry}>
       {receipt && <ReceiptHeader receipt={receipt} showOwner={showOwner} photo={photo} categories={lineCategories(visibleLines)} />}
       {receipt && <div className="receipt-toolbar">{actions}{hide}</div>}
+      {/* A thread of «Чат с ИИ» about this spend: the model gets the whole receipt and its place in the limits. */}
+      {receipt && <StartChat input={{ kind: 'spend', receipt_id: receiptId }} className="ck-button-secondary chat-ask-spend">Спросить ИИ об этой трате</StartChat>}
     </ReceiptBlock>
     {!manual && <PagedBlock title="Изображения чека" id="receipt-images" request={images} empty="У этого чека нет изображений."
       page={pages.images} onPage={(page) => onPage('images', page)}>

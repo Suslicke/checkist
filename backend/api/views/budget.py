@@ -20,6 +20,7 @@ from budget.models import BudgetLimit, BudgetLimitChange
 from catalog.models import Category
 from config.exceptions import InvalidParameter
 from incomes.services import month_income
+from planned import services as planned_services
 from rates.convert import request_base_currency
 from receipts import spending
 from receipts.models import Receipt
@@ -296,7 +297,8 @@ def _allowance_object(value):
     return {
         "currency": value.currency, "basis": value.basis, "amount": common.amount(value.amount),
         "spent": common.amount(value.spent), "unpaid": common.amount(value.unpaid), "unpaid_count": value.unpaid_count,
-        "days_left": value.days_left, "per_day": common.amount(value.per_day), "overspent": common.amount(value.overspent),
+        "planned": common.amount(value.planned), "planned_count": value.planned_count, "days_left": value.days_left,
+        "per_day": common.amount(value.per_day), "overspent": common.amount(value.overspent),
     }
 
 
@@ -319,6 +321,8 @@ class DashboardView(LocalAPIView):
     """
 
     def get(self, request):
+        from .planned import planned_card  # планы берут ``_amount`` и ``read_month`` отсюда: импорт внутри
+
         today = timezone.localdate()
         params = Params(request.query_params)
         month = read_month(params, today)
@@ -352,4 +356,6 @@ class DashboardView(LocalAPIView):
             "allowance": _allowance_object(allowance.daily(
                 request_user(request), month, today=today,
                 income=lambda: month_income(request_user(request), month))),
+            # Планы месяца (ожидаемые разовые траты, 2026-10-26): null — планов месяца нет.
+            "planned": planned_card(planned_services.dashboard_card(request, month, today)),
         })

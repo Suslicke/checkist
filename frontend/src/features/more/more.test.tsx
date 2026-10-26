@@ -28,7 +28,7 @@ describe('«Ещё» as a screen of its own (2026-10-13, Vitest/SSR, not browser
     expect(html).toContain('Семья «Пустовые» · пароль и уведомления')
     expect(html).toContain('<section aria-label="Деньги"><ul class="more-tiles"><li><a class="more-tile" href="/incomes">Доходы</a></li>')
     expect(html).toContain('<h2 id="more-data" class="more-title">Данные</h2>')
-    expect(links(html)).toEqual(['/account', '/incomes', '/recurring', '/goals', '/review', '/receipts/upload', '/statements/new', '/catalog', '/stores', '/statements/rules',
+    expect(links(html)).toEqual(['/account', '/incomes', '/recurring', '/planned', '/goals', '/review', '/chat', '/receipts/upload', '/statements/new', '/catalog', '/stores', '/statements/rules',
       '/recognition/jobs', '/export', '/family', '/health'])
     // The account is the card on top, not a row again; the theme and the pictures of the spends end «Настройки».
     expect(html.match(/href="\/account"/g)).toHaveLength(1)

@@ -22,6 +22,7 @@ urlpatterns = [
     re_path(r"", include("api.urls_incomes")),
     re_path(r"", include("api.urls_goals")),
     re_path(r"", include("api.urls_push")),
+    re_path(r"", include("api.urls_planned")),
     # Только пути с завершающим «/»: иначе APPEND_SLASH перестанет перенаправлять /api/health.
     re_path(r"^(?:.*/)?$", NotFoundView.as_view(), name="api-not-found"),
 ]

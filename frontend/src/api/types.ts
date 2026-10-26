@@ -26,6 +26,8 @@ export type LocalApiErrorReason = ApiErrorReason
   | 'storage_unavailable' | 'database_unavailable' | 'method_not_allowed' | 'not_acceptable'
   | 'ai_disabled' | 'ai_quota'
   | 'push_not_configured'
+  /** `POST /api/insights/{id}/actions/{index}/confirm/` of an action that was confirmed before (features/chat). */
+  | 'action_done'
 export type ApiFailure = {
   kind: 'error'
   reason: ApiErrorReason

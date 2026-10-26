@@ -1,0 +1,157 @@
+/* «Планы» (2026-10-26, макет frontend/planned-preview/index.html): экран /planned и карточка «Планируем в октябре» на
+   «Главной» в языке артефакта — карточки .ck-panel, строки .ck-list / .ck-row, главное действие залито --ck-primary
+   (обычная кнопка App.css), второе — .ck-button-secondary. Цвета — только токены (цвет категории — --ck-cat-N по
+   categoryTone, как на «Главной» и в «Тратах»), размеры текста — шкала --ck-text-*, анимаций нет; телефон (≤ 540 px) —
+   одна колонка без прокрутки вбок, колонки компьютера — блок theme/desktop.css (.planned-main / .planned-side). */
+.pl-cat-0 { --pl-cat: var(--ck-text-muted); --pl-cat-tint: var(--ck-neutral-bg); }
+.pl-cat-1 { --pl-cat: var(--ck-cat-1); --pl-cat-tint: var(--ck-cat-1-tint); }
+.pl-cat-2 { --pl-cat: var(--ck-cat-2); --pl-cat-tint: var(--ck-cat-2-tint); }
+.pl-cat-3 { --pl-cat: var(--ck-cat-3); --pl-cat-tint: var(--ck-cat-3-tint); }
+.pl-cat-4 { --pl-cat: var(--ck-cat-4); --pl-cat-tint: var(--ck-cat-4-tint); }
+.pl-cat-5 { --pl-cat: var(--ck-cat-5); --pl-cat-tint: var(--ck-cat-5-tint); }
+.pl-cat-6 { --pl-cat: var(--ck-cat-6); --pl-cat-tint: var(--ck-cat-6-tint); }
+
+.planned-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; max-width: 760px; }
+.pl-card { gap: 12px; }
+.pl-card h2, .pl-hero h2 { margin: 0; font-size: var(--ck-text-lg); font-weight: 800; }
+.ck-panel-head > .pl-card-link { display: inline-flex; align-items: center; min-height: 44px; margin-block: -12px; color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.pl-card-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pl-head-meta { flex: none; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; white-space: nowrap; }
+.pl-note { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
+.pl-foot { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); }
+.pl-notice { margin: 0; padding: 12px 16px; border-radius: var(--ck-radius-sm); background: var(--ck-info-bg); color: var(--ck-info-text); font-size: var(--ck-text-sm); font-weight: 600; }
+.pl-inline-link { color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; }
+.pl-inline-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* The hero: the month as one segmented strip — every plan a part, the closed ones solid, the open ones tinted. */
+.pl-hero { gap: 4px; }
+.pl-eyebrow { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.pl-hero h2.pl-eyebrow { font-size: var(--ck-text-xs); }
+.pl-hero-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; }
+.pl-hero-word { font-size: var(--ck-text-sm); font-weight: 700; color: var(--ck-text-muted); }
+.pl-hero-sub { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
+.pl-segments { display: flex; gap: 3px; height: 14px; margin-top: 14px; }
+.pl-segments > i { display: block; height: 100%; min-width: 6px; border-radius: 4px; background: var(--pl-cat-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-cat) 45%, transparent); }
+.pl-segments > i.pl-seg-done { background: var(--pl-cat); box-shadow: none; }
+.pl-segments > i:first-child { border-top-left-radius: 7px; border-bottom-left-radius: 7px; }
+.pl-segments > i:last-child { border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+.pl-segments-small { height: 10px; margin-top: 0; }
+.pl-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 600; }
+.pl-legend b { color: var(--ck-text); font-weight: 700; }
+.pl-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; background: var(--ck-cat-6); vertical-align: -1px; }
+.pl-legend i.pl-legend-open { background: var(--ck-cat-6-tint); box-shadow: inset 0 0 0 1px var(--ck-cat-6); }
+
+/* «＋ Запланировать» and «✦ Спросить ИИ» side by side. */
+.pl-cta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.pl-cta > button { min-height: 48px; white-space: nowrap; }
+.pl-ask { padding-inline: 16px; font-size: var(--ck-text-sm); }
+
+/* The months ahead as cards in one row (ChipScroller on a phone, a wrapping grid from 960 px — desktop.css). */
+.pl-months .ck-chip-scroller-track { padding: 2px; }
+.pl-month { display: grid; flex: 0 0 132px; gap: 2px; min-width: 0; padding: 12px 14px; border-radius: var(--ck-radius-button); background: var(--ck-surface-raised); color: var(--ck-text); text-decoration: none; }
+.pl-month:hover { background: var(--ck-neutral-bg); color: var(--ck-text); }
+.pl-month-now { background: var(--ck-accent-bg); outline: 1.5px solid var(--ck-accent); }
+.pl-month-now:hover { background: var(--ck-accent-bg); }
+.pl-month-label { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; white-space: nowrap; }
+.pl-month-now .pl-month-label { color: var(--ck-accent-text); }
+.pl-month-sum { font-size: var(--ck-text-base); font-weight: 800; white-space: nowrap; }
+.pl-month-sum-empty { color: var(--ck-text-muted); font-weight: 600; }
+.pl-month-meta { color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 600; white-space: nowrap; }
+.pl-month-bar { display: flex; gap: 2px; height: 5px; margin-top: 8px; }
+.pl-month-bar > i { display: block; height: 100%; border-radius: 3px; background: var(--pl-cat-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-cat) 45%, transparent); }
+.pl-month-bar > i.pl-seg-done { background: var(--pl-cat); box-shadow: none; }
+
+/* A row: the badge in the tint of the category, the rail under the name, the delta as a pill. The row is one button. */
+.pl-list > li:first-child { border-top: 1px solid var(--ck-divider); }
+.pl-row { align-items: flex-start; min-height: 0; padding: 14px 0; }
+.pl-row-button { width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; color: var(--ck-text); font-weight: inherit; text-align: left; }
+.pl-row-button:hover, .pl-row-button:active { border: 0; background: transparent; color: var(--ck-text); }
+.pl-row-button:hover .ck-row-title { text-decoration: underline; }
+.pl-row .ck-row-main { gap: 7px; }
+.pl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.pl-badge { background: var(--pl-cat-tint); color: var(--pl-cat); }
+.pl-done .pl-badge { background: var(--pl-cat); color: var(--ck-surface); }
+.pl-rail { position: relative; display: block; height: 6px; overflow: hidden; border-radius: 3px; background: var(--ck-track); }
+.pl-rail > b { position: absolute; left: 0; top: 0; height: 100%; border-radius: inherit; }
+.pl-rail-plan { background: var(--pl-cat-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-cat) 35%, transparent); }
+.pl-rail-over { background: var(--ck-over-bar); }
+.pl-rail-fact, .pl-rail-saved { background: var(--pl-cat); }
+.pl-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; color: var(--ck-text-muted); font-size: var(--ck-text-xs); white-space: normal; }
+.pl-pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--ck-radius-pill); font-size: var(--ck-text-2xs); font-weight: 700; white-space: nowrap; }
+.pl-pill-over { background: var(--ck-warning-bg); color: var(--ck-over-text); }
+.pl-pill-under { background: var(--ck-success-bg); color: var(--ck-success-text); }
+.pl-pill-ai-wait { background: var(--ck-warning-bg); color: var(--ck-warning-text); }
+.pl-pill-ai-drop { background: var(--ck-error-bg); color: var(--ck-error-text); }
+.pl-amount-plan { margin-right: 8px; color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 600; }
+.pl-amount-plan::before { content: "план "; }
+.pl-pick-row { min-height: 56px; padding: 8px 0; }
+
+/* The sheet of a plan: the figure, the words, the verdict of the model, the actions one under the other. */
+.pl-sheet { display: grid; gap: 12px; }
+.pl-sheet-sum { margin: 0; font-size: var(--ck-text-xl); font-weight: 800; }
+.pl-verdict { margin: 0; padding: 10px 12px; border-radius: var(--ck-radius-sm); font-size: var(--ck-text-sm); }
+.pl-verdict-keep { background: var(--ck-success-bg); color: var(--ck-success-text); }
+.pl-verdict-wait { background: var(--ck-warning-bg); color: var(--ck-warning-text); }
+.pl-verdict-drop { background: var(--ck-error-bg); color: var(--ck-error-text); }
+.pl-sheet-actions, .pl-actions { display: grid; gap: 8px; }
+.pl-sheet-actions > button, .pl-sheet-actions > .pl-link-button, .pl-actions > button, .pl-wide, .pl-add, .pl-save { width: 100%; min-height: 48px; }
+.pl-link-button { display: inline-flex; align-items: center; justify-content: center; padding: 0 20px; border: 1px solid var(--ck-link); border-radius: var(--ck-radius-button); color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 800; text-decoration: none; }
+.pl-link-button:hover { background: var(--ck-surface-raised); color: var(--ck-link-hover); }
+.pl-confirm { display: grid; gap: 10px; }
+.pl-confirm p { margin: 0; font-size: var(--ck-text-sm); }
+.pl-section { display: grid; gap: 12px; }
+.pl-section h3 { margin: 0; font-size: var(--ck-text-base); font-weight: 800; }
+.pl-sheet button[aria-disabled="true"], .pl-section button[aria-disabled="true"], .pl-form button[aria-disabled="true"], .pl-cta button[aria-disabled="true"] { border-color: var(--ck-disabled-border); background: var(--ck-disabled-bg); color: var(--ck-disabled-text); cursor: default; }
+
+/* The form in the sheet: rows of 56 px — the words on the left, the field on the right — like «Платежи». */
+.pl-form { display: grid; gap: 16px; padding-bottom: 4px; }
+.pl-fields { display: grid; border-top: 1px solid var(--ck-divider); }
+.pl-field-wrap { border-bottom: 1px solid var(--ck-divider); }
+.pl-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 56px; cursor: text; }
+.pl-field > span { flex: none; font-size: var(--ck-text-sm); font-weight: 600; }
+.pl-field input, .pl-field select { flex: 1; width: 100%; min-width: 0; min-height: 48px; padding: 0 2px; border: 0; border-radius: var(--ck-radius-sm); background: transparent; color: var(--ck-text); font-size: var(--ck-text-base); text-align: right; text-align-last: right; }
+.pl-field input::placeholder { color: var(--ck-text-muted); opacity: 1; }
+.pl-field input[aria-invalid="true"], .pl-field select[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--ck-error-border); }
+.pl-field-error { margin: 0 0 10px; color: var(--ck-error-text); font-size: var(--ck-text-xs); font-weight: 600; }
+.pl-calc { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; }
+@media (pointer: fine) {
+  .pl-calc:not(:has(.expense-calc-result)) { display: none; }
+}
+.pl-due-choice { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 12px 0; border: 0; border-bottom: 1px solid var(--ck-divider); }
+.pl-due-choice > legend { padding: 0; font-size: var(--ck-text-sm); font-weight: 600; }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pl-chips .ck-chip { font-size: var(--ck-text-sm); }
+
+/* «Как накопить»: the options as cards, the chosen one outlined, the bar «вложено | проценты». */
+.pl-advice-sub { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
+.pl-timeline { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin-top: 10px; color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; }
+.pl-timeline > i { position: relative; height: 4px; border-radius: 2px; background: var(--ck-track); }
+.pl-timeline > i > s { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); color: var(--ck-text); text-decoration: none; white-space: nowrap; }
+.pl-options { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.pl-option-pick { display: grid; gap: 8px; width: 100%; min-width: 0; margin: 0; padding: 14px; border: 0; border-radius: var(--ck-radius-button); background: var(--ck-surface-raised); color: var(--ck-text); font: inherit; font-weight: inherit; text-align: left; }
+button.pl-option-pick:hover, button.pl-option-pick:active { border: 0; background: var(--ck-neutral-bg); color: var(--ck-text); }
+.pl-option-best .pl-option-pick, .pl-option-best button.pl-option-pick:hover { outline: 1.5px solid var(--ck-accent); background: var(--ck-accent-bg); }
+.pl-option-off { opacity: 0.6; }
+.pl-option-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.pl-option-name { min-width: 0; font-size: var(--ck-text-sm); font-weight: 800; }
+.pl-option-sum { flex: none; max-width: 50%; font-size: var(--ck-text-base); font-weight: 800; white-space: nowrap; text-align: right; }
+.pl-option-sum small { display: block; font-size: var(--ck-text-2xs); font-weight: 600; color: var(--ck-text-muted); white-space: normal; }
+.pl-option-bar { display: flex; height: 12px; overflow: hidden; border-radius: 6px; background: var(--ck-track); }
+.pl-option-bar > i { display: block; height: 100%; }
+.pl-option-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 600; }
+.pl-option-meta i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; vertical-align: 0; }
+.pl-option-in { background: var(--ck-cat-4); }
+.pl-option-gain { background: var(--ck-cat-2); }
+.pl-risk { display: inline-flex; gap: 2px; margin-left: 6px; vertical-align: -1px; }
+.pl-risk > b { width: 6px; height: 6px; border-radius: 50%; background: var(--ck-track); }
+.pl-risk > b.pl-risk-on { background: var(--ck-over-bar); }
+
+/* «Планируем в октябре» on «Главная»: the small strip, the legend, up to three rows without badges. */
+.pl-dash-rows .pl-row { min-height: 0; padding: 8px 0; }
+.pl-dash-rows .pl-row .ck-row-main { gap: 2px; }
+.pl-dash-legend { margin-top: 0; }
+
+@media (forced-colors: active) {
+  .pl-segments > i, .pl-month-bar > i, .pl-rail > b, .pl-risk > b { border: 1px solid CanvasText; }
+  .pl-segments > i.pl-seg-done, .pl-rail-fact { background: CanvasText; }
+}

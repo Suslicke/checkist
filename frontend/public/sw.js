@@ -6,7 +6,7 @@
  *  - navigation (HTML) — network first, the cached index.html after 3 s or on failure;
  *  - /assets/*         — cache first: hashed names never change;
  *  - /api/* GET        — network first (6 s), on failure the last 200 answer with `X-Checkist-Offline: 1`;
- *  - everything else   — not touched: POST/PATCH/DELETE, a GET with `X-Checkist-Fresh: 1`, /api/auth/*, any …/csrf/, /api/health*, /media/*, /admin, /static.
+ *  - everything else   — not touched: POST/PATCH/DELETE, a GET with `X-Checkist-Fresh: 1`, /api/auth/*, any …/csrf/, /api/health*, /api/insights/threads/*, /media/*, /admin, /static.
  *
  * Pre-cache: index.html, the files it names, and the fonts/images named inside those scripts and styles.
  * Versions: the shell cache is named after a hash of index.html (`checkist-shell-<hash>`). Every successful online
@@ -43,6 +43,8 @@ function route(request, origin) {
   if (path.startsWith('/api/')) {
     // Tokens and sign-in must be fresh; a cached «healthy» would lie about the services.
     if (path.startsWith('/api/auth/') || path.endsWith('/csrf/') || path.startsWith('/api/health')) return 'bypass'
+    // A thread of «Чат с ИИ» is polled while its message waits for the worker: a cached copy would show it waiting for ever.
+    if (path.startsWith('/api/insights/threads/')) return 'bypass'
     return 'api'
   }
   return 'bypass'

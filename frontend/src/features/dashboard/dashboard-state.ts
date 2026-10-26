@@ -185,14 +185,23 @@ export type AllowanceView = { label: string; amount: Decimal; over: boolean; not
 /** «Можно тратить в день 4 187 ₸» and how it was counted; gone below zero — «Перерасход N ₸», never a negative day. */
 export function allowanceView(value: DashboardAllowance): AllowanceView {
   const [basis, ofBasis] = allowanceBasis[value.basis]
-  const owed = cents(value.unpaid) > 0n && value.unpaid_count > 0
-    ? glue(String(value.unpaid_count), plural(value.unpaid_count, 'платёж', 'платежа', 'платежей'), 'к', 'оплате') : null
+  // The unpaid payments of the month and its open plans («Планы», `planned` — a separate sum of the server) are taken
+  // off the basis: «минус траты, 2 платежа к оплате (23 000 ₸) и 1 планируемая трата (65 000 ₸)».
+  const planned = value.planned_count ?? 0
+  const parts: [string, Decimal][] = []
+  if (cents(value.unpaid) > 0n && value.unpaid_count > 0) {
+    parts.push([glue(String(value.unpaid_count), plural(value.unpaid_count, 'платёж', 'платежа', 'платежей'), 'к', 'оплате'), value.unpaid])
+  }
+  if (planned > 0 && value.planned !== undefined && cents(value.planned) > 0n) {
+    parts.push([glue(String(planned), plural(planned, 'планируемая трата', 'планируемые траты', 'планируемых трат')), value.planned])
+  }
+  const listed = (items: string[]) => items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} и ${items[items.length - 1]}`
   if (value.per_day === null) {
     return { label: 'Перерасход', amount: value.overspent ?? '0.00', over: true,
-      note: `${owed ? `Траты и ${owed}` : 'Траты'} больше ${ofBasis} ${formatMoney(value.amount, value.currency)}` }
+      note: `${listed(['Траты', ...parts.map(([words]) => words)])} больше ${ofBasis} ${formatMoney(value.amount, value.currency)}` }
   }
   return { label: 'Можно тратить в день', amount: value.per_day, over: false,
-    note: `${basis} ${formatMoney(value.amount, value.currency)} минус траты${owed ? ` и ${owed} (${formatMoney(value.unpaid, value.currency)})` : ''}, `
+    note: `${basis} ${formatMoney(value.amount, value.currency)} минус ${listed(['траты', ...parts.map(([words, sum]) => `${words} (${formatMoney(sum, value.currency)})`)])}, `
       + `поровну на ${glue(String(value.days_left), plural(value.days_left, 'день', 'дня', 'дней'))}` }
 }
 

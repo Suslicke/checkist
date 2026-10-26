@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["answer", "verdicts", "actions"],
+  "properties": {
+    "answer": {"type": "string", "maxLength": 1200},
+    "verdicts": {
+      "type": ["array", "null"],
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["plan_id", "verdict", "reason"],
+        "properties": {
+          "plan_id": {"type": "integer", "minimum": 1},
+          "verdict": {"type": "string", "enum": ["keep", "wait", "drop"]},
+          "reason": {"type": "string", "maxLength": 200}
+        }
+      }
+    },
+    "actions": {
+      "type": ["array", "null"],
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "label", "plan_id", "due", "due_exact", "amount", "name", "category_id"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["move_plan", "delete_plan", "change_amount", "create_plan"]},
+          "label": {"type": "string", "maxLength": 80},
+          "plan_id": {"type": ["integer", "null"], "minimum": 1},
+          "due": {"type": ["string", "null"], "maxLength": 10, "pattern": "[0-9]{4}-[0-9]{2}-[0-9]{2}"},
+          "due_exact": {"type": ["boolean", "null"]},
+          "amount": {"type": ["string", "number", "null"], "maxLength": 20, "minimum": 0},
+          "name": {"type": ["string", "null"], "maxLength": 100},
+          "category_id": {"type": ["integer", "null"], "minimum": 1}
+        }
+      }
+    }
+  }
+}

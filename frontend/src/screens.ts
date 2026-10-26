@@ -90,11 +90,13 @@ const statsPart = part(() => import('./features/stats'))
 const accountPagePart = part(() => import('./features/auth/AccountPage'))
 const exportPart = part(() => import('./features/export'))
 const recurringPart = part(() => import('./features/recurring'))
+const plannedPart = part(() => import('./features/planned'))
 const incomesPart = part(() => import('./features/incomes'))
 const storesPart = part(() => import('./features/stores'))
 const familyPart = part(() => import('./features/family'))
 const statementsPart = part(() => import('./features/statements'))
 const insightsPart = part(() => import('./features/insights'))
+const chatPart = part(() => import('./features/chat'))
 const goalsPart = part(() => import('./features/goals'))
 const morePart = part(() => import('./features/more/MorePage'))
 
@@ -121,6 +123,7 @@ export const IncomesStatsPage = screen('IncomesStatsPage', statsPart, (module) =
 export const AccountPage = screen('AccountPage', accountPagePart, (module) => module.default)
 export const ExportPage = screen('ExportPage', exportPart, (module) => module.ExportPage)
 export const RecurringPage = screen('RecurringPage', recurringPart, (module) => module.RecurringPage)
+export const PlannedPage = screen('PlannedPage', plannedPart, (module) => module.PlannedPage)
 export const IncomesPage = screen('IncomesPage', incomesPart, (module) => module.IncomesPage)
 export const StoresPage = screen('StoresPage', storesPart, (module) => module.StoresPage)
 export const FamilyPage = screen('FamilyPage', familyPart, (module) => module.FamilyPage)
@@ -130,7 +133,7 @@ export const UploadStatementPage = screen('UploadStatementPage', statementsPart,
 export const StatementPage = screen('StatementPage', statementsPart, (module) => module.StatementPage)
 export const StatementRulesPage = screen('StatementRulesPage', statementsPart, (module) => module.StatementRulesPage)
 export const ReviewPage = screen('ReviewPage', insightsPart, (module) => module.ReviewPage)
-export const AskPage = screen('AskPage', insightsPart, (module) => module.AskPage)
+export const ChatPage = screen('ChatPage', chatPart, (module) => module.ChatPage)
 export const GoalsPage = screen('GoalsPage', goalsPart, (module) => module.GoalsPage)
 export const GoalPage = screen('GoalPage', goalsPart, (module) => module.GoalPage)
 export const MorePage = screen('MorePage', morePart, (module) => module.default)
@@ -143,9 +146,9 @@ export const routeScreens: Record<Route['kind'], Part | undefined> = {
   health: HealthPage, receipts: ReceiptsPage, upload: UploadPage, receipt: ReceiptPage,
   'expense-new': ExpensePage, 'expense-edit': ExpensePage, 'income-edit': ExpensePage, incomes: IncomesPage,
   jobs: JobsPage, job: JobPage, merges: MergesPage, merge: MergePage, classification: ClassificationPage,
-  account: AccountPage, export: ExportPage, family: FamilyPage, recurring: RecurringPage, stores: StoresPage,
+  account: AccountPage, export: ExportPage, family: FamilyPage, recurring: RecurringPage, planned: PlannedPage, stores: StoresPage,
   'family-new': NewFamilySignedIn, 'statement-new': UploadStatementPage, statement: StatementPage, 'statement-rules': StatementRulesPage,
-  review: ReviewPage, ask: AskPage, goals: GoalsPage, goal: GoalPage, more: MorePage,
+  review: ReviewPage, chat: ChatPage, goals: GoalsPage, goal: GoalPage, more: MorePage,
   login: undefined, 'invalid-query': undefined, 'not-found': undefined,
 }
 

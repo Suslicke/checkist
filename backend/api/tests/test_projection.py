@@ -445,9 +445,11 @@ SKIPPED_ROUTES = {
          "family-join", "recurring-decision", "recurring-pay", "recurring-suggestion-accept", "recurring-suggestion-dismiss",
          "store-merges-merge", "store-merges-dismiss", "store-merges-category", "auth-tokens", "auth-token", "family-ai", "family-new-invites", "family-new-invite",
          "auth-new-family", "auth-new-family-check", "statements-save", "statements-goal", "goal-contributions",
-         "push-subscribe", "push-unsubscribe", "push-test", "goal-reconcile"),
+         "push-subscribe", "push-unsubscribe", "push-test", "goal-reconcile", "planned-deposit",
+         "insights-thread-messages", "insights-action-confirm"),
         "только POST",
     ),
+    "family-ai-model": "только PATCH",
     "recurring-payment": "регулярный платёж семьи или пользователя; id чеков в нём нет",
     "statements-rule": "только PATCH и DELETE",
     "goal-contribution": "только PATCH и DELETE",
@@ -459,11 +461,14 @@ SKIPPED_ROUTES = {
     "api-category-icon": "значок общей категории; id чеков в ответе нет",
     "income": "доход, видимый автору и главному; id чеков в нём нет",
     "insights-detail": "запрос к ИИ своего пользователя (чужой — 404); id чеков в нём нет",
+    "insights-thread": "беседа с ИИ своего пользователя (чужая — 404); receipt_id — видимой ему траты",
+    "planned-plan": "план семьи или пользователя; закрывшая трата — видимая запросу (visible_receipts_q)",
+    "planned-advice": "совет по плану семьи или пользователя; id чеков в ответе нет",
     **dict.fromkeys(
         ("api-not-found", "recognition-not-found", "receipts-not-found", "product-merges-not-found",
          "product-classifications-not-found", "stats-not-found", "budget-not-found", "export-not-found",
          "family-not-found", "recurring-not-found", "store-merges-not-found", "statements-not-found",
-         "incomes-not-found", "goals-not-found", "push-not-found", "insights-not-found"),
+         "incomes-not-found", "goals-not-found", "push-not-found", "insights-not-found", "planned-not-found"),
         "ответ 404 без данных",
     ),
     **dict.fromkeys(
@@ -541,7 +546,7 @@ class NoForeignReceiptIdTests(ProjectionMixin, TestCase):
             "/api/export/?include=receipts,lines,media,stores,summary", "/api/recurring/",
             "/api/statements/", "/api/statements/rules/",
             "/api/incomes/", "/api/incomes/summary/", "/api/incomes/categories/", "/api/stats/trends/incomes/", "/api/stats/incomes/",
-            "/api/goals/", "/api/push/", "/api/insights/review/", "/api/insights/ask/",
+            "/api/goals/", "/api/push/", "/api/insights/review/", "/api/insights/ask/", "/api/insights/threads/", "/api/planned/",
         ]
         paths += [f"/api/categories/{pk}/" for pk in Category.objects.values_list("pk", flat=True)]
         months = sorted({day.strftime("%Y-%m") for day in Receipt.objects.values_list("purchased_on", flat=True)})

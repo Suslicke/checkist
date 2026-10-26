@@ -244,7 +244,7 @@ describe('what is kept', () => {
   it.each([
     'dashboard/', 'receipts/', 'receipts/5/', 'receipts/5/lines/', 'receipts/5/discounts/', 'receipts/5/taxes/', 'receipts/manual/suggest/',
     'stats/spending/', 'stats/receipts/series/', 'stats/trends/monthly/', 'stats/category-spends/', 'stats/incomes/',
-    'recurring/', 'incomes/', 'incomes/summary/', 'incomes/categories/', 'incomes/4/', 'goals/', 'goals/3/',
+    'recurring/', 'planned/', 'incomes/', 'incomes/summary/', 'incomes/categories/', 'incomes/4/', 'goals/', 'goals/3/',
     'categories/', 'categories/2/', 'budget/limits/', 'budget/limits/history/', 'budget/month/', 'family/', 'stores/',
     'store-merges/', 'statements/rules/', 'products/', 'products/9/', 'products/9/prices/', 'products/9/prices/summary/',
     'products/9/prices/series/', 'generic-products/', 'generic-products/5/', 'brands/', 'countries/',
@@ -253,7 +253,7 @@ describe('what is kept', () => {
   it.each([
     'me/', 'me/settings/', 'auth/csrf/', 'auth/login/', 'recognition/csrf/', 'recognition/jobs/', 'recognition/jobs/7/',
     'recognition/photos/3/', 'recognition/receipt-images/2/', 'receipts/manual/', 'receipts/manual/parse/', 'receipts/manual/parse/4/',
-    'insights/review/', 'insights/ask/', 'insights/9/', 'push/', 'statements/', 'statements/5/', 'export/', 'health/', 'health',
+    'insights/review/', 'insights/ask/', 'insights/9/', 'insights/threads/', 'insights/threads/5/', 'push/', 'statements/', 'statements/5/', 'export/', 'health/', 'health',
     'product-merges/', 'product-merges/2/', 'product-merges/2/lines/', 'product-classifications/', 'product-classifications/status/',
     'categories/2/icon/', 'family/invites/',
   ])('never keeps %s', (path) => { expect(remembersPath(path)).toBe(false) })

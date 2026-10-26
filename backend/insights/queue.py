@@ -12,6 +12,10 @@ expired`` (ждал воркера дольше ``QUEUE_TTL``).
 
 Числа текста сверяются со сводкой (``unverified``): число от 100, которого нет среди цифр сводки (и вопроса),
 экран показывает как непроверенное — суммы на экране разбора всегда идут от сервера.
+
+Сообщения бесед («Чат с ИИ», ``kind = chat``) идут той же очередью: ставит их ``insights.chat`` (планы и предмет
+беседы — в ``context``), вход модели дополняют история беседы и вопрос, ответ несёт вердикты планам и действия,
+которые ждут подтверждения человека (``row.actions``); после ``succeeded`` — ``chat.apply_verdicts``.
 """
 import json
 import math
@@ -19,7 +23,7 @@ import os
 import re
 import time
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from functools import lru_cache
 from pathlib import Path
@@ -49,7 +53,7 @@ LEASE_MARGIN = timedelta(seconds=30)
 TIMEOUT_SECONDS = 120
 ROOT = Path(__file__).resolve().parent
 INPUT_MARKER = "INPUT JSON:"
-FAKE_SCENARIOS = ("simple", "invalid_output", "provider_error", "timeout")
+FAKE_SCENARIOS = ("simple", "chat", "invalid_output", "provider_error", "timeout")
 FAKE_SCENARIO_ENV = "INSIGHTS_FAKE_SCENARIO"
 
 
@@ -133,8 +137,8 @@ def claim():
         return row
 
 
-def finish(row, *, answer=None, error_code=""):
-    """Конечный статус захваченной строки; ``False`` — её уже закрыли (lease истекла)."""
+def finish(row, *, answer=None, error_code="", actions=None):
+    """Конечный статус захваченной строки; ``False`` — её уже закрыли (lease истекла). ``actions`` — у беседы."""
     with transaction.atomic():
         owned = InsightRequest.objects.select_for_update().filter(
             pk=row.pk, status=Status.RUNNING, run_token=row.run_token).first()
@@ -143,21 +147,31 @@ def finish(row, *, answer=None, error_code=""):
         owned.status = Status.FAILED if error_code else Status.SUCCEEDED
         owned.answer, owned.error_code, owned.finished_at = answer, error_code, db_now()
         owned.run_token = owned.lease_expires_at = None
-        owned.save(update_fields=["status", "answer", "error_code", "finished_at", "run_token", "lease_expires_at"])
+        owned.actions = actions
+        owned.save(update_fields=["status", "answer", "error_code", "finished_at", "run_token", "lease_expires_at", "actions"])
+        if owned.thread_id is not None:
+            from .models import InsightThread
+
+            InsightThread.objects.filter(pk=owned.thread_id).update(updated_at=timezone.now())
         return True
 
 
 # --- вход модели и проверка ответа ---
 
 def build_input(row):
-    """Вход модели: сводка строки, у вопроса — и сам вопрос."""
+    """Вход модели: сводка строки, у вопроса — и сам вопрос; у сообщения беседы — ещё планы и предмет (в ``context``),
+    история беседы и вопрос последним."""
     payload = dict(row.context)
-    if row.kind == Kind.ASK:
+    if row.kind == Kind.CHAT:
+        from . import chat
+
+        payload["history"] = chat.history(row.thread, before=row) if row.thread_id is not None else []
+    if row.kind in (Kind.ASK, Kind.CHAT):
         payload["question"] = row.question
     return payload
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=3)
 def schema(kind):
     return json.loads((ROOT / "schemas" / f"{kind}.schema.json").read_text(encoding="utf-8"))
 
@@ -173,13 +187,46 @@ def _flat(value):
     return value
 
 
-def answer_from_output(kind, data):
-    """Ответ модели -> ``answer`` строки либо ``OutputError``; пустой текст — тоже ошибка."""
+def _chat_actions(data, context):
+    """Действия ответа беседы к записи: только полные и только о планах входа; ``done_at``/``result`` пустые."""
+    from . import chat
+
+    known = {plan["id"] for plan in (context or {}).get("plans") or []}
+    result = []
+    for action in data.get("actions") or []:
+        values = {key: action[key] for key in chat.ACTION_KEYS if action.get(key) is not None}
+        if any(key not in values for key in chat.ACTION_REQUIRED[action["kind"]]):
+            continue  # ponytail: неполное действие модели отбрасывается, ответ остаётся
+        if "plan_id" in values and values["plan_id"] not in known:
+            continue  # план, которого модель не видела (или выдуманный id)
+        result.append({"kind": action["kind"], "label": action["label"], **values, "done_at": None, "result": None})
+    return result
+
+
+def answer_from_output(kind, data, context=None):
+    """Ответ модели -> ``answer`` строки либо ``OutputError``; пустой текст — тоже ошибка.
+
+    У беседы (``context`` — сводка строки с ``plans``) ответ несёт ещё ``verdicts`` с ``name`` плана из входа (вердикт
+    неизвестному плану остаётся в тексте без имени, ``chat.apply_verdicts`` его пропустит) и ``actions`` — список к
+    записи в ``row.actions``.
+    """
     data = _flat(data)
     try:
         _bounded(data, schema(kind))
     except SchemaValidationError:
         raise OutputError() from None
+    if kind == Kind.CHAT:
+        if not data["answer"]:
+            raise OutputError()
+        verdicts, seen = [], set()
+        names = {plan["id"]: plan["name"] for plan in (context or {}).get("plans") or []}
+        for item in data.get("verdicts") or []:
+            if item["plan_id"] not in seen:
+                seen.add(item["plan_id"])
+                # ``name`` — план из входа модели, как его видел человек; вердикт неизвестному плану — без имени.
+                verdicts.append({"plan_id": item["plan_id"], "verdict": item["verdict"], "reason": item["reason"],
+                                 "name": names.get(item["plan_id"])})
+        return {"answer": data["answer"], "verdicts": verdicts or None, "actions": _chat_actions(data, context)}
     if kind == Kind.ASK:
         if not data["answer"]:
             raise OutputError()
@@ -192,10 +239,11 @@ def answer_from_output(kind, data):
 
 
 def texts(row):
-    """Тексты ответа строки по порядку показа."""
+    """Тексты ответа строки по порядку показа; у беседы — и причины вердиктов, и подписи действий."""
     answer = row.answer or {}
     return [text for text in (answer.get("summary"), answer.get("changes"), answer.get("limits"), answer.get("answer"),
-                              *answer.get("advice", [])) if text]
+                              *answer.get("advice", []), *(item["reason"] for item in answer.get("verdicts") or []),
+                              *(item["label"] for item in row.actions or [])) if text]
 
 
 NUMBER = re.compile(r"(?<![\w.,])(\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+)(?:[.,](\d{1,2}))?(?!\d|\s?%)")
@@ -230,6 +278,11 @@ def unverified(row):
     found = set()
     _known(row.context, found)
     found.update(math.floor(value) for _text, value in _numbers(row.question))
+    if row.kind == Kind.CHAT and row.thread_id is not None:
+        from . import chat
+
+        for pair in chat.history(row.thread, before=row):
+            found.update(math.floor(value) for _text, value in _numbers(pair["question"] + " " + pair["answer"]))
     result = []
     for text in texts(row):
         for written, value in _numbers(text):
@@ -265,6 +318,8 @@ class FakeWriter:
             return {"answer": 42}
         focus, currency = payload["focus"], payload["currency"]
         top = focus["categories"][0] if focus["categories"] else None
+        if kind == Kind.CHAT:
+            return self._chat(payload, currency)
         if kind == Kind.ASK:
             words = payload["question"].casefold()
             found = next((item for item in focus["categories"]
@@ -285,6 +340,34 @@ class FakeWriter:
             "advice": [f"Посмотрите траты «{top['name']}» — это самая большая статья месяца.",
                        "Сверьте регулярные платежи: всё ли оплачено и нет ли лишних подписок."],
         }
+
+
+    def _chat(self, payload, currency):
+        """Ответ беседы: о трате — её сумма и лимит, о планах — первый план с вердиктом «подождать» и переносом."""
+        plans, subject = payload.get("plans") or [], payload.get("subject") or {}
+        if subject.get("kind") == "spend" and subject.get("total") is not None:
+            limit = subject.get("limit")
+            answer = f"Трата в «{subject['store'] or 'Без места'}» на {_money(subject['total'], currency)}"
+            answer += (f" — сверх лимита «{limit['category']}» на {_money(limit['over'], currency)}." if limit and limit.get("over")
+                       else ".")
+        elif plans:
+            answer = (f"Ближайший план — «{plans[0]['name']}» на {_money(plans[0]['amount'] or 0, currency)}: "
+                      "с ним лучше подождать.")
+        elif subject.get("kind") == "month":
+            answer = f"В этом месяце ушло {_money(payload['focus']['spent'], currency)}."
+        else:
+            answer = "Не знаю: в данных нет ответа на этот вопрос."
+        result = {"answer": answer, "verdicts": None, "actions": None}
+        if plans:
+            first = plans[0]
+            today = date.fromisoformat(payload["today"])
+            following = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
+            result["verdicts"] = [{"plan_id": first["id"], "verdict": "wait",
+                                   "reason": f"«{first['name']}» на {_money(first['amount'] or 0, currency)} подождёт до следующего месяца."}]
+            result["actions"] = [{"kind": "move_plan", "label": f"Перенести «{first['name']}» на следующий месяц"[:80],
+                                  "plan_id": first["id"], "due": following.isoformat(), "due_exact": False, "amount": None,
+                                  "name": None, "category_id": None}]
+        return result
 
 
 class CodexWriter:
@@ -327,15 +410,21 @@ def execute(row, *, writer, is_stopped=lambda: False):
     Непредвиденное исключение уходит вызывающему (воркер закрывает строку ``internal_error``).
     """
     run = RunContext(deadline=time.monotonic() + timeout_seconds() + 5, is_cancelled=is_stopped)
-    answer, error_code = None, ""
+    answer, error_code, actions = None, "", None
     try:
-        answer = answer_from_output(row.kind, writer.write(row.kind, build_input(row), run))
+        answer = answer_from_output(row.kind, writer.write(row.kind, build_input(row), run), row.context)
+        if row.kind == Kind.CHAT:
+            actions = answer.pop("actions")
     except ProviderError as error:
         error_code = "worker_lost" if error.code == "cancelled" else error.code
     except OutputError:
         error_code = "invalid_output"
-    finish(row, answer=answer, error_code=error_code)
+    done = finish(row, answer=answer, error_code=error_code, actions=actions)
     row.refresh_from_db()
+    if done and row.kind == Kind.CHAT and row.status == Status.SUCCEEDED:
+        from . import chat
+
+        chat.apply_verdicts(row)  # модель сама ничего не меняет; вердикт — пометка на плане, действия ждут человека
     return row
 
 

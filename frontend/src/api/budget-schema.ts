@@ -1,10 +1,10 @@
-import { amount, array, choice, currency, isId, isISODate, isISODateTime, nonNegativeInteger, nullable, object, record, text } from './schema.ts'
+import { amount, array, bool, choice, currency, isId, isISODate, isISODateTime, nonNegativeInteger, nullable, object, record, text } from './schema.ts'
 import type { Check, Guard } from './schema.ts'
 import { withBase } from './base-currency.ts'
 import type { InBase } from './base-currency.ts'
 import type {
   BudgetLimit, BudgetLimitChange, BudgetLimitHistory, BudgetLimitSeries, CategorySpendCurrency, CategorySpendItem, CategorySpendLine, CategorySpendPart, CategorySpends, Dashboard, DashboardAllowance,
-  DashboardBudget, DashboardCategory, DashboardCurrency, DashboardRecent, DashboardSubCategory, MonthBudget,
+  DashboardBudget, DashboardCategory, DashboardCurrency, DashboardPlanned, DashboardPlannedRow, DashboardRecent, DashboardSubCategory, MonthBudget,
 } from './budget-types.ts'
 import { isPerson } from '../lib/people.ts'
 
@@ -35,19 +35,25 @@ const dashboardRecent = object<Omit<DashboardRecent, 'owner_name' | 'base_total'
 })
 const recentItem: Check = (value) => dashboardRecent(value) && optional(value, 'owner_name', text)
   && optional(value, 'base_total', nullable(amount))
-const dashboardShape = object<Omit<Dashboard, 'people' | 'base' | 'budget' | 'allowance' | keyof InBase>>({
+const dashboardShape = object<Omit<Dashboard, 'people' | 'base' | 'budget' | 'allowance' | 'planned' | keyof InBase>>({
   month: isMonthCode, previous_month: isMonthCode, days_left: nonNegativeInteger, members: array(username),
   currencies: array(dashboardCurrency), recent: array(recentItem),
 })
 const dashboardBudget = object<DashboardBudget>({ amount, currency, spent: amount })
-const dashboardAllowance = object<DashboardAllowance>({
+const allowanceShape = object<Omit<DashboardAllowance, 'planned' | 'planned_count'>>({
   currency, basis: choice('budget', 'income'), amount, spent: amount, unpaid: amount, unpaid_count: nonNegativeInteger,
   days_left: nonNegativeInteger, per_day: nullable(amount), overspent: nullable(amount),
+})
+const dashboardAllowance: Check = (value) => allowanceShape(value) && optional(value, 'planned', amount) && optional(value, 'planned_count', nonNegativeInteger)
+const plannedRow = object<DashboardPlannedRow>({ id: isId, name: text, amount, currency, category_id: nullable(isId) })
+const plannedSegment = object<DashboardPlanned['segments'][number]>({ id: isId, name: text, category_id: nullable(isId), amount, done: bool })
+const dashboardPlanned = object<DashboardPlanned>({
+  expected: amount, left: amount, count: nonNegativeInteger, done_count: nonNegativeInteger, segments: array(plannedSegment), rows: array(plannedRow),
 })
 /** The month in the base currency too when the server sends it; an older server without it passes. */
 export const isDashboard = withBase<Dashboard>((value): value is Dashboard => dashboardShape(value)
   && optional(value, 'people', array(isPerson)) && optional(value, 'budget', nullable(dashboardBudget))
-  && optional(value, 'allowance', nullable(dashboardAllowance)), undefined, false)
+  && optional(value, 'allowance', nullable(dashboardAllowance)) && optional(value, 'planned', nullable(dashboardPlanned)), undefined, false)
 
 export const isMonthBudget = object<MonthBudget>({ amount: nullable(amount), currency: nullable(currency), base_currency: currency })
 

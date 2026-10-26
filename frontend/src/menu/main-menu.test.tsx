@@ -32,8 +32,8 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
   })
 
   it.each<[string, Session, string[]]>([
-    ['thirteen items in local_single', local, ['Доходы', 'Платежи', 'Цели', 'Разбор месяца', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Состояние сервисов']],
-    ['fifteen items in accounts', reader, ['Доходы', 'Платежи', 'Цели', 'Разбор месяца', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов']],
+    ['fourteen items in local_single', local, ['Доходы', 'Платежи', 'Планы', 'Цели', 'Разбор месяца', 'Чат с ИИ', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Состояние сервисов']],
+    ['sixteen items in accounts', reader, ['Доходы', 'Платежи', 'Планы', 'Цели', 'Разбор месяца', 'Чат с ИИ', 'Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов']],
   ])('keeps the links after the third one behind «Ещё» with %s', (_name, session, more) => {
     const html = render(session, { kind: 'not-found', path: '/missing' })
     // The same nav: «Главная · Траты · ＋ · Статистика · Ещё»; the sections are its direct children, with no new attributes.
@@ -57,8 +57,8 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
   it('draws a picture over each word of the bar and before each row of «Ещё», hidden from the screen reader', () => {
     const html = raw(reader, catalog)
     const pictures = html.match(/<svg\b[^>]*>/g) ?? []
-    // Fourteen links behind «Ещё», three of the bar, «Ещё» itself, «＋» (26 px) and ▾ of «Данные» and «Настройки».
-    expect(pictures.filter((tag) => tag.includes('class="ck-icon"'))).toHaveLength(3 + 14 + 1 + 1 + 2)
+    // Sixteen links behind «Ещё», three of the bar, «Ещё» itself, «＋» (26 px) and ▾ of «Данные» and «Настройки».
+    expect(pictures.filter((tag) => tag.includes('class="ck-icon"'))).toHaveLength(3 + 16 + 1 + 1 + 2)
     for (const tag of pictures) expect(tag).toContain('aria-hidden="true"')
     expect(html).toMatch(/<a href="\/"><svg class="ck-icon" viewBox="0 0 24 24" width="22" height="22"[^>]*>.*?<\/svg>Главная<\/a>/)
     expect(html).toMatch(/<button type="button" class="main-add-toggle"[^>]*><svg class="ck-icon" viewBox="0 0 24 24" width="26" height="26"/)

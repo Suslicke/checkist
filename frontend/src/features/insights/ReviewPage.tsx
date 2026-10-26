@@ -6,6 +6,7 @@ import RequestState from '../../components/RequestState'
 import { formatCents, formatMoney } from '../../lib/money'
 import { buildRoute, Link } from '../../navigation'
 import { cents, compareMonths, dashboardErrorMessage, deviceMonth, inMonth, monthTitle, plural, shiftMonth } from '../dashboard/dashboard-state'
+import { StartChat } from '../chat/StartChat'
 import { follow } from './follow'
 import {
   defaultReviewMonth, delta, insightErrorMessage, insightTexts, isActive, modelText, monthIsEmpty, requestFailureMessage,
@@ -86,7 +87,10 @@ export function ReviewView({ month, figures, review, status, onRefresh = () => {
         {working && <p className="ins-status" role="status">{status.refreshing ? insightTexts.refreshing : insightTexts.working}</p>}
         {status.kind === 'message' && <p className="ins-status ins-status-failed" role="alert">{status.text}</p>}
         {review ? <AiText review={review} /> : !working && empty && <p className="ins-status">{insightTexts.empty}</p>}
-        <Link className="ins-link" to="/ask">Спросить о тратах</Link>
+        <div className="ins-links">
+          {!empty && <StartChat input={{ kind: 'month', month }} className="ins-link chat-start-link">Обсудить</StartChat>}
+          <Link className="ins-link" to="/chat">Спросить о тратах</Link>
+        </div>
       </section>
     </div>
 

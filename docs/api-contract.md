@@ -2173,6 +2173,47 @@ Line несёт ещё `category` (`{"id","name"}` либо `null`, после `
   `unverified` — числа от 100 из текста, которых нет среди цифр сводки и вопроса (как написаны).
 - Коды сбоя: `invalid_output` (ответ не прошёл схему), `timeout`, `expired` (ждал воркера > 10 мин), `worker_lost`,
   `auth_required`, `internal_error` и прочие коды провайдера; `message` — фиксированный текст.
+## Чат с ИИ (2026-10-26, ветка `feature/planned-and-chat`)
+
+Беседы с моделью о тратах и планах (`insights.InsightThread`); сообщение беседы — та же строка `InsightRequest` вида
+`chat` в общей очереди `insights` (тот же шаг `recognition_worker`, опрос — прежний `GET /api/insights/{id}/`). Доступ
+и отказы — как у вопросов: `accounts` — вход, `local_single` — DEBUG + флаг + loopback, запись — с CSRF; беседу видит
+только её владелец (чужая — `404 not_found`, и у члена семьи тоже); до постановки сообщения — `accounts.ai.use_ai`
+(`403 ai_disabled` / `429 ai_quota`), лимит 2 незавершённых / 30 в час на человека общий с `/ask` — `429 parse_limit`;
+отказ первого сообщения не оставляет беседы. Правила — `insights/chat.py`. Прежние `/review` и `/ask` не менялись.
+
+| Запрос | Ответ |
+|---|---|
+| `GET /api/insights/threads/` | `{results}` — свои беседы, новые сверху (по `updated_at`), до 200 |
+| `POST /api/insights/threads/` `{kind, receipt_id?, month?, question?}` | `201 {thread, messages}`; `spend` требует `receipt_id` видимой траты (`visible_receipts_q`; иначе `400` у `receipt_id`), `month` — `month` `ГГГГ-ММ`; с `question` (1–300) первое сообщение сразу в очереди; у `plans` первое сообщение задаёт сервер («Посмотрите мои планы: что брать, что отложить, от чего отговорите»), свой `question` заменяет его |
+| `GET /api/insights/threads/{id}/` | `{thread, messages}` — сообщения по порядку |
+| `POST /api/insights/threads/{id}/messages/` `{question}` | `202` сообщение (строка запроса) |
+| `DELETE /api/insights/threads/{id}/` | `204`, с сообщениями |
+| `POST /api/insights/{id}/actions/{index}/confirm/` | `200` сообщение с `done_at`/`result` у действия; повтор — `409 action_done`; нет такого действия — `400` у `index`; действие не применилось (план исчез, негодные значения) — `400` у `action` с причиной |
+
+- Беседа: `{id, kind: "free"|"spend"|"plans"|"month", title, receipt_id, month, created_at, updated_at,
+  last_answer_preview}`. Заголовок — «Планы», «Октябрь 2026», «Трата: <место> · <сумма>» либо первые 60 знаков первого
+  вопроса (без вопроса — «Беседа»); `last_answer_preview` — первые 120 знаков последнего готового ответа, `null` без него.
+- Сообщение — строка запроса (`id, kind: "chat", month, question, status, answer, unverified, error, created_at,
+  finished_at, executor`) плюс `thread_id` и `actions`. `answer` у `succeeded` — `{answer, verdicts}`: текст модели (до 1200
+  знаков) и вердикты планам `[{plan_id, name, verdict: keep|wait|drop, reason}]` либо `null` (`name` — имя плана из входа
+  модели, `null` у неизвестного плана). `actions` — действия, предложенные
+  моделью (до 5; `null`, пока ответа нет): `{kind: move_plan|delete_plan|change_amount|create_plan, label, plan_id?, due?,
+  due_exact?, amount?, name?, category_id?, done_at, result}` — только с полями своего вида и только о планах, которые
+  модель видела (неполные и выдуманные сервер отбрасывает). **Модель сама ничего не меняет:** действие исполняется
+  только по `confirm` через `planned.services.apply_action` (чужой план — `400`), `result` — текст «что сделано»;
+  после `succeeded` сервер лишь пишет вердикты в `ai_verdict`/`ai_reason`/`ai_at` видимых владельцу планов
+  (неизвестные `plan_id` пропускаются). `unverified` — числа от 100 из текста, причин вердиктов и подписей действий,
+  которых нет во входе модели (сводка, планы, предмет, вопрос и история беседы).
+- Вход модели (`queue.build_input`): сводка `insights.context` месяца беседы (у `spend` — месяца траты, у `month` — этого
+  месяца, иначе текущего), `plans` — открытые планы семьи (`id, name, amount` в основной валюте, `due, due_exact,
+  category, saved, goal`), `subject` — у `spend` трата целиком (`date, store, total, currency, payment_method, category`
+  — путь главной категории, `lines`, `limit` — место в лимите корневой категории месяца из той же сводки, `store_spends`
+  — последние 6 трат в этом месте), у `month` — `{month}`, у `plans` — `{"ask": "verdicts"}`, у `free` — `null`;
+  `history` — до 20 последних готовых пар «вопрос — ответ» беседы; `question` — последним. Планы и предмет снимаются при
+  постановке (лежат в `context` строки). Промпт — `insights/prompts/chat.txt`, схема — `insights/schemas/chat.schema.json`
+  (все ключи обязательны, «нет» — `null`); fake — сценарий `chat` (и `simple` у строк `chat`): ответ по предмету, вердикт
+  «подождать» и перенос первого плана на следующий месяц.
 ## Доходы (2026-10-13, ветка `feature/incomes`)
 
 Доходы человек вносит только сам; поступления из выписок доходами не становятся. Доступ — как у трат без чека
@@ -2693,3 +2734,68 @@ Gold"}` либо null (одним запросом; в списке поля н�
 **Транспорт** — Streamable HTTP без состояния: `POST /mcp` с одним JSON-RPC 2.0 запросом → один `application/json`; уведомление (без `id`) → `202`; `GET`/`DELETE` → `405`; сессий (`Mcp-Session-Id`) нет. Методы: `initialize` (возвращает запрошенную версию из `2026-07-28`, `2025-11-25`, `2025-06-18`, `2025-03-26`, иначе `2025-11-25`; `capabilities.tools`, `instructions`), `ping`, `tools/list`, `tools/call`; прочие — `404` с `-32601`. Вход — `Authorization: Bearer ck_…` либо `/mcp/ck_…` (для клиентов, где можно вписать только адрес; такой адрес может остаться в истории и журналах, поэтому по нему — **только чтение** при любых правах токена). Без токена — `401` с `WWW-Authenticate: Bearer`. Caddy пропускает `/mcp` и `/mcp/*` к Django.
 
 **Инструменты** — каждый вызывает существующий вью API внутри процесса от имени владельца токена (видимость семьи, скрытые траты, «видит с», права модератора, проверки тела — те же); ответ — JSON того вью в `content[0].text` и `structuredContent`, отказ — `isError: true` и `{status, data}`. Чтение (`read` и `write`): `whoami`, `dashboard`, `list_spends`, `get_spend` (с позициями), `spending_stats`, `monthly_trends`, `list_categories`, `list_limits`, `list_incomes`, `list_recurring`, `list_goals`, `list_stores`. Запись (только `write`): `add_spend`, `update_spend`, `delete_spend`, `add_income`, `add_limit`, `update_limit`. Новый инструмент — строка `_tool(...)` в `TOOLS`: путь существующего вью и белый список параметров; прямого доступа к моделям у инструментов нет.
+
+## Планы — ожидаемые разовые траты (2026-10-26, ветка `feature/planned-and-chat`)
+
+«Куртка к 20 октября», «шины в ноябре», «подарок» без срока — не регулярные платежи и не лимиты: план ждёт одну
+настоящую трату и закрывается привязкой к ней. Доступ — как у лимитов и записи трат (`LocalAPIView`: `accounts` — вход,
+`local_single` — DEBUG + флаг + loopback; запись — с CSRF). Планы общие на семью (`budget.access.limits_q` /
+`limit_owner`, правило — `planned.access`), без семьи — свои; чужой план — `404`. Дизайн — `docs/plans/2026-10-26-planned-and-chat-design.md`.
+
+| Метод и адрес | Тело → ответ |
+| --- | --- |
+| `GET /api/planned/?month=ГГГГ-ММ` | месяц (по умолчанию текущий): `{"month", "today", "currency", "rows", "undated", "base", "months"}` |
+| `POST /api/planned/` | `{"name", "amount", "currency"?, "due"?, "due_exact"?, "category_id"?, "note"?, "goal_id"?}` → `201` план |
+| `GET /api/planned/{id}/` | план |
+| `PATCH /api/planned/{id}/` | те же поля плюс `receipt_id` → план; пустое — `400` у `body` |
+| `DELETE /api/planned/{id}/` | `204`; трата и цель остаются |
+| `GET /api/planned/{id}/advice/` | «как накопить»: `{"need", "saved", "missing", "currency", "due", "months", "options"}` |
+| `POST /api/planned/{id}/deposit/` | `{"option": "lump_fixed"\|"monthly_flexible"\|"invest"}` → `201` план с новой целью-депозитом |
+
+План: `{"id", "name", "category": {"id", "name", "icon"} | null, "currency", "amount", "due", "due_exact", "note",
+"receipt": {"id", "total", "currency", "purchased_on", "store_name"} | null, "goal": {"id", "name", "kind", "saved",
+"share"} | null, "ai": {"verdict", "reason", "at"} | null, "created_by": {"username", "display_name"} | null,
+"created_at"}`. `due` — срок (`null` — без срока, тогда `due_exact` всегда `false`); `due_exact: true` — «к 20 октября», `false` — «в октябре» (сервер
+ставит `due` первым числом месяца). `receipt` — закрывшая трата (план закрыт); `goal` — цель, на которой копят:
+`saved` — отложено на ней в валюте плана по курсу сегодня, `share` — доля плана, уже отложенная (0–100). Закрывшая трата
+показывается (и считается фактом в `base`) только тому, кто её видит сам (`visible_receipts_q`: скрытый главным платёж —
+только главному, строки раньше «видит с» — нет) — остальным `receipt: null`, план закрыт суммой плана. Цель видна только тому,
+кому видна сама цель (`goals.access.goals_q`) — личная цель одного члена семьи остальным `goal: null`, «отложено» у них ноль;
+привязать (`goal_id`) можно только цель, видимую всем, кто видит план: семейному плану — цель семьи, личному — свою либо
+семейную, иначе `400` у `goal_id`; депозит из совета создаёт цель владельца плана (семейному — семьи). `ai` —
+последний вердикт чата (`keep` | `wait` | `drop`), `null` — ИИ ещё не смотрел. `icon` — значок категории либо предка.
+
+Проверки (`400 invalid_parameter` с `fields`): название 1–100 символов; сумма > 0 с двумя знаками (запятая
+допустима); валюта существует, у нового плана без неё — основная валюта семьи; `due` — `ГГГГ-ММ-ДД` с 2000 года и не
+дальше 50 лет либо `null`; `due_exact` — bool; категория существует; комментарий ≤ 300; `goal_id` — видимая цель
+(`goals.access.goals_q`) либо `null`; `receipt_id` (только `PATCH`) — видимая трата (`visible_receipts_q`, вся семья
+без скрытых) либо `null` — снять. Трата уже закрывает другой план — `409 receipt_taken`; повтор с той же тратой у
+того же плана — `200`. Трата из плана: клиент ведёт в `/receipts/new?planned={id}` и после сохранения шлёт
+`PATCH {"receipt_id"}`.
+
+Месяц: `rows` — планы со сроком в месяце по сроку (закрытые тоже: месяц плана — месяц его срока, день покупки не
+важен); `undated` — планы без срока (в месяц и в «можно тратить в день» не входят). `base` — в основной валюте
+семьи (`rates.convert.converter`; курс — сегодня у текущего и будущих месяцев, последний день — у прошлого; факт
+закрытой траты — по курсу дня покупки): `{"currency", "expected"` (все планы месяца), `"done"` (факт закрытых),
+`"left"` (открытые), `"excluded"` (планы без курса — не в суммах), `"count", "done_count", "segments": [{"id", "name",
+"category_id", "amount", "done"}]}`. `months` — с текущего месяца вперёд все месяцы с планами: `[{"month", "expected",
+"count", "done_count", "segments"}]`. Число запросов от числа планов не зависит.
+
+Совет (`planned.advice`, чистые расчёты поверх `goals.forecast` — те же проценты, что у цели-депозита): `need` — сумма
+плана, `saved` — отложено на цели, `missing` — недостаёт, `months` — месяцев до срока (30,44 дня, вверх; `null` — без
+срока, `0` — срок прошёл). `options` — всегда три, в порядке `lump_fixed` (срочный вклад без снятия: одна сумма
+сегодня; от 3 месяцев), `monthly_flexible` (вклад с пополнением и снятием: взнос в конце месяца; от 1 месяца; без
+срока — «при N в месяц хватит к <месяц>», N — 10 % недостающего, вверх до двух значащих цифр), `invest` (инвестиции /
+крипта; больше 12 месяцев). Вариант: `{"key", "available", "reason"` (почему недоступен, иначе `null`), `"amount"` (сумма
+сегодня либо взнос в месяц), `"times"` (1 либо число взносов), `"gain"` (сколько принесут проценты), `"rate"` (% годовых,
+`settings.PLANNED_RATES`: `PLANNED_RATE_FIXED/FLEXIBLE/INVEST`, по умолчанию 17 / 15 / 10), `"risk"` 1..3, `"liquid"`
+(можно снять раньше), `"until"` (срок либо месяц, когда хватит)`}`; суммы строками. `deposit` создаёт `Goal(kind=deposit,
+rate по варианту, deadline=due, amount=missing, name=план)` общую на семью (без семьи — свою) и привязывает её к плану;
+вариант неизвестен или недоступен — `400` у `option`.
+
+Дашборд (`GET /api/dashboard/`): `allowance` получил `planned` и `planned_count` — открытые планы текущего месяца в
+основной валюте по курсу сегодня, вычитаются из «можно тратить в день» как неоплаченные платежи; поле `planned` —
+`{"currency", "expected", "left", "count", "done_count", "segments", "rows": до 3 открытых планов по сроку `{"id",
+"name", "amount", "currency", "category_id"}` (в своей валюте)}` либо `null`, когда планов месяца нет. Действия чата
+(`planned.services.apply_action`: `move_plan`, `delete_plan`, `change_amount`, `create_plan`) — только через
+подтверждение в `insights` (чат — отдельная работа).
