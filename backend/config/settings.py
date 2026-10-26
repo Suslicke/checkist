@@ -264,6 +264,14 @@ def env_directory(name, default):
 AUTH_LOGIN_FAILURE_LIMIT = env_integer("AUTH_LOGIN_FAILURE_LIMIT", 5, 1, 1000)
 AUTH_LOGIN_IP_FAILURE_LIMIT = env_integer("AUTH_LOGIN_IP_FAILURE_LIMIT", 50, 1, 100000)
 AUTH_LOGIN_LOCK_SECONDS = env_integer("AUTH_LOGIN_LOCK_SECONDS", 900, 1, 86400)
+# Sign-in with Pocket ID (accounts.pocket_id): on only when all three are set, otherwise its routes answer 404.
+# The issuer is the exact `iss` of the ID tokens (https, no trailing slash); the callback is
+# https://<site>/api/auth/pocket-id/callback/. Accounts are bound by `sub` from /account, never by email.
+POCKET_ID_ISSUER = os.environ.get("POCKET_ID_ISSUER", "").strip().rstrip("/")
+POCKET_ID_CLIENT_ID = os.environ.get("POCKET_ID_CLIENT_ID", "").strip()
+POCKET_ID_CLIENT_SECRET = os.environ.get("POCKET_ID_CLIENT_SECRET", "").strip()
+if POCKET_ID_ISSUER and not (POCKET_ID_ISSUER.startswith("https://") or DEBUG):
+    raise ImproperlyConfigured("POCKET_ID_ISSUER: expected an https URL.")
 # Local recognition is opt-in. MEDIA and private provider scratch never overlap.
 recognition_flag = env_text("ALLOW_LOCAL_RECOGNITION_API", "0").lower()
 if recognition_flag not in {"0", "1", "true", "false"}:

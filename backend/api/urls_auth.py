@@ -1,5 +1,6 @@
 from django.urls import re_path
 
+from .views import pocket_id
 from .views.api_tokens import ApiTokensView, ApiTokenView
 from .views.auth import CsrfView, LoginView, LogoutView, MeView, PasswordView, SettingsView
 
@@ -10,6 +11,10 @@ urlpatterns = [
     re_path(r"^auth/password/$", PasswordView.as_view(), name="auth-password"),
     re_path(r"^auth/tokens/$", ApiTokensView.as_view(), name="auth-tokens"),
     re_path(r"^auth/tokens/(?P<pk>[^/]+)/$", ApiTokenView.as_view(), name="auth-token"),
+    re_path(r"^auth/pocket-id/$", pocket_id.PocketIdStatusView.as_view(), name="auth-pocket-id"),
+    re_path(r"^auth/pocket-id/login/$", pocket_id.login_start, name="auth-pocket-id-login"),
+    re_path(r"^auth/pocket-id/link/$", pocket_id.PocketIdLinkView.as_view(), name="auth-pocket-id-link"),
+    re_path(r"^auth/pocket-id/callback/$", pocket_id.callback, name="auth-pocket-id-callback"),
     re_path(r"^me/$", MeView.as_view(), name="me"),
     re_path(r"^me/settings/$", SettingsView.as_view(), name="me-settings"),
 ]

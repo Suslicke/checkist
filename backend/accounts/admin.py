@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AiModelSetting, Household, LoginFailure, Membership
+from .models import AiModelSetting, Household, LoginFailure, Membership, PocketIdIdentity
 
 
 @admin.register(LoginFailure)
@@ -50,3 +50,18 @@ class AiModelSettingAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.pk, obj.updated_by = 1, request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(PocketIdIdentity)
+class PocketIdIdentityAdmin(admin.ModelAdmin):
+    """Привязки Pocket ID: видны и удаляются (отвязка); создаёт их только сам пользователь на «Аккаунте»."""
+
+    list_display = ("user", "subject", "issuer", "created_at", "last_login_at")
+    search_fields = ("user__username", "subject")
+    readonly_fields = ("user", "issuer", "subject", "created_at", "last_login_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
