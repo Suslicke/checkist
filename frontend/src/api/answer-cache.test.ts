@@ -253,7 +253,7 @@ describe('what is kept', () => {
   it.each([
     'me/', 'me/settings/', 'auth/csrf/', 'auth/login/', 'recognition/csrf/', 'recognition/jobs/', 'recognition/jobs/7/',
     'recognition/photos/3/', 'recognition/receipt-images/2/', 'receipts/manual/', 'receipts/manual/parse/', 'receipts/manual/parse/4/',
-    'insights/review/', 'insights/ask/', 'insights/9/', 'push/', 'statements/', 'statements/5/', 'export/', 'health/', 'health',
+    'insights/review/', 'insights/ask/', 'insights/9/', 'insights/threads/', 'insights/threads/5/', 'push/', 'statements/', 'statements/5/', 'export/', 'health/', 'health',
     'product-merges/', 'product-merges/2/', 'product-merges/2/lines/', 'product-classifications/', 'product-classifications/status/',
     'categories/2/icon/', 'family/invites/',
   ])('never keeps %s', (path) => { expect(remembersPath(path)).toBe(false) })
