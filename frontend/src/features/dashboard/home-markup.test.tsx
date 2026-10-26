@@ -123,7 +123,7 @@ describe('«Главная» of 2026-10-26 (Vitest/SSR, not browser visual accep
     expect(tiles).toContain(`<a class="dash-tile dash-tile-goals" href="/goals"><span class="dash-tile-title">Цели</span><span class="dash-tile-value ck-figures">${nb('62 %')}</span><span class="dash-tile-note">${nb('3 цели')} · ${nb('305 000 ₸')}</span><span class="dash-mini" role="img" aria-label="Накоплено ${nb('62 %')} по всем целям"><i class="dash-mini-part dash-cat-3 dash-mini-on" style="flex:62"></i><i class="dash-mini-part dash-cat-0" style="flex:38"></i></span></a>`)
     // Without plans the tile invites; an older server has no tiles.
     const data = homeFixture()
-    expect(view({ ...data, tiles: { ...data.tiles!, plans: null } })).toContain('<span class="dash-tile-value ck-figures">Пока без планов</span><span class="dash-tile-note">добавить</span></a>')
+    expect(view({ ...data, tiles: { ...data.tiles!, plans: null } })).toContain('<span class="dash-tile-value ck-figures">Нет</span><span class="dash-tile-note">без планов</span></a>')
     expect(view(dashboardFixture())).not.toContain('dash-tiles')
   })
 

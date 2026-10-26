@@ -152,7 +152,7 @@ export type TileView = {
 /** «Платежи»: paid of all, what is still waited for, a part of the bar per payment. */
 export function paymentsTile(tile: DashboardPaymentsTile | null): TileView {
   if (!tile || tile.total === 0) {
-    return { key: 'payments', title: 'Платежи', to: '/recurring', value: 'Нет', note: 'добавить регулярный', bar: [], label: 'Регулярных платежей в месяце нет' }
+    return { key: 'payments', title: 'Платежи', to: '/recurring', value: 'Нет', note: 'добавить', bar: [], label: 'Регулярных платежей в месяце нет' }
   }
   const bar = tile.segments.map((segment, index) => ({ key: String(index), flex: 1, on: segment.paid, tone: 2 }))
   const note = cents(tile.left) > 0n ? `ждут ${formatMoney(tile.left, tile.currency)}` : 'все оплачены'
@@ -163,7 +163,7 @@ export function paymentsTile(tile: DashboardPaymentsTile | null): TileView {
 export function plansTile(plans: DashboardPlanned | null, currency: string, month: string): TileView {
   const to = `/planned?month=${month}`
   if (!plans || plans.count === 0) {
-    return { key: 'plans', title: 'Планы', to, value: 'Пока без планов', note: 'добавить', bar: [], label: 'Планов на месяц нет' }
+    return { key: 'plans', title: 'Планы', to, value: 'Нет', note: 'без планов', bar: [], label: 'Планов на месяц нет' }
   }
   const bar = plans.segments.map((segment) => ({ key: String(segment.id), flex: Math.max(centsOf(segment.amount), 0), on: segment.done, tone: categoryTone(segment.category_id) || 4 }))
   return {

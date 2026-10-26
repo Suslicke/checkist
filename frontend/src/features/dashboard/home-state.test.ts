@@ -112,7 +112,7 @@ describe('the tiles «Платежи · Планы · Цели»', () => {
     expect(tile.bar.map((part) => part.on)).toEqual([true, true, false, false, false])
     expect(tile.to).toBe('/recurring')
     expect(paymentsTile({ paid: 3, total: 3, left: '0.00', currency: 'KZT', segments: [] }).note).toBe('все оплачены')
-    expect(paymentsTile(null)).toMatchObject({ value: 'Нет', bar: [] })
+    expect(paymentsTile(null)).toMatchObject({ value: 'Нет', note: 'добавить', bar: [] })
   })
   it('says what the plans still wait for, done of all, the plans as parts in their colours', () => {
     const tile = plansTile(homeFixture().tiles!.plans, 'KZT', '2026-10')
@@ -120,7 +120,7 @@ describe('the tiles «Платежи · Планы · Цели»', () => {
     expect(tile.note).toBe('ждём · 1 из 3')
     expect(tile.to).toBe('/planned?month=2026-10')
     expect(tile.bar.map((part) => [part.flex, part.on, part.tone])).toEqual([[6500000, false, 6], [9200000, true, 4], [12000000, false, 3]])
-    expect(plansTile(null, 'KZT', '2026-10')).toMatchObject({ value: 'Пока без планов', note: 'добавить', bar: [] })
+    expect(plansTile(null, 'KZT', '2026-10')).toMatchObject({ value: 'Нет', note: 'без планов', bar: [] })
   })
   it('says the share of the goals and the bar of it', () => {
     const tile = goalsTile(homeFixture().tiles!.goals)
