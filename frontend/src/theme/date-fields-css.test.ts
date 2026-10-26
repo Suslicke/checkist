@@ -37,6 +37,8 @@ describe('fields of a date keep the width of their panel (text of the rules and 
       'features/goals/GoalForms.tsx: date',
       'features/goals/GoalForms.tsx: date',
       'features/goals/GoalForms.tsx: date',
+      'features/planned/PlannedPage.tsx: date',
+      'features/planned/PlannedPage.tsx: month',
       'features/product/ProductPage.tsx: date',
       'features/receipts/ReceiptFilters.tsx: date',
       'features/receipts/ReceiptFilters.tsx: date',

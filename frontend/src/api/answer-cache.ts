@@ -31,6 +31,7 @@ const REMEMBERED: readonly RegExp[] = [
   /^receipts\/manual\/suggest\/$/,
   /^stats\/[a-z0-9_/-]+\/$/,
   /^recurring\/$/,
+  /^planned\/$/,
   /^incomes\/$/,
   /^incomes\/(summary|categories)\/$/,
   /^incomes\/\d+\/$/,

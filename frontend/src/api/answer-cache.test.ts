@@ -244,7 +244,7 @@ describe('what is kept', () => {
   it.each([
     'dashboard/', 'receipts/', 'receipts/5/', 'receipts/5/lines/', 'receipts/5/discounts/', 'receipts/5/taxes/', 'receipts/manual/suggest/',
     'stats/spending/', 'stats/receipts/series/', 'stats/trends/monthly/', 'stats/category-spends/', 'stats/incomes/',
-    'recurring/', 'incomes/', 'incomes/summary/', 'incomes/categories/', 'incomes/4/', 'goals/', 'goals/3/',
+    'recurring/', 'planned/', 'incomes/', 'incomes/summary/', 'incomes/categories/', 'incomes/4/', 'goals/', 'goals/3/',
     'categories/', 'categories/2/', 'budget/limits/', 'budget/limits/history/', 'budget/month/', 'family/', 'stores/',
     'store-merges/', 'statements/rules/', 'products/', 'products/9/', 'products/9/prices/', 'products/9/prices/summary/',
     'products/9/prices/series/', 'generic-products/', 'generic-products/5/', 'brands/', 'countries/',

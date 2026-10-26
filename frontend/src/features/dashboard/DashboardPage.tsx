@@ -13,6 +13,7 @@ import { Link } from '../../navigation'
 import { useQuickShot } from '../recognition/QuickShot'
 import RecurringDue from '../recurring/RecurringDue'
 import IncomeSummary from '../incomes/IncomeSummary'
+import PlannedCard from '../planned/PlannedCard'
 import {
   allowanceView, capitalize, categoryIds, categoryTone, cents, compareMonths, currencyName, daysLeftText, dashboardErrorMessage, dashboardPeople, deviceDate, deviceMonth,
   formatMoney, formatNumber, hasLimit, initials, inMonth, monthIsEmpty, monthSlide, monthTitle, progress, recentMeta, recentSource, shiftMonth,
@@ -366,6 +367,8 @@ export function DashboardView({ data, today = deviceMonth(), family = data.membe
     <div className="dash-column dash-column-side">
       <IncomeSummary month={data.month} />
       <RecurringDue month={data.month} />
+      <PlannedCard planned={data.planned} month={data.month} currency={data.base_currency ?? hero?.currency ?? data.currencies[0]?.currency ?? ''} current={current}
+        categoryNames={new Map([...ids].map(([name, id]) => [id, name]))} />
       {limits.map((block) => <LimitsCard key={block.currency} block={block} several={several} month={data.month} fold={fold} budget={budget} />)}
       {(!data.currencies.length || (budget && !limits.length)) && <section className="ck-panel dash-card dash-limits" aria-label="Лимиты">
         <div className="ck-panel-head"><h2>Лимиты</h2><Link className="dash-card-link" to="/budget/limits">Изменить</Link></div>

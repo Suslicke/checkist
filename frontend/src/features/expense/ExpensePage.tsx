@@ -3,6 +3,9 @@ import type { CSSProperties, FormEvent, RefObject } from 'react'
 import { getCategories } from '../../api/catalog'
 import { announceIncome, createIncome, getIncome, getIncomeCategories, updateIncome } from '../../api/incomes'
 import { createManualSpend, getManualDefaults, getReceipt, getReceiptLines, updateManualSpend } from '../../api/receipts'
+import { getPlanned, updatePlanned } from '../../api/planned'
+import type { PlannedSpend } from '../../api/planned'
+import { draftFromPlanned, plannedHref } from '../planned/planned-state'
 import { confirmReceiptImage, getReceiptImage, getRecognitionCsrf } from '../../api/recognition'
 import type { ReceiptImageDetail } from '../../api/recognition'
 import { reviewErrorText } from '../recognition/labels'
@@ -350,8 +353,10 @@ const isFailure = (value: unknown): value is Failure => typeof value === 'object
 /** `/receipts/new` and `/receipts/{id}/edit`: loads what the form needs, saves, then opens the page of the spend.
  * The shell keys it by the spend, so another spend starts from «loading» again. A new form switches «Трата / Доход»
  * (`income` — it opens on «Доход»); `/incomes/{id}/edit` (`incomeId`) changes an income and goes back to «Доходы». */
-export default function ExpensePage({ receiptId, repeat, income = false, incomeId, crop }: { receiptId?: number; repeat?: number; income?: boolean; incomeId?: number; crop?: number }) {
+export default function ExpensePage({ receiptId, repeat, income = false, incomeId, crop, planned }: { receiptId?: number; repeat?: number; income?: boolean; incomeId?: number; crop?: number; planned?: number }) {
   const isNew = receiptId === undefined && incomeId === undefined && crop === undefined
+  // `?planned=`: the plan («Планы») the spend will close — the form starts from it, the saved spend is tied to it.
+  const planRef = useRef<PlannedSpend | undefined>(undefined)
   const [kind, setKind] = useState<FormKind>(income || incomeId !== undefined ? 'income' : 'spend')
   usePageTitle(crop !== undefined ? 'Проверка чека' : isNew ? (kind === 'income' ? 'Новый доход' : 'Новая трата') : undefined)
   // `?crop=`: a recognized receipt that needs a check is checked here and saved by its confirmation (`crop-review.ts`).
@@ -395,6 +400,8 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
       const source = receiptId ?? (handed ? undefined : repeat)
       const copied = source === undefined ? undefined
         : Promise.all([getReceipt(source, { signal }), getReceiptLines(source, { page_size: 200 }, { signal })])
+      // A plan to close (`?planned=`) is read like a spend to repeat; if it cannot be read, the form is empty.
+      const planToClose = planned !== undefined && isNew && !handed ? getPlanned(planned, { signal, fresh: true }) : undefined
       const loaded = crop !== undefined
         ? Promise.all([categories, getManualDefaults({ signal }), getReceiptImage(crop, { signal, fresh: true })])
         : receiptId === undefined
@@ -402,6 +409,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
         : Promise.all([categories, getReceipt(receiptId, { signal, fresh: true }), allReceiptLines(receiptId, signal)])
       const [categoryResult, ...rest] = await loaded
       const [copiedReceipt, copiedLines] = receiptId === undefined && copied ? await copied : []
+      const planResult = planToClose ? await planToClose : undefined
       const incomeResult = incomeCategories ? await incomeCategories : undefined
       if (signal.aborted) return
       const values = [unwrap(categoryResult), ...rest.map((result) => unwrap(result as LocalApiResult<unknown>))]
@@ -431,6 +439,11 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
         if (copiedReceipt?.kind === 'ok' && copiedLines?.kind === 'ok' && copiedReceipt.data.source === 'manual') {
           next = { ...withoutIds(draftFromReceipt(copiedReceipt.data, copiedLines.data.results)), date: todayISO() }
         }
+        // An open plan fills «Что купили», the category, the amount and the currency; a closed one is left alone.
+        if (planResult?.kind === 'ok' && planResult.data.receipt === null) {
+          planRef.current = planResult.data
+          next = draftFromPlanned(planResult.data, categoryData.results, todayISO())
+        }
         frequent = defaults.frequent_categories
         // The method chosen last on this device, unless the spend being repeated or sent later says its own.
         if (next.method === undefined) next = { ...next, method: lastMethod() }
@@ -446,7 +459,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
         incomeChips: incomeResult?.kind === 'ok' ? incomeResult.data.map(incomeChip) : [], byline, media } })
     })()
     return () => controller.abort()
-  }, [receiptId, incomeId, repeat, attempt, handed, crop])
+  }, [receiptId, incomeId, repeat, attempt, handed, crop, planned, isNew])
 
   useEffect(() => () => saveController.current?.abort(), [])
 
@@ -540,6 +553,17 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
     setSaving(false)
     if (result.kind === 'ok') {
       if (handed) await discardPending(handed.id)
+      // The spend closes its plan: one more request, then «Планы» of the plan's month. A refused tie leaves the spend
+      // saved and says so on its page («Это она» in the sheet of the plan ties it by hand).
+      const plan = planRef.current
+      if (plan && planned !== undefined) {
+        const tied = await updatePlanned(planned, { receipt_id: result.data.id }, { signal: controller.signal })
+        if (controller.signal.aborted || tied.kind === 'aborted') return
+        if (tied.kind === 'ok') { navigate(plannedHref(plan)); return }
+        setExpenseNotice(result.data.id, 'Трата сохранена, но план не закрыт: откройте «Планы» и выберите «Это она».')
+        navigate({ kind: 'receipt', receiptId: result.data.id })
+        return
+      }
       setExpenseNotice(result.data.id, receiptId === undefined ? savedNotice : updatedNotice)
       navigate({ kind: 'receipt', receiptId: result.data.id })
       return

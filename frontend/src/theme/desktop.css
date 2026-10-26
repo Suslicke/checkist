@@ -10,6 +10,9 @@
 /* «Платежи» (features/recurring RecurringPage.tsx): the two columns have no box below 960 px — today's one column in
    today's DOM order, no order rules needed (each wrapper holds a contiguous group). */
 .rec-main, .rec-side { display: contents; }
+/* «Планы» (features/planned PlannedPage.tsx): the same — the side (hero, actions, months) comes first in DOM, the
+   main (the lists) after it; a phone reads them in that order. */
+.planned-main, .planned-side { display: contents; }
 
 @media (min-width: 960px) {
   /* Правила экранов добавляют свои задачи: Траты, Чек, Новая трата, Каталог, Платежи, Цели, Доходы, Магазины. */
@@ -111,6 +114,17 @@
   .rec-main { grid-column: 1; }
   .rec-side { grid-column: 2; }
 
+  /* «Планы»: the lists of the month and «Без срока» at the left (three fifths), the hero, the actions and the months at
+     the right (the side is first in DOM: an explicit column each, both in row 1). The row of months stops scrolling and
+     wraps into a grid of cards. .planned-page (0,1,0) later in cascade beats the 760 px cap and the one column of
+     Planned.css; the forms stay in the sheet (a portal outside .planned-page). */
+  .planned-page { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  .planned-main, .planned-side { display: grid; gap: 16px; min-width: 0; }
+  .planned-main { grid-column: 1; grid-row: 1; }
+  .planned-side { grid-column: 2; grid-row: 1; }
+  .pl-months > .ck-chip-scroller-track { flex-wrap: wrap; }
+  .pl-months .pl-month { flex: 1 1 128px; }
+
   /* «Цели» (features/goals GoalsPage.tsx — the list only: the page of one goal shares the .goals root and has no
      .goal-add, so :has(> .goal-add) (0,2,0) leaves it at the 720 px cap of Goals.css): the family's at the left, the
      personal ones at the right; one group alone (or the empty card) keeps today's width — section:only-of-type counts
@@ -134,4 +148,9 @@
   .stores-page > .stores-intro { max-width: 760px; }
   .stores-page > .stores-suggestions { grid-column: 2; }
   .stores-page > .ck-panel:not(.stores-suggestions) { grid-column: 1; }
+  /* «Чат с ИИ» (features/chat ChatPage.tsx): the threads a 280 px rail at the left, the open thread (or the start of a
+     new one, with the composer) at the right. Chat.css hides the rail beside an open thread below 960 px; the same
+     selector here, later in the cascade, shows it again. The composer is pinned by Chat.css at every width. */
+  .chat-page { grid-template-columns: 280px minmax(0, 1fr); align-items: start; max-width: none; }
+  .chat-page.chat-open > .chat-side { display: flex; }
 }

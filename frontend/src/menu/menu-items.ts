@@ -71,8 +71,10 @@ export function menuItems(session: Session, route: Route): Menu {
     { key: 'money', title: 'Деньги', items: [
       { key: 'incomes', to: '/incomes', label: 'Доходы', current: route.kind === 'incomes' || route.kind === 'income-edit', icon: 'income' },
       { key: 'recurring', to: '/recurring', label: 'Платежи', current: route.kind === 'recurring', icon: 'repeat' },
+      { key: 'planned', to: '/planned', label: 'Планы', current: route.kind === 'planned', icon: 'box' },
       { key: 'goals', to: '/goals', label: 'Цели', current: route.kind === 'goals' || route.kind === 'goal', icon: 'goal' },
-      { key: 'review', to: '/review', label: 'Разбор месяца', current: route.kind === 'review' || route.kind === 'ask', icon: 'insight' },
+      { key: 'review', to: '/review', label: 'Разбор месяца', current: route.kind === 'review', icon: 'insight' },
+      { key: 'chat', to: '/chat', label: 'Чат с ИИ', current: route.kind === 'chat', icon: 'insight' },
     ] },
     { key: 'data', title: 'Данные', items: [
       // A computer has no «＋» sheet: a photo or a PDF of a receipt and a bank statement are picked from here. «Траты»

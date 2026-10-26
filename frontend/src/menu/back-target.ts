@@ -13,7 +13,7 @@ export function isFocusRoute(route: Route): boolean {
 }
 
 /** The sections of the screen «Ещё» (menu/menu-items.ts `groups`): opened from it, they go back to it. */
-const MORE_KINDS: Route['kind'][] = ['incomes', 'recurring', 'goals', 'review', 'catalog', 'stores', 'statement-rules', 'jobs', 'export', 'family', 'account', 'health']
+const MORE_KINDS: Route['kind'][] = ['incomes', 'recurring', 'planned', 'goals', 'review', 'chat', 'catalog', 'stores', 'statement-rules', 'jobs', 'export', 'family', 'account', 'health']
 export function isMoreSection(route: Route): boolean {
   return MORE_KINDS.includes(route.kind)
 }
@@ -32,6 +32,8 @@ const backLabels: Partial<Record<Route['kind'], string>> = {
   'statement-new': 'Назад к выпискам',
   incomes: 'Назад к доходам',
   goals: 'Назад к целям',
+  chat: 'Назад к беседам',
+  planned: 'Назад к планам',
   more: 'Назад в «Ещё»',
 }
 
@@ -54,6 +56,8 @@ export function backTarget({ route, returnTo }: Pick<NavigationSnapshot, 'route'
     case 'limits': return target('/')
     case 'statement': return target(returnTo ?? '/statements/new')
     case 'goal': return target('/goals')
+    // A thread goes back to the list of threads; the list itself is a section.
+    case 'chat': return route.threadId !== undefined ? target('/chat') : undefined
     // Back to «Главная» of the same month; from a deeper category — still «Главная», the screen links its parents itself.
     case 'category-spends': return target(returnTo ?? (route.month ? `/?month=${route.month}` : '/'))
     default: return undefined

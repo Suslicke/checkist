@@ -160,7 +160,7 @@ export type NavigableRoute = CatalogRoute
   | { kind: 'upload' }
   /** «Добавить трату» — a spend without a receipt; `repeat` — a manual spend whose copy with today's date starts the form
    * («Повторить»). `expense-edit` changes a manual spend with the same form. `income` — the same form on «Доход». */
-  | { kind: 'expense-new'; repeat?: number; income?: boolean; crop?: number }
+  | { kind: 'expense-new'; repeat?: number; income?: boolean; crop?: number; /** A plan («Планы») the spend will close: the form starts from it. */ planned?: number }
   | { kind: 'expense-edit'; receiptId: number }
   /** «Доходы» of a month (no `month` — the current one) and the form of one income. */
   | { kind: 'incomes'; month?: string }
@@ -182,6 +182,8 @@ export type NavigableRoute = CatalogRoute
   | { kind: 'family'; token?: string }
   /** «Регулярные платежи»: rent, utilities, subscriptions of this month, suggestions from history, the form. */
   | { kind: 'recurring' }
+  /** «Планы» (`/planned?month=`; no `month` — the current one): the expected one-off spends of a month and without a date. */
+  | { kind: 'planned'; month?: string }
   /** «Магазины»: places of the family, the ones that look like one payee, the merge. */
   | { kind: 'stores' }
   /** The invite of a new family (`/family/new?token=…`): a guest creates an account and a family; no `token` — a broken link. */
@@ -190,9 +192,11 @@ export type NavigableRoute = CatalogRoute
   | { kind: 'statement-new' }
   | { kind: 'statement'; statementId: number }
   | { kind: 'statement-rules' }
-  /** «Разбор месяца» (`/review?month=`; no `month` — the one before the current) and «Вопрос о тратах» (`/ask?q=`). */
+  /** «Разбор месяца» (`/review?month=`; no `month` — the one before the current). */
   | { kind: 'review'; month?: string }
-  | { kind: 'ask'; q?: string }
+  /** «Чат с ИИ»: the threads at `/chat`, one of them at `/chat/{id}`; `/chat?q=` (and the old `/ask?q=`) starts a thread
+   * with the question. */
+  | { kind: 'chat'; threadId?: number; q?: string }
   /** «Цели»: накопления семьи и свои, одна цель — прогресс, темп и взносы. */
   | { kind: 'goals' }
   | { kind: 'goal'; goalId: number }
@@ -583,6 +587,7 @@ export function buildRoute(route: NavigableRoute): string {
     case 'upload': return '/receipts/upload'
     case 'expense-new': return route.income ? '/receipts/new?kind=income'
       : route.crop !== undefined ? `/receipts/new?crop=${buildId(route.crop)}`
+      : route.planned !== undefined ? `/receipts/new?planned=${buildId(route.planned)}`
       : route.repeat === undefined ? '/receipts/new' : `/receipts/new?repeat=${buildId(route.repeat)}`
     case 'expense-edit': return `/receipts/${buildId(route.receiptId)}/edit`
     case 'incomes': return parseMonthParam(route.month) ? `/incomes?month=${route.month}` : '/incomes'
@@ -599,13 +604,15 @@ export function buildRoute(route: NavigableRoute): string {
     case 'more': return '/more'
     case 'family': return route.token ? `/family/join?${new URLSearchParams({ token: route.token })}` : '/family'
     case 'recurring': return '/recurring'
+    case 'planned': return parseMonthParam(route.month) ? `/planned?month=${route.month}` : '/planned'
     case 'stores': return '/stores'
     case 'family-new': return route.token ? `/family/new?${new URLSearchParams({ token: route.token })}` : '/family/new'
     case 'statement-new': return '/statements/new'
     case 'statement': return `/statements/${buildId(route.statementId)}`
     case 'statement-rules': return '/statements/rules'
     case 'review': return parseMonthParam(route.month) ? `/review?month=${route.month}` : '/review'
-    case 'ask': return route.q?.trim() ? `/ask?${new URLSearchParams({ q: route.q.trim() })}` : '/ask'
+    case 'chat': return route.threadId !== undefined ? `/chat/${buildId(route.threadId)}`
+      : route.q?.trim() ? `/chat?${new URLSearchParams({ q: route.q.trim() })}` : '/chat'
     case 'goals': return '/goals'
     case 'goal': return `/goals/${buildId(route.goalId)}`
   }
@@ -643,6 +650,9 @@ export function parseRoute(input: string | URL): Route {
     // A crop of a photo that needs a check opens in the same form (2026-10-14); a wrong one is dropped like `repeat`.
     const crop = positiveInteger(url.searchParams.get('crop') ?? '')
     if (crop !== undefined) return { kind: 'expense-new', crop }
+    // A plan to close with the spend («Планы»); a wrong one is dropped like `repeat`.
+    const planned = positiveInteger(url.searchParams.get('planned') ?? '')
+    if (planned !== undefined) return { kind: 'expense-new', planned }
     // A wrong `repeat` is dropped: the form opens empty.
     const repeat = positiveInteger(url.searchParams.get('repeat') ?? '')
     return repeat === undefined ? { kind: 'expense-new' } : { kind: 'expense-new', repeat }
@@ -669,6 +679,11 @@ export function parseRoute(input: string | URL): Route {
   if (normalizedPath === '/more') return { kind: 'more' }
   if (normalizedPath === '/family') return { kind: 'family' }
   if (normalizedPath === '/recurring') return { kind: 'recurring' }
+  if (normalizedPath === '/planned') {
+    // Like the dashboard: a wrong month is dropped and the current one opens.
+    const month = parseMonthParam(url.searchParams.getAll('month').at(-1))
+    return month ? { kind: 'planned', month } : { kind: 'planned' }
+  }
   if (normalizedPath === '/statements/new') return { kind: 'statement-new' }
   if (normalizedPath === '/statements/rules') return { kind: 'statement-rules' }
   // Like the dashboard: a wrong month is dropped and the default one opens; an empty question is no question.
@@ -676,9 +691,16 @@ export function parseRoute(input: string | URL): Route {
     const month = parseMonthParam(url.searchParams.getAll('month').at(-1))
     return month ? { kind: 'review', month } : { kind: 'review' }
   }
-  if (normalizedPath === '/ask') {
+  // «Чат с ИИ»; the old address `/ask` of «Вопрос о тратах» opens it too (the shell then shows `/chat`).
+  if (normalizedPath === '/chat' || normalizedPath === '/ask') {
     const q = url.searchParams.get('q')?.trim().slice(0, 300)
-    return q ? { kind: 'ask', q } : { kind: 'ask' }
+    return q ? { kind: 'chat', q } : { kind: 'chat' }
+  }
+  const chatThread = /^\/chat\/([^/]+)$/.exec(normalizedPath)
+  if (chatThread) {
+    let id: number | undefined
+    try { id = positiveInteger(decodeURIComponent(chatThread[1])) } catch { /* Invalid path encoding. */ }
+    return id === undefined ? { kind: 'not-found', path } : { kind: 'chat', threadId: id }
   }
   const statement = /^\/statements\/([^/]+)$/.exec(normalizedPath)
   if (statement) {

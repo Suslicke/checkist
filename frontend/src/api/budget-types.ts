@@ -48,6 +48,16 @@ export type DashboardBudget = { amount: Decimal; currency: CurrencyCode; spent: 
 export type DashboardAllowance = {
   currency: CurrencyCode; basis: 'budget' | 'income'; amount: Decimal; spent: Decimal; unpaid: Decimal
   unpaid_count: number; days_left: number; per_day: Decimal | null; overspent: Decimal | null
+  /** The open plans of the month («Планы», 2026-10-26), taken off like the unpaid payments; missing from an older server. */
+  planned?: Decimal; planned_count?: number
+}
+/** «Планируем в октябре» (2026-10-26): the plans of the month in the base currency, `rows` — up to three open ones;
+ * null — no plans in the month. */
+export type DashboardPlannedRow = { id: number; name: string; amount: Decimal; currency: CurrencyCode; category_id: number | null }
+export type DashboardPlanned = {
+  expected: Decimal; left: Decimal; count: number; done_count: number
+  segments: { id: number; name: string; category_id: number | null; amount: Decimal; done: boolean }[]
+  rows: DashboardPlannedRow[]
 }
 export type Dashboard = InBase & {
   /** The month in the base currency (null — nothing to show); read into `currencies` by `getDashboard`. */
@@ -55,6 +65,7 @@ export type Dashboard = InBase & {
   /** Missing from an older server. */
   budget?: DashboardBudget | null
   allowance?: DashboardAllowance | null
+  planned?: DashboardPlanned | null
   month: MonthCode; previous_month: MonthCode; days_left: number; members: string[]; people?: Person[]
   /** One block per currency from an older server; one block of the base currency (or none) from a newer one (api/base-currency.ts). */
   currencies: DashboardCurrency[]; recent: DashboardRecent[]

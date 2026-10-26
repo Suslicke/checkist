@@ -185,8 +185,11 @@ export type AllowanceView = { label: string; amount: Decimal; over: boolean; not
 /** «Можно тратить в день 4 187 ₸» and how it was counted; gone below zero — «Перерасход N ₸», never a negative day. */
 export function allowanceView(value: DashboardAllowance): AllowanceView {
   const [basis, ofBasis] = allowanceBasis[value.basis]
+  // The open plans of the month («Планы») are taken off with the unpaid payments: «из них 2 планируемые».
+  const planned = value.planned_count ?? 0
+  const ofThem = planned > 0 ? `, из них ${glue(String(planned), plural(planned, 'планируемая', 'планируемые', 'планируемых'))}` : ''
   const owed = cents(value.unpaid) > 0n && value.unpaid_count > 0
-    ? glue(String(value.unpaid_count), plural(value.unpaid_count, 'платёж', 'платежа', 'платежей'), 'к', 'оплате') : null
+    ? `${glue(String(value.unpaid_count), plural(value.unpaid_count, 'платёж', 'платежа', 'платежей'), 'к', 'оплате')}${ofThem}` : null
   if (value.per_day === null) {
     return { label: 'Перерасход', amount: value.overspent ?? '0.00', over: true,
       note: `${owed ? `Траты и ${owed}` : 'Траты'} больше ${ofBasis} ${formatMoney(value.amount, value.currency)}` }

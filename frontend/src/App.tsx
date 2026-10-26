@@ -10,9 +10,9 @@ import { PageHeaderContext } from './components/page-header'
 import type { PageHeaderSlots } from './components/page-header'
 // The screens come in parts of the build (screens.ts); only the sign-in is in the shell: a guest sees it first.
 import {
-  AccountPage, AskPage, CatalogPage, CategoryPage, CategorySpendsPage, ClassificationPage, DashboardPage, ExpensePage, ExportPage,
+  AccountPage, CatalogPage, ChatPage, CategoryPage, CategorySpendsPage, ClassificationPage, DashboardPage, ExpensePage, ExportPage,
   FamilyPage, GoalPage, GoalsPage, HealthPage, IncomesPage, IncomesStatsPage, JobPage, JobsPage, LimitsPage, MergePage, MergesPage, MorePage,
-  NewFamilyPage, NewFamilySignedIn, ProductPage, ReceiptPage, ReceiptsPage, ReceiptsStatsPage, RecurringPage, ReviewPage, SpendingPage,
+  NewFamilyPage, NewFamilySignedIn, PlannedPage, ProductPage, ReceiptPage, ReceiptsPage, ReceiptsStatsPage, RecurringPage, ReviewPage, SpendingPage,
   StatementPage, StatementRulesPage, StoresPage, TrendsPage, UploadPage, UploadStatementPage,
   preloadRoute, warmScreens,
 } from './screens'
@@ -63,13 +63,14 @@ function pageTitle(route: Route) {
     case 'more': return 'Ещё'
     case 'family': return 'Семья'
     case 'recurring': return 'Регулярные платежи'
+    case 'planned': return 'Планы'
     case 'stores': return 'Магазины'
     case 'family-new': return 'Новая семья'
     case 'statement-new': return 'Загрузить выписку'
     case 'statement': return 'Выписка'
     case 'statement-rules': return 'Правила выписок'
     case 'review': return 'Разбор месяца'
-    case 'ask': return 'Вопрос о тратах'
+    case 'chat': return 'Чат с ИИ'
     case 'goals': return 'Цели'
     case 'goal': return 'Цель'
     case 'invalid-query': return 'Некорректная ссылка'
@@ -107,7 +108,8 @@ function pageContent({ route, returnTo }: NavigationSnapshot, username: string) 
     case 'health': return <HealthPage />
     case 'receipts': return <ReceiptsPage query={route.query} />
     case 'upload': return <UploadPage />
-    case 'expense-new': return <ExpensePage key={`new-${route.income ? 'income' : route.crop !== undefined ? `crop-${route.crop}` : route.repeat ?? ''}`} repeat={route.repeat} income={route.income} crop={route.crop} />
+    case 'expense-new': return <ExpensePage key={`new-${route.income ? 'income' : route.crop !== undefined ? `crop-${route.crop}` : route.planned !== undefined ? `planned-${route.planned}` : route.repeat ?? ''}`}
+      repeat={route.repeat} income={route.income} crop={route.crop} planned={route.planned} />
     case 'expense-edit': return <ExpensePage key={route.receiptId} receiptId={route.receiptId} />
     case 'incomes': return <IncomesPage month={route.month} />
     case 'income-edit': return <ExpensePage key={`income-${route.incomeId}`} incomeId={route.incomeId} />
@@ -124,13 +126,14 @@ function pageContent({ route, returnTo }: NavigationSnapshot, username: string) 
     case 'more': return <MorePage />
     case 'family': return <FamilyPage joinToken={route.token} />
     case 'recurring': return <RecurringPage />
+    case 'planned': return <PlannedPage key={route.month ?? ''} month={route.month} />
     case 'stores': return <StoresPage />
     case 'family-new': return <NewFamilySignedIn />
     case 'statement-new': return <UploadStatementPage />
     case 'statement': return <StatementPage key={route.statementId} statementId={route.statementId} />
     case 'statement-rules': return <StatementRulesPage />
     case 'review': return <ReviewPage key={route.month ?? ''} month={route.month} />
-    case 'ask': return <AskPage q={route.q} />
+    case 'chat': return <ChatPage key={route.threadId ?? 'list'} threadId={route.threadId} q={route.q} />
     case 'goals': return <GoalsPage />
     case 'goal': return <GoalPage key={route.goalId} goalId={route.goalId} />
     case 'invalid-query': return <RequestState kind="empty" message="В адресе указаны некорректные фильтры или номер страницы. Сбросьте параметры и попробуйте снова." action={<Link className="action-link" to={route.resetTo} replace>Сбросить параметры</Link>} />
@@ -222,6 +225,11 @@ export default function App() {
     // After the sign-in on /login, and for a signed-in person who opens it: «Главная», without a history entry.
     if (leaveLogin) navigate('/', { replace: true })
   }, [leaveLogin])
+  // The old address of «Вопрос о тратах» is «Чат с ИИ» now: the address bar shows the new one, without a history entry.
+  const leaveAsk = pathname === '/ask' && route.kind === 'chat' && view === 'page'
+  useLayoutEffect(() => {
+    if (leaveAsk) navigate(buildRoute(route), { replace: true })
+  }, [leaveAsk, route])
 
   useEffect(() => {
     document.title = `Чекист — ${title}`
