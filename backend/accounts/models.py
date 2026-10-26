@@ -207,3 +207,28 @@ class AiModelSetting(models.Model):
     class Meta:
         verbose_name = "AI model"
         verbose_name_plural = "AI model"
+
+
+class PocketIdIdentity(models.Model):
+    """Привязка пользователя к учётной записи Pocket ID (``accounts.pocket_id``; 2026-10-26).
+
+    Ключ — пара ``issuer`` + ``subject`` (``iss`` и ``sub`` ID-токена), почта не используется никогда. Привязку
+    создаёт только сам вошедший пользователь со страницы «Аккаунт»; у пользователя не больше одной привязки, ``sub``
+    принадлежит не больше чем одному пользователю. Замены нет: сначала отвязать, потом привязать заново.
+    """
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="pocket_id")
+    issuer = models.CharField(max_length=255)
+    subject = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_login_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Pocket ID identity"
+        verbose_name_plural = "Pocket ID identities"
+        constraints = [
+            models.UniqueConstraint(fields=("issuer", "subject"), name="accounts_pocketid_issuer_subject_uniq"),
+        ]
+
+    def __str__(self):
+        return f"{self.user} — {self.subject}"
