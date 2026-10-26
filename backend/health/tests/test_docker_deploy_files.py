@@ -181,7 +181,8 @@ class DockerDeployFilesTests(SimpleTestCase):
         self.assertEqual(
             set(commented),
             {"CHECKIST_HTTP_BIND", "CHECKIST_HTTPS_BIND", "CHECKIST_BACKUP_DIR", "COMPOSE_PROFILES",
-             "COMPOSE_PROJECT_NAME", "CHECKIST_OBSERVABILITY"},
+             "COMPOSE_PROJECT_NAME", "CHECKIST_OBSERVABILITY", "POCKET_ID_ISSUER", "POCKET_ID_CLIENT_ID",
+             "POCKET_ID_CLIENT_SECRET"},
         )
         for name in (*env_example(), *commented):
             with self.subTest(name=name):
