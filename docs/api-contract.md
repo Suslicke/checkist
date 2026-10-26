@@ -2173,6 +2173,46 @@ Line несёт ещё `category` (`{"id","name"}` либо `null`, после `
   `unverified` — числа от 100 из текста, которых нет среди цифр сводки и вопроса (как написаны).
 - Коды сбоя: `invalid_output` (ответ не прошёл схему), `timeout`, `expired` (ждал воркера > 10 мин), `worker_lost`,
   `auth_required`, `internal_error` и прочие коды провайдера; `message` — фиксированный текст.
+## Чат с ИИ (2026-10-26, ветка `feature/planned-and-chat`)
+
+Беседы с моделью о тратах и планах (`insights.InsightThread`); сообщение беседы — та же строка `InsightRequest` вида
+`chat` в общей очереди `insights` (тот же шаг `recognition_worker`, опрос — прежний `GET /api/insights/{id}/`). Доступ
+и отказы — как у вопросов: `accounts` — вход, `local_single` — DEBUG + флаг + loopback, запись — с CSRF; беседу видит
+только её владелец (чужая — `404 not_found`, и у члена семьи тоже); до постановки сообщения — `accounts.ai.use_ai`
+(`403 ai_disabled` / `429 ai_quota`), лимит 2 незавершённых / 30 в час на человека общий с `/ask` — `429 parse_limit`;
+отказ первого сообщения не оставляет беседы. Правила — `insights/chat.py`. Прежние `/review` и `/ask` не менялись.
+
+| Запрос | Ответ |
+|---|---|
+| `GET /api/insights/threads/` | `{results}` — свои беседы, новые сверху (по `updated_at`), до 200 |
+| `POST /api/insights/threads/` `{kind, receipt_id?, month?, question?}` | `201 {thread, messages}`; `spend` требует `receipt_id` видимой траты (`visible_receipts_q`; иначе `400` у `receipt_id`), `month` — `month` `ГГГГ-ММ`; с `question` (1–300) первое сообщение сразу в очереди; у `plans` первое сообщение задаёт сервер («Посмотрите мои планы: что брать, что отложить, от чего отговорите»), свой `question` заменяет его |
+| `GET /api/insights/threads/{id}/` | `{thread, messages}` — сообщения по порядку |
+| `POST /api/insights/threads/{id}/messages/` `{question}` | `202` сообщение (строка запроса) |
+| `DELETE /api/insights/threads/{id}/` | `204`, с сообщениями |
+| `POST /api/insights/{id}/actions/{index}/confirm/` | `200` сообщение с `done_at`/`result` у действия; повтор — `409 action_done`; нет такого действия — `400` у `index`; действие не применилось (план исчез, негодные значения) — `400` у `action` с причиной |
+
+- Беседа: `{id, kind: "free"|"spend"|"plans"|"month", title, receipt_id, month, created_at, updated_at,
+  last_answer_preview}`. Заголовок — «Планы», «Октябрь 2026», «Трата: <место> · <сумма>» либо первые 60 знаков первого
+  вопроса (без вопроса — «Беседа»); `last_answer_preview` — первые 120 знаков последнего готового ответа, `null` без него.
+- Сообщение — строка запроса (`id, kind: "chat", month, question, status, answer, unverified, error, created_at,
+  finished_at, executor`) плюс `thread_id` и `actions`. `answer` у `succeeded` — `{answer, verdicts}`: текст модели (до 1200
+  знаков) и вердикты планам `[{plan_id, verdict: keep|wait|drop, reason}]` либо `null`. `actions` — действия, предложенные
+  моделью (до 5; `null`, пока ответа нет): `{kind: move_plan|delete_plan|change_amount|create_plan, label, plan_id?, due?,
+  due_exact?, amount?, name?, category_id?, done_at, result}` — только с полями своего вида и только о планах, которые
+  модель видела (неполные и выдуманные сервер отбрасывает). **Модель сама ничего не меняет:** действие исполняется
+  только по `confirm` через `planned.services.apply_action` (чужой план — `400`), `result` — текст «что сделано»;
+  после `succeeded` сервер лишь пишет вердикты в `ai_verdict`/`ai_reason`/`ai_at` видимых владельцу планов
+  (неизвестные `plan_id` пропускаются). `unverified` — числа от 100 из текста, причин вердиктов и подписей действий,
+  которых нет во входе модели (сводка, планы, предмет, вопрос и история беседы).
+- Вход модели (`queue.build_input`): сводка `insights.context` месяца беседы (у `spend` — месяца траты, у `month` — этого
+  месяца, иначе текущего), `plans` — открытые планы семьи (`id, name, amount` в основной валюте, `due, due_exact,
+  category, saved, goal`), `subject` — у `spend` трата целиком (`date, store, total, currency, payment_method, category`
+  — путь главной категории, `lines`, `limit` — место в лимите корневой категории месяца из той же сводки, `store_spends`
+  — последние 6 трат в этом месте), у `month` — `{month}`, у `plans` — `{"ask": "verdicts"}`, у `free` — `null`;
+  `history` — до 20 последних готовых пар «вопрос — ответ» беседы; `question` — последним. Планы и предмет снимаются при
+  постановке (лежат в `context` строки). Промпт — `insights/prompts/chat.txt`, схема — `insights/schemas/chat.schema.json`
+  (все ключи обязательны, «нет» — `null`); fake — сценарий `chat` (и `simple` у строк `chat`): ответ по предмету, вердикт
+  «подождать» и перенос первого плана на следующий месяц.
 ## Доходы (2026-10-13, ветка `feature/incomes`)
 
 Доходы человек вносит только сам; поступления из выписок доходами не становятся. Доступ — как у трат без чека

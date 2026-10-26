@@ -961,6 +961,19 @@ docker compose -p checkist_dev cp postgres:/tmp/checkist.dump ./checkist.dump
   `recover_expired`), промпты `insights/prompts/{review,ask}.txt`, схемы `insights/schemas/{review,ask}.schema.json`;
   fake — `INSIGHTS_FAKE_SCENARIO` (`simple|invalid_output|provider_error|timeout`), срок — `INSIGHTS_TIMEOUT_SECONDS`
   (120, читается через `getattr`, в settings не вынесен).
+## Чат с ИИ (`insights`, 2026-10-26, ветка `feature/planned-and-chat`)
+
+- `insights.InsightThread` — беседа: `owner` (CASCADE; видит только он), `kind` `free|spend|plans|month`, `title` (≤ 120),
+  `receipt` (FK `receipts.Receipt`, SET_NULL — удалённая трата оставляет беседу), `month` (1-е число месяца беседы
+  `month`), `created_at`, `updated_at` (обновляется сообщением, ответом и подтверждённым действием). `InsightRequest`
+  получил `thread` (FK, CASCADE — беседа удаляется с сообщениями), `kind` `chat` и `actions` (JSON: действия модели,
+  у каждого `done_at`/`result` после подтверждения; `null`, пока ответа нет). У `chat` `context` — сводка месяца беседы
+  плюс `plans` и `subject`. Миграция `insights.0002_chat`; откат — `migrate insights 0001_initial` (сообщения `chat`
+  удаляются, иначе прежняя проверка `kind` не вернётся; беседы уходят с таблицей).
+- Правило — `insights/chat.py`: `create_thread`, `send` (`use_ai` и лимиты как у вопроса), `subject`, `plans_input`,
+  `history`, `apply_verdicts` (после `succeeded` — `ai_verdict`/`ai_reason`/`ai_at` видимых владельцу планов),
+  `confirm_action` (единственный путь исполнения действия — `planned.services.apply_action`, повтор — `ActionDone`).
+  Сама модель данных не меняет. Промпт `insights/prompts/chat.txt`, схема `insights/schemas/chat.schema.json`.
 ## Доходы (`incomes`, 2026-10-13, ветка `feature/incomes`)
 
 - `incomes.IncomeCategory` — `name` (до 60), `household` / `user` — оба пусты у встроенных, иначе один из них (владелец
