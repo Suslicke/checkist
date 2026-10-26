@@ -37,7 +37,7 @@ describe('«Деньги» (money-state, pure)', () => {
     const data = moneyFixture()
     expect(incomesTile(data)).toMatchObject({ to: '/incomes?month=2026-10', note: nb('за октябрь') })
     expect(plain(incomesTile(data).value ?? '')).toBe('1 050 000 ₸')
-    expect(incomesTile({ ...data, income: null })).toMatchObject({ value: 'Не внесён', note: `${nb('за октябрь')} не внесён` })
+    expect(incomesTile({ ...data, income: null })).toMatchObject({ value: 'Не внесён', note: nb('за октябрь') })
     expect(dueWords(2)).toBe(nb('через 2 дня'))
     expect(dueWords(0)).toBe('сегодня')
     expect(dueWords(-3)).toBe('просрочен')
@@ -51,7 +51,7 @@ describe('«Деньги» (money-state, pure)', () => {
     expect(plain(plans.note)).toBe('ждём · 2 без срока')
     expect(plans.to).toBe('/planned?month=2026-10')
     expect(plansTile({ ...data, plans: { left: '1.00', count: 1, undated_count: 0 } }).note).toBe('ждём')
-    expect(plansTile({ ...data, plans: null })).toMatchObject({ value: 'Пока без планов' })
+    expect(plansTile({ ...data, plans: null })).toMatchObject({ value: 'Нет', note: 'пока без планов' })
     const goals = goalsTile(data)
     expect(goals.value).toBe(nb('62 %'))
     expect(plain(goals.note)).toBe('«Зима» 38 % · «Отпуск» 83 %')
@@ -77,7 +77,7 @@ describe('«Деньги» (money-state, pure)', () => {
     expect(plain(reviewNote({ month: '2026-09', change_previous: null, tips: 0 }))).toBe('0 советов')
     const tile = reviewTile(moneyFixture())
     expect(tile).toMatchObject({ value: 'Сентябрь', to: '/review?month=2026-09' })
-    expect(reviewTile({ ...moneyFixture(), review: null })).toMatchObject({ value: 'Запросить разбор', to: '/review' })
+    expect(reviewTile({ ...moneyFixture(), review: null })).toMatchObject({ value: 'Сентябрь', note: 'запросить разбор', to: '/review?month=2026-09' })
   })
 
   it('takes the newest thread of the chat', () => {

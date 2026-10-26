@@ -4,7 +4,7 @@ import type { LocalApiFailure } from '../../api/types'
 import type { IconName } from '../../components/Icon'
 import { formatCents, formatMoney } from '../../lib/money'
 import { glue } from '../../lib/text'
-import { cents, dayAndMonth, dashboardErrorMessage, inMonth, plural } from '../dashboard/dashboard-state'
+import { cents, dayAndMonth, dashboardErrorMessage, inMonth, plural, shiftMonth } from '../dashboard/dashboard-state'
 import { centsOf, percentText, shareOf } from '../dashboard/home-state'
 import { threadTitle } from '../chat/chat-state'
 
@@ -76,13 +76,13 @@ export type HubTile = {
   label: string
 }
 
-/** «Доходы»: the income of the month, or that it is not entered. */
+/** «Доходы»: the income of the month, or that it is not entered (the big words say so, the note names the month). */
 export function incomesTile(data: Money): HubTile {
   const entered = data.income !== null
   return {
     key: 'incomes', title: 'Доходы', icon: 'income', tone: 'success', to: `/incomes?month=${data.month}`,
     value: entered ? formatMoney(data.income as string, data.currency) : 'Не внесён',
-    note: entered ? forMonth(data.month) : `${forMonth(data.month)} не внесён`,
+    note: forMonth(data.month),
     label: entered ? `Доходы: ${formatMoney(data.income as string, data.currency)} ${forMonth(data.month)}` : `Доходы ${forMonth(data.month)} не внесены`,
   }
 }
@@ -110,7 +110,7 @@ export function plansTile(data: Money): HubTile {
   const { plans } = data
   const to = `/planned?month=${data.month}`
   if (!plans || (plans.count === 0 && plans.undated_count === 0)) {
-    return { key: 'plans', title: 'Планы', icon: 'box', tone: 4, to, value: 'Пока без планов', note: 'добавить', label: 'Планы: пока без планов' }
+    return { key: 'plans', title: 'Планы', icon: 'box', tone: 4, to, value: 'Нет', note: 'пока без планов', label: 'Планы: пока без планов' }
   }
   const undated = plans.undated_count > 0 ? glue(String(plans.undated_count), 'без срока') : null
   const note = ['ждём', undated].filter(Boolean).join(' · ')
@@ -172,11 +172,13 @@ export function reviewNote(review: MoneyReview): string {
   return parts.join(' · ')
 }
 
-/** «Разбор»: the last review of the month before, or the invitation to ask for one. */
+/** «Разбор»: the last review of the month before, or the invitation to ask for one (the month before as the big
+ * words — «Запросить разбор» does not fit a tile of a phone). */
 export function reviewTile(data: Money): HubTile {
   const { review } = data
   if (!review) {
-    return { key: 'review', title: 'Разбор', icon: 'insight', tone: 'ai', to: '/review', value: 'Запросить разбор', note: `${forMonth(data.month)} и раньше`, label: 'Разбор месяца: запросить' }
+    const before = shiftMonth(data.month, -1)
+    return { key: 'review', title: 'Разбор', icon: 'insight', tone: 'ai', to: `/review?month=${before}`, value: monthName(before), note: 'запросить разбор', label: `Разбор ${inMonth(before)}: запросить` }
   }
   const value = monthName(review.month)
   const note = reviewNote(review)

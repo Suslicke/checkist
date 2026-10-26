@@ -42,7 +42,8 @@
 .money-tone-5 { background: var(--ck-cat-5-tint); color: var(--ck-cat-5); }
 .money-tone-6 { background: var(--ck-cat-6-tint); color: var(--ck-cat-6); }
 .money-tile-value { overflow: hidden; font-size: var(--ck-text-lg); font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
-.money-tile-note { overflow: hidden; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); white-space: nowrap; text-overflow: ellipsis; }
+/* The note may take two lines, as in the mock («2 из 5 оплачено · аренда через 2 дня»); the sums in it stay whole. */
+.money-tile-note { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); overflow-wrap: normal; }
 /* The six columns of the statistics: the shown month in the colour of the first category, the others its tint. */
 .money-columns { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
 .money-columns > i { flex: 1 1 0; min-width: 0; border-radius: 2px 2px 0 0; background: var(--ck-cat-1-tint); }
