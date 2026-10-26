@@ -696,3 +696,23 @@ curl -sI https://<домен>/api/health/ | grep -i strict-transport-security
 Без ключей push выключен, приложение пишет «Уведомления не настроены на сервере.»; тик ничего не делает. Исходящие
 HTTPS-запросы `web` идут только на push-сервисы браузеров (FCM, Apple, Mozilla, WNS). Не проверено: настоящая доставка,
 строка cron на сервере.
+
+## Вход через Pocket ID (2026-10-26, ветка `feat/pocket-id-login`)
+
+Чекист — свой OIDC-клиент Pocket ID (конфиденциальный, PKCE S256, плитка «Checkist» в «My Apps»). Код —
+`backend/accounts/pocket_id.py` (поток и проверка ID-токена) и `backend/api/views/pocket_id.py` (маршруты), модель
+`accounts.PocketIdIdentity` (миграция `accounts.0008_pocket_id_identity`, откат — `migrate accounts 0007`).
+Новых зависимостей нет: `requests` и `cryptography` уже в образе.
+
+- Окружение `.env.prod`: `POCKET_ID_ISSUER` (ровно `iss` токенов, без `/` в конце), `POCKET_ID_CLIENT_ID`,
+  `POCKET_ID_CLIENT_SECRET`. Без любой из трёх (и в `local_single`) все маршруты — `404`, кнопки нет.
+- Callback клиента в Pocket ID — ровно `https://<CHECKIST_SITE_ADDRESS>/api/auth/pocket-id/callback/` (путь под
+  `/api/*`: Caddy отдаёт его Django, гейт хаба на него не ставить).
+- Привязка — только по `iss` + `sub` и только из вошедшей сессии: «Аккаунт» → «Подключить Pocket ID»; на callback
+  проверяется, что сессия — того же пользователя и с тем же хешем пароля. Неизвестный `sub` — отказ
+  (`/login?pocket_id=not_linked`), пользователей вход не создаёт, почту не читает, привязку не заменяет;
+  отвязать — «Отключить Pocket ID» либо удалить строку в админке («Pocket ID identities»).
+- Вход паролем, `/admin/` и MCP-токены не меняются.
+- Проверка ID-токена: RS256 по JWKS (`kid`, повторное чтение набора при неизвестном ключе), `iss`, `aud`/`azp`,
+  `exp`/`iat` (±60 с), `nonce`; `state` и PKCE verifier — в сессии Django, одноразовые, 10 минут.
+- Тесты: `manage.py test accounts.tests.test_pocket_id`; клиент — `src/features/auth/pocket-id.test.tsx`.
