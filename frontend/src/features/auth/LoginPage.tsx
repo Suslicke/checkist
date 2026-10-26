@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import logo640 from '../../assets/brand/logo-640.webp'
 import logo1280 from '../../assets/brand/logo-1280.webp'
+import { getPocketIdStatus, POCKET_ID_LOGIN_URL, pocketIdOutcomes, takePocketIdOutcome } from '../../api/pocket-id'
+import type { PocketIdOutcome } from '../../api/pocket-id'
 import { login } from '../../api/session'
 import { applyMe } from '../../session'
 import { ThemeToggle } from '../../theme'
@@ -30,12 +32,16 @@ export type LoginViewProps = {
   onSubmit: () => void
   /** The shell's `h1#page-heading`: it names the form and takes the focus when the screen opens. */
   heading?: ReactNode
+  /** «Войти через Pocket ID» under the form: only when the server has it on. */
+  pocketId?: boolean
+  /** Why the return from Pocket ID did not sign in (`?pocket_id=`). */
+  pocketIdOutcome?: PocketIdOutcome | null
 }
 
 /** The sign-in on the address the person opened: the whole screen with its own `<main>`, no shell around it —
     the logo as an app icon above a card with the form (two columns from 720 px). A real form: a password manager
     offers to save and to fill it. The order in the markup is the Tab order: name, password, «Войти», theme switch. */
-export function LoginView({ state, expired, values, onChange, onSubmit, heading }: LoginViewProps) {
+export function LoginView({ state, expired, values, onChange, onSubmit, heading, pocketId, pocketIdOutcome }: LoginViewProps) {
   const pending = state.kind === 'pending'
   const invalid = (field: string) => (state.kind === 'failed' && state.fields.includes(field)) || undefined
   const submit = (event: FormEvent) => { event.preventDefault(); if (!pending) onSubmit() }
@@ -54,6 +60,7 @@ export function LoginView({ state, expired, values, onChange, onSubmit, heading 
           </div>
           <section className="ck-auth" aria-labelledby="page-heading">
             {expired && <p className="ck-auth-notice" data-auth-expired>{sessionExpiredText}</p>}
+            {pocketIdOutcome && <div className="ck-auth-error" role="alert" data-pocket-id-outcome><p>{pocketIdOutcomes[pocketIdOutcome]}</p></div>}
             <form className="ck-auth-panel" method="post" noValidate onSubmit={submit}>
               <div className="ck-auth-field">
                 <label htmlFor="login-username">Имя пользователя</label>
@@ -73,6 +80,8 @@ export function LoginView({ state, expired, values, onChange, onSubmit, heading 
                 <FormMessage state={state} id="login-message" />
               </div>
             </form>
+            {/* A plain navigation: the server answers with the redirect to Pocket ID and brings the person back signed in. */}
+            {pocketId && <a className="ck-auth-secondary ck-auth-pocket-id" href={POCKET_ID_LOGIN_URL} data-pocket-id-login>Войти через Pocket ID</a>}
           </section>
           <p className="ck-login-note">Пропуска выдаёт администратор</p>
         </div>
@@ -87,6 +96,14 @@ export function LoginView({ state, expired, values, onChange, onSubmit, heading 
 export default function LoginPage({ expired, heading }: { expired: boolean; heading?: ReactNode }) {
   // The password lives only in this component: never in the address, history state or storage.
   const [values, setValues] = useState<LoginInput>({ username: '', password: '' })
+  const [pocketId, setPocketId] = useState(false)
+  const [pocketIdOutcome] = useState(takePocketIdOutcome)
+  useEffect(() => {
+    const controller = new AbortController()
+    // 404 — the server has it off: the button stays hidden.
+    void getPocketIdStatus({ signal: controller.signal }).then((result) => { if (result.kind === 'ok') setPocketId(result.data.enabled) })
+    return () => controller.abort()
+  }, [])
   const { state, run } = useAuthForm({
     check: checkLogin,
     send: (input: LoginInput, signal) => login({ username: input.username, password: input.password }, { signal }),
@@ -94,5 +111,6 @@ export default function LoginPage({ expired, heading }: { expired: boolean; head
     // The shell opens the page of the same address as soon as the session has a user.
     success: (me) => { applyMe(me) },
   })
-  return <LoginView state={state} expired={expired} values={values} onChange={setValues} onSubmit={() => { void run(values) }} heading={heading} />
+  return <LoginView state={state} expired={expired} values={values} onChange={setValues} onSubmit={() => { void run(values) }} heading={heading}
+    pocketId={pocketId} pocketIdOutcome={pocketIdOutcome} />
 }

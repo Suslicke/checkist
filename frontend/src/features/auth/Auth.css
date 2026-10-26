@@ -149,3 +149,7 @@ ul.ck-auth-rules { display: grid; gap: 2px; padding-left: 20px; }
 .ck-auth-mcp-copy-row { display: flex; gap: 8px; }
 .ck-auth-mcp-copy-row input { flex: 1 1 auto; min-width: 0; font-family: var(--ck-font-figures, monospace); font-size: var(--ck-text-xs); }
 .ck-auth-mcp-tokens [data-revoked] { opacity: 0.6; }
+
+/* «Войти через Pocket ID» / «Подключить Pocket ID»: an outline button that is a link (a page navigation). */
+.ck-auth-pocket-id { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 10px 20px; border-radius: var(--ck-radius-button); text-decoration: none; }
+.ck-auth-pocket-id-section { display: grid; gap: 14px; }
