@@ -30,7 +30,8 @@ SERVER = {"name": "checkist", "title": "Чекист", "version": "1.0.0"}
 BODY_MAX = 256 * 1024
 INSTRUCTIONS = (
     "Checkist is a family budget: spends (receipts from photos, manual spends, bank statements), incomes, monthly "
-    "limits by category, recurring payments and savings goals. Data and names are mostly Russian/Kazakh; money is a "
+    "limits by category, recurring payments and incomes, planned one-off spends and savings goals (a bank deposit is "
+    "a goal of kind deposit; money put into it is a contribution). Data and names are mostly Russian/Kazakh; money is a "
     "decimal string with its currency (KZT by default). Dates are YYYY-MM-DD, months YYYY-MM. Call list_categories "
     "before writing a category id. Never invent ids: read them first."
 )
@@ -72,6 +73,15 @@ def _i(description):
     return {"type": "integer", "description": description}
 
 
+def _b(description):
+    return {"type": "boolean", "description": description}
+
+
+def _null(schema):
+    """The same field that also takes null (clears it)."""
+    return {**schema, "type": [schema["type"], "null"]}
+
+
 DATE = _s("YYYY-MM-DD")
 MONTH = _s("YYYY-MM; default — the current month")
 LINE = {"type": "object", "properties": {
@@ -88,6 +98,45 @@ SPEND = {
     "item_name": _s("what was bought, one catalog product (spend without lines)"),
     "lines": {"type": "array", "items": LINE, "description": "positions; the total is their sum"},
 }
+PLAN = {
+    "name": _s("what is planned, 1–100 chars, e.g. «Шины»"),
+    "amount": _s("expected sum, > 0, up to 2 decimals"),
+    "currency": _s("ISO code; default — the family's base currency"),
+    "due": _null(_s("YYYY-MM-DD when it is expected; null — no date. «in November» → the 1st of November with "
+                    "due_exact false (the server moves a non-exact due to the 1st); «by 20 October» → that day with "
+                    "due_exact true")),
+    "due_exact": _b("true — by this exact day; false (default) — some time in the month of due"),
+    "category_id": _null(_i("spend category id (list_categories); null — no category")),
+    "note": _s("comment, up to 300 chars"),
+    "goal_id": _null(_i("savings goal the money is collected on (list_goals); null — none")),
+}
+GOAL = {
+    "name": _s("1–100 chars"), "amount": _s("target sum, > 0 (for a deposit — the sum to reach)"),
+    "currency": _s("ISO code; default — the family's base currency"),
+    "deadline": _null(_s("YYYY-MM-DD or null — no deadline")),
+    "shared": _b("true — goal of the whole family (needs a family), false (default) — personal"),
+    "kind": _s("saving (default, a plain piggy bank) | deposit (a bank deposit that earns interest)"),
+    "rate": _null(_s("deposit only, required for it: % per year, 0–100, e.g. \"14\"")),
+    "capitalization": _s("deposit only: monthly (default, interest is added every month) | none"),
+}
+CONTRIBUTION = {
+    "amount": _s("sum put in, > 0"), "currency": _s("ISO code; default — the goal's currency"),
+    "date": _s("YYYY-MM-DD; default — today"), "user": _s("login of the family member who put it; default — you"),
+    "note": _s("comment, up to 200 chars"),
+}
+INCOME = {"amount": _s("sum"), "category": _i("income category id (list_income_categories)"),
+          "currency": _s("ISO code"), "received_on": DATE, "note": _s("comment")}
+RECURRING = {
+    "kind": _s("spend (default) | income; cannot be changed later"), "name": _s("1–100 chars, e.g. «Интернет»"),
+    "amount": _s("sum per month"), "currency": _s("ISO code"),
+    "due_day": _i("day of the month it is due, 1–31"),
+    "category_id": _i("spend category id (list_categories) or, for kind income, income category id "
+                      "(list_income_categories)"),
+    "store_name": _null(_s("place / payee (spends only); empty or null — none")),
+    "active": _b("false — paused, not expected any more"),
+}
+PLAN_ID = {"id": _i("plan id")}
+GOAL_ID = {"id": _i("goal id")}
 
 
 def _tool(name, description, method, path, *, query=(), body=(), properties=None, required=(), write=False,
@@ -132,17 +181,105 @@ TOOLS = [
           body=tuple(SPEND), properties={"id": _i("spend id"), **SPEND}, required=("id",), write=True),
     _tool("delete_spend", "Delete a spend (a photo receipt keeps its photo).", "DELETE", "/api/receipts/{id}/",
           path_args=("id",), properties={"id": _i("spend id")}, required=("id",), write=True),
-    _tool("add_income", "Add an income. category — id of an income category (see list_incomes results).", "POST",
-          "/api/incomes/", body=("amount", "category", "currency", "received_on", "note"),
-          properties={"amount": _s("sum"), "category": _i("income category id"), "currency": _s("ISO code"),
-                      "received_on": DATE, "note": _s("comment")}, required=("amount", "category"), write=True),
+    _tool("add_income", "Add an income. category — id of an income category (list_income_categories).", "POST",
+          "/api/incomes/", body=tuple(INCOME), properties=INCOME, required=("amount", "category"), write=True),
     _tool("add_limit", "Add a monthly limit of a category (in the family's base currency).", "POST",
           "/api/budget/limits/", body=("category_id", "currency", "amount"),
           properties={"category_id": _i("category id"), "currency": _s("ISO code"), "amount": _s("sum per month")},
           required=("category_id", "currency", "amount"), write=True),
-    _tool("update_limit", "Change the sum of a limit.", "PATCH", "/api/budget/limits/{id}/", path_args=("id",),
-          body=("amount",), properties={"id": _i("limit id"), "amount": _s("sum per month")},
-          required=("id", "amount"), write=True),
+    _tool("update_limit", "Change a limit: its sum, category or currency.", "PATCH", "/api/budget/limits/{id}/",
+          path_args=("id",), body=("amount", "category_id", "currency"),
+          properties={"id": _i("limit id"), "amount": _s("sum per month"), "category_id": _i("category id"),
+                      "currency": _s("ISO code")}, required=("id",), write=True),
+    _tool("delete_limit", "Delete the monthly limit of a category (find its id with list_limits).", "DELETE",
+          "/api/budget/limits/{id}/", path_args=("id",), properties={"id": _i("limit id")}, required=("id",),
+          write=True),
+    _tool("get_month_budget", "The overall budget of the current month over all limits (null — not set).", "GET",
+          "/api/budget/month/"),
+    _tool("set_month_budget", "Set the overall budget of the month, from the current month on (base currency).",
+          "POST", "/api/budget/month/", body=("amount",), properties={"amount": _s("sum per month")},
+          required=("amount",), write=True),
+    _tool("clear_month_budget", "Remove the overall budget of the month, from the current month on.", "DELETE",
+          "/api/budget/month/", write=True),
+    # Incomes.
+    _tool("list_income_categories", "Income categories (built-in, then the family's own). Use these ids for "
+          "incomes and recurring incomes.", "GET", "/api/incomes/categories/"),
+    _tool("update_income", "Change an income: any of its fields (find its id with list_incomes).", "PATCH",
+          "/api/incomes/{id}/", path_args=("id",), body=tuple(INCOME), properties={"id": _i("income id"), **INCOME},
+          required=("id",), write=True),
+    _tool("delete_income", "Delete an income.", "DELETE", "/api/incomes/{id}/", path_args=("id",),
+          properties={"id": _i("income id")}, required=("id",), write=True),
+    # Recurring payments and incomes.
+    _tool("add_recurring", "Add a recurring monthly payment (internet, rent, subscription) or, with kind income, a "
+          "recurring income (salary).", "POST", "/api/recurring/", body=tuple(RECURRING), properties=RECURRING,
+          required=("name", "category_id", "currency", "amount", "due_day"), write=True),
+    _tool("update_recurring", "Change a recurring payment or income: any field except kind (ids — list_recurring).",
+          "PATCH", "/api/recurring/{id}/", path_args=("id",), body=tuple(RECURRING),
+          properties={"id": _i("recurring payment id"), **RECURRING}, required=("id",), write=True),
+    _tool("delete_recurring", "Delete a recurring payment or income with its answers; spends made from it stay.",
+          "DELETE", "/api/recurring/{id}/", path_args=("id",), properties={"id": _i("recurring payment id")},
+          required=("id",), write=True),
+    _tool("pay_recurring", "Mark a recurring payment (kind spend) paid for a month: creates the spend. 409 — "
+          "already paid or answered for that month.", "POST", "/api/recurring/{id}/pay/", path_args=("id",),
+          body=("month", "amount", "payment_method", "purchased_on"),
+          properties={"id": _i("recurring payment id"),
+                      "month": _s("YYYY-MM, the current month or up to a year back"), "amount": _s("sum paid"),
+                      "payment_method": _s("kaspi_gold|forte|cash|crypto|card or empty"),
+                      "purchased_on": _s("YYYY-MM-DD, not in the future; default — today")},
+          required=("id", "month", "amount"), write=True),
+    # Planned one-off spends.
+    _tool("list_planned", "Planned one-off spends («tyres in November», «jacket by 20 October») of a month: rows "
+          "(due that month, closed ones too), undated (no date), base (expected / done / left in the base "
+          "currency) and months ahead that have plans.", "GET", "/api/planned/", query=("month",),
+          properties={"month": MONTH}),
+    _tool("get_planned", "One planned spend.", "GET", "/api/planned/{id}/", path_args=("id",), properties=PLAN_ID,
+          required=("id",)),
+    _tool("add_planned", "Add a planned one-off spend. «Tyres in November 80 000» → name «Шины», amount \"80000\", "
+          "due \"<year>-11-01\", due_exact false. Without due — no date.", "POST", "/api/planned/",
+          body=tuple(PLAN), properties=PLAN, required=("name", "amount"), write=True),
+    _tool("update_planned", "Change a planned spend (move it, change the sum, category, goal). receipt_id closes the "
+          "plan with an existing spend (null — reopen it); 409 receipt_taken — that spend closes another plan.",
+          "PATCH", "/api/planned/{id}/", path_args=("id",), body=(*PLAN, "receipt_id"),
+          properties={**PLAN_ID, **PLAN, "receipt_id": _null(_i("spend id that paid for the plan; null — none"))},
+          required=("id",), write=True),
+    _tool("delete_planned", "Delete a planned spend; its spend and goal stay.", "DELETE", "/api/planned/{id}/",
+          path_args=("id",), properties=PLAN_ID, required=("id",), write=True),
+    _tool("planned_advice", "«How to save up» for a planned spend: need, saved, missing and the options lump_fixed, "
+          "monthly_flexible, invest (rate, sum, available or not) — read before planned_deposit.", "GET",
+          "/api/planned/{id}/advice/", path_args=("id",), properties=PLAN_ID, required=("id",)),
+    _tool("planned_deposit", "Open a deposit for a planned spend by an available option of planned_advice: creates a "
+          "deposit goal for the missing sum and links it to the plan.", "POST", "/api/planned/{id}/deposit/",
+          path_args=("id",), body=("option",),
+          properties={**PLAN_ID, "option": _s("lump_fixed | monthly_flexible | invest")},
+          required=("id", "option"), write=True),
+    # Savings goals and deposits.
+    _tool("get_goal", "One goal with its contributions (ids, dates, who), deposit figures and series.", "GET",
+          "/api/goals/{id}/", path_args=("id",), properties=GOAL_ID, required=("id",)),
+    _tool("add_goal", "Add a savings goal. A bank deposit: kind deposit with rate, e.g. «a deposit at 14% for "
+          "1 000 000» → name «Депозит», amount \"1000000\", kind deposit, rate \"14\"; then add the money already on "
+          "it with add_contribution.", "POST", "/api/goals/", body=tuple(GOAL), properties=GOAL,
+          required=("name", "amount"), write=True),
+    _tool("update_goal", "Change a goal: any of its fields.", "PATCH", "/api/goals/{id}/", path_args=("id",),
+          body=tuple(GOAL), properties={**GOAL_ID, **GOAL}, required=("id",), write=True),
+    _tool("delete_goal", "Delete a goal with all its contributions; plans linked to it stay.", "DELETE",
+          "/api/goals/{id}/", path_args=("id",), properties=GOAL_ID, required=("id",), write=True),
+    _tool("add_contribution", "Put money into a goal or deposit («put 50 000 into the deposit»). Returns the goal.",
+          "POST", "/api/goals/{id}/contributions/", path_args=("id",), body=tuple(CONTRIBUTION),
+          properties={**GOAL_ID, **CONTRIBUTION}, required=("id", "amount"), write=True),
+    _tool("update_contribution", "Change a contribution (not an interest record). Returns the goal.", "PATCH",
+          "/api/goals/{id}/contributions/{contribution_id}/", path_args=("id", "contribution_id"),
+          body=tuple(CONTRIBUTION), properties={**GOAL_ID, "contribution_id": _i("contribution id (get_goal)"),
+                                                **CONTRIBUTION},
+          required=("id", "contribution_id"), write=True),
+    _tool("delete_contribution", "Delete a contribution or an interest record of a goal. Returns the goal.",
+          "DELETE", "/api/goals/{id}/contributions/{contribution_id}/", path_args=("id", "contribution_id"),
+          properties={**GOAL_ID, "contribution_id": _i("contribution id (get_goal)")},
+          required=("id", "contribution_id"), write=True),
+    _tool("reconcile_deposit", "Reconcile a deposit with the bank: the actual balance on a date; the difference "
+          "with the estimate is written as interest. Returns the goal.", "POST", "/api/goals/{id}/reconcile/",
+          path_args=("id",), body=("balance", "date"),
+          properties={**GOAL_ID, "balance": _s("balance in the bank"), "date": _s("YYYY-MM-DD; default — today")},
+          required=("id", "balance"), write=True),
 ]
 BY_NAME = {tool["name"]: tool for tool in TOOLS}
 
