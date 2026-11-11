@@ -664,7 +664,7 @@ def _confirm(image, store, digest, normalized, effective, notices, derived, inde
     stamp = db_now().astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     try:
         with transaction.atomic():
-            store = store or _named_store(effective)
+            store = store or _named_store(effective, image.normalized_result)
             receipt, effect, issues = _import_domain(
                 effective, derived, owner_id=owner_id, store=store, confirmed={"image_id": image.pk, "at": stamp})
     except ResolutionError as problem:
@@ -704,14 +704,22 @@ def _confirm(image, store, digest, normalized, effective, notices, derived, inde
     return ConfirmResult(image.pk, job.pk, False)
 
 
-def _named_store(observation):
+def _named_store(observation, read=None):
     """The shop a person confirmed only by its name (2026-10-15: an OZON e-receipt has no address and no branch):
     found or created by that name as for a spend without a receipt (``receipts.manual.find_or_create_store``),
-    inside the import transaction, so a refused confirmation leaves no shop. ``None`` — the import resolves it."""
+    inside the import transaction, so a refused confirmation leaves no shop. ``None`` — the import resolves it.
+
+    ``read`` is what the model read from the paper (``ReceiptImage.normalized_result``). A paper that names no
+    seller at all (2026-11-11: a utility bill) prints the payer's address, not a shop's: the name the person
+    typed is then the place, whatever the address — otherwise every such bill made a new shop at the home address.
+    """
     from receipts.manual import find_or_create_store
 
     shop, merchant = observation.store, observation.merchant
     name = (merchant.brand_name or shop.name or "").strip()
-    if (shop.address_raw or "").strip() or shop.branch_code or not name:
+    sellerless = isinstance(read, dict) and not any(
+        (read.get(part) or {}).get(key) for part, key in
+        (("merchant", "legal_name"), ("merchant", "brand_name"), ("store", "name")))
+    if not name or shop.branch_code or (shop.address_raw or "").strip() and not sellerless:
         return None
     return find_or_create_store(name[:100], observation.currency_code or "KZT")

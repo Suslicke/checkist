@@ -763,6 +763,24 @@ class ConfirmServiceTests(TestCase):
         self.assertEqual(Store.objects.count(), stores + 1)
         self.assertTrue(Store.objects.filter(name="Демо-маркетплейс", address_raw="").exists())
 
+    def test_a_paper_without_a_seller_goes_to_the_place_the_person_names(self):
+        # Prod 2026-11-11, a utility bill: no seller printed, the address is the payer's. The typed name is the
+        # place, as for a spend without a receipt; no new shop at the home address.
+        merchant = Merchant.objects.create(country_id="DE", legal_name="Demo-Wohnung", brand_name="Demo-Wohnung")
+        home = Store.objects.create(merchant=merchant, country_id="DE", name="Demo-Wohnung",
+                                    address_raw="Anderswo 1, 10115 Berlin", timezone="Europe/Berlin")
+        paper = wrong_total()
+        paper["merchant"].update(legal_name=None, brand_name=None)
+        paper["store"]["name"] = None
+        paper["fields"] = [f for f in paper["fields"]
+                           if f["path"] not in ("/merchant/legal_name", "/merchant/brand_name", "/store/name")]
+        image = review_image(paper)
+        stores = Store.objects.count()
+        review.confirm(image.pk, fixed_body(store_name="Demo-Wohnung"))
+        self.assertEqual((Receipt.objects.get().store_id, Store.objects.count()), (home.pk, stores))
+        home.refresh_from_db()
+        self.assertEqual(home.address_raw, "Anderswo 1, 10115 Berlin")
+
     def test_ambiguous_store_is_refused_until_a_store_is_chosen(self):
         first = Merchant.objects.create(country_id="DE", legal_name="TESTMARKT GmbH")
         second = Merchant.objects.create(country_id="DE", legal_name="Testmarkt  GmbH")
