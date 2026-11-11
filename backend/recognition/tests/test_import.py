@@ -122,6 +122,11 @@ class ImportTests(TestCase):
         named = importer._import_domain(*importer.effective_observation(
             observation(self.sellerless(self.amount_fact_payload(), 12)))[::2], owner_id=local_user().pk, store=home)[0]
         self.assertEqual(named.store_id, home.pk)
+        # A payment hidden by the head of the family is read by nobody, the memory included.
+        Receipt.objects.filter(pk=named.pk).update(hidden=True)
+        hidden = self.run_import(self.sellerless(self.amount_fact_payload(), 15))
+        self.assertEqual(hidden.outcome, "needs_review")
+        Receipt.objects.filter(pk=named.pk).update(hidden=False)
         # Next month: other amounts, the same lines — no person needed.
         data = self.sellerless(self.amount_fact_payload(), 13)
         data["lines"][0].update(quantity="100.000", amount="3808.52")

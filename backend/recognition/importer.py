@@ -562,7 +562,7 @@ def _remembered_store(observation, owner_id):
 
     A utility bill prints no supplier and the payer's address, so a person had to name the place every month
     (prod 2026-11-11). Its lines repeat from month to month: when at least half of them (and no fewer than two)
-    are the lines of earlier photo receipts of the owner's family, and all those receipts are of one place,
+    are the lines of earlier photo receipts the owner may read (``visible_receipts_q``), all of one place,
     the bill goes there by itself. The first such paper is still named by a person; a printed seller is never
     overridden; two candidate places leave the choice to a person.
     """
@@ -571,15 +571,20 @@ def _remembered_store(observation, owner_id):
     names = {name_key(line.raw_name) for line in observation.lines if line.raw_name} - {""}
     if len(names) < 2:
         return None
-    from accounts.models import Membership
+    from types import SimpleNamespace
 
-    household = Membership.objects.filter(user_id=owner_id).values_list("household_id", flat=True).first()
-    owners = (Membership.objects.filter(household_id=household).values_list("user_id", flat=True)
-              if household else [owner_id])
+    from django.contrib.auth import get_user_model
+
+    from accounts.access import visible_receipts_q
+
+    # Only what the owner of the crop may read: the family's receipts by the one rule of every read path
+    # (no payments hidden by the head, nothing before the member's «видит траты семьи с»). The rules of
+    # accounts.access read nothing but ``user`` of a request.
+    reader = SimpleNamespace(user=get_user_model().objects.get(pk=owner_id))
     # ponytail: one scan of the family's photo lines of the last 400 days, compared in Python
     # (name_key is not an SQL function); an indexed key column if a family ever has 100k such lines.
     rows = ReceiptLine.objects.filter(
-        receipt__owner_id__in=owners, receipt__source=Receipt.Source.PHOTO,
+        visible_receipts_q(reader, "receipt__"), receipt__source=Receipt.Source.PHOTO,
         receipt__purchased_on__gte=date.today() - timedelta(days=REMEMBERED_DAYS),
     ).values_list("receipt_id", "receipt__store_id", "raw_name")
     matched = {}
