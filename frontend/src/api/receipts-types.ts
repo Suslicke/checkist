@@ -45,7 +45,11 @@ export type Line = {
   /** The category of a line of a manual spend (and of a service charge); it wins over the product's (2026-10-13). */
   category: NamedObject | null; matching_status: MatchingStatus
   tax_rate: TaxRate | null; tax_code: string; tax_amount: Decimal | null; is_excise: boolean; is_marked: boolean
+  /** What the paper said where the import kept the amount as the fact and recalculated the rest (2026-11-11);
+   * absent from an answer of an older server. */
+  printed?: PrintedLine | null
 }
+export type PrintedLine = { quantity: Decimal | null; unit: Unit | null; unit_price: Decimal | null }
 export type Discount = { id: number; position: number; line_id: number | null; name: string; amount: Decimal }
 export type Tax = { id: number; tax_rate: TaxRate; tax_code: string; net: Decimal; tax: Decimal; gross: Decimal }
 export type ReceiptParams = PageParams & {

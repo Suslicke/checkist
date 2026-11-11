@@ -58,7 +58,8 @@
           "category_id": 3,
           "category_path": "Продукты / Молочное",
           "product_id": 44,
-          "product_name": "Молоко 3,2% 1 л"
+          "product_name": "Молоко 3,2% 1 л",
+          "printed": null
         }
       ],
       "media": {
@@ -96,7 +97,8 @@
           "category_id": 7,
           "category_path": "Дом",
           "product_id": null,
-          "product_name": null
+          "product_name": null,
+          "printed": null
         }
       ],
       "media": null

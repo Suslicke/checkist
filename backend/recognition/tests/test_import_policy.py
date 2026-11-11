@@ -188,10 +188,22 @@ class ImportPolicyTests(SimpleTestCase):
                 self.assertEqual((effective.lines[1].quantity, effective.lines[1].unit, effective.lines[1].unit_price),
                                  (Decimal("0.500"), "kg", Decimal("2.0000")))
 
-    def test_contradictory_printed_values_are_preserved_without_defaults(self):
+    def test_contradictory_printed_values_keep_the_amount_when_the_total_balances(self):
+        # The owner's decision of 2026-11-11: amounts adding up to the printed total are the fact.
         payload = receipt_payload()
         payload["lines"][0].update(quantity="2.000", unit_price="1.2900", amount="3.49", unit=None)
         payload.update(total="5.33", taxes=[])
+        effective, derived = _domain_observation(observation(payload))
+        self.assertEqual((effective.lines[0].quantity, effective.lines[0].unit_price, effective.lines[0].amount),
+                         (Decimal("2.000"), Decimal("1.7450"), Decimal("3.49")))
+        self.assertIn("/lines/0/unit_price", derived)
+        self.assertEqual(derived.printed, {0: {"unit_price": "1.2900"}})
+        _preflight(effective, derived)  # no total_mismatch any more
+
+    def test_contradictory_printed_values_are_preserved_when_the_total_does_not_balance(self):
+        payload = receipt_payload()
+        payload["lines"][0].update(quantity="2.000", unit_price="1.2900", amount="3.49", unit=None)
+        payload.update(total="9.99", taxes=[])
         incoming = observation(payload)
         effective, derived = _domain_observation(incoming)
         self.assertEqual((effective.lines[0].quantity, effective.lines[0].unit_price, effective.lines[0].amount),

@@ -47,7 +47,7 @@ from stores.models import Store
 
 from . import common
 from .params import Params
-from .recognition_serialization import download_url
+from .recognition_serialization import download_url, printed_object
 from .stats_common import owner_product_id
 
 FORMAT = "checkist-export"
@@ -247,10 +247,10 @@ def _lines(selected, tree):
     rows = list(ReceiptLine.objects.filter(receipt__in=selected.values("pk")).annotate(owner_pid=owner_product_id())
                 .order_by("receipt_id", "position", "id")
                 .values_list("receipt_id", "position", "kind", "raw_name", "quantity", "unit", "unit_price",
-                             "amount", "discount_amount", "owner_pid", "category_id"))
+                             "amount", "discount_amount", "owner_pid", "category_id", "extra"))
     products = _products({row[9] for row in rows if row[9] is not None})
     found = {}
-    for receipt_id, position, kind, name, quantity, unit, unit_price, amount, discount, pid, own_category in rows:
+    for receipt_id, position, kind, name, quantity, unit, unit_price, amount, discount, pid, own_category, extra in rows:
         product = products.get(pid)
         category_id = own_category if own_category is not None or not product else product[1]
         with price_context():
@@ -261,6 +261,8 @@ def _lines(selected, tree):
             "amount": common.amount(amount), "discount_amount": common.amount(discount), "paid_amount": common.amount(paid),
             "category_id": category_id, "category_path": _path(tree, category_id),
             "product_id": pid if product else None, "product_name": product[0] if product else None,
+            # Printed quantity / unit / price the import replaced, keeping the amount (null: nothing replaced).
+            "printed": printed_object(extra),
         })
     return found
 

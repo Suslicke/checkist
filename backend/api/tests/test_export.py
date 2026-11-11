@@ -129,7 +129,7 @@ class ExportDocumentTests(ExportData, TwoUsers, TestCase):
         self.assertEqual(photo["lines"][0], {
             "position": 1, "kind": "product", "name": "MILCH", "quantity": "1.000", "unit": "pcs", "unit_price": "0.1000",
             "amount": "0.10", "discount_amount": "0.00", "paid_amount": "0.10", "category_id": self.dairy.pk,
-            "category_path": "Демо-продукты / Демо-молочное", "product_id": self.milk.pk, "product_name": "Демо-молоко 1 л",
+            "category_path": "Демо-продукты / Демо-молочное", "product_id": self.milk.pk, "product_name": "Демо-молоко 1 л", "printed": None,
         })
         self.assertEqual((photo["lines"][1]["paid_amount"], photo["lines"][1]["product_id"]), ("0.15", None))
         statement = doc["receipts"][1]
@@ -374,6 +374,6 @@ class ExportFixtureTests(TestCase):
                                         "categories", "lines", "media"})
         self.assertEqual(set(receipt["lines"][0]), {"position", "kind", "name", "quantity", "unit", "unit_price", "amount",
                                                     "discount_amount", "paid_amount", "category_id", "category_path",
-                                                    "product_id", "product_name"})
+                                                    "product_id", "product_name", "printed"})
         self.assertEqual(set(example["summary"]["currencies"][0]), {"currency", "receipts_count", "lines_count", "total",
                                                                      "category_total", "by_category", "by_month"})

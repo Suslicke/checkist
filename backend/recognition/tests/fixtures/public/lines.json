@@ -34,7 +34,8 @@
       "tax_code": "A",
       "tax_amount": null,
       "is_excise": false,
-      "is_marked": false
+      "is_marked": false,
+      "printed": null
     }
   ]
 }

@@ -415,12 +415,9 @@ class ReviewConfirmHttpTests(TransactionTestCase):
             # A number typed without its scale is a value error of the form, not a rounding.
             value = self.refused(image["id"], with_line(body, quantity="2", unit_price=1.29), 400, "invalid_parameter")
             self.assertEqual(sorted(value["error"]["fields"]), ["lines.0.quantity", "lines.0.unit_price"])
-            # Well formed operands that do not give the printed amount.
-            value = self.refused(image["id"], with_line(body, quantity=quantity, unit_price="9.9900"), 409,
-                                 "review_invalid")
-            self.assertEqual(value["issues"], [{
-                **TOTAL_MISMATCH, "field": "/lines/0/amount",
-                "context": {"entity": "line", "index": 0, "position": 1, "attribute": "amount"}}])
+            # Well formed operands that do not give the printed amount are no longer refused when the line
+            # amounts add up to the total: the amount is the fact, the price follows it (2026-11-11;
+            # recognition.tests.test_import: test_amounts_adding_up_to_the_total_are_the_fact_and_the_paper_is_kept).
             status, imported, review = outcome
             self.confirmed(image["id"], with_line(body, quantity=quantity, unit_price=price), status=status,
                            imported=imported, review=review)

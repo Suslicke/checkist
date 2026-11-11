@@ -1,3 +1,4 @@
+import copy
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
@@ -65,6 +66,45 @@ class ImportTests(TestCase):
         data["lines"][0]["product_hint"].update(name="Luftreiniger Neu", model="XM-1")
         third = self.run_import(data)
         self.assertEqual(third.receipt.lines.get(position=1).product.model, "XM-1")
+
+    def amount_fact_payload(self):
+        """K1 with its four lines replaced by the shapes of prod 2026-11-11: a stepped tariff, weighed goods
+        rounded at the till, a line without a quantity. The amounts add up to the printed total."""
+        data = receipt_payload()
+        data.update(discounts=[], taxes=[], discount_total=None, prices_include_tax=None, total="5464.31")
+        template = data["lines"][0]
+        rows = [("Электр. энергия", "service", "121.000", "kwh", "34.2800", "4608.31"),
+                ("Помидоры", "product", "0.456", "kg", "899.0000", "410.00"),
+                ("Отопление", "service", None, "gcal", "9909.4900", "446.00")]
+        data["lines"] = [{**copy.deepcopy(template), "position": n, "raw_name": name, "kind": kind, "quantity": quantity,
+                          "unit": unit, "unit_price": price, "amount": amount, "parent_position": None,
+                          "discount_amount": None, "tax_amount": None,
+                          "tax_rate": {"kind": None, "rate": None}, "tax_code": None,
+                          "product_hint": dict.fromkeys(template["product_hint"])}
+                         for n, (name, kind, quantity, unit, price, amount) in enumerate(rows, 1)]
+        return data
+
+    def test_amounts_adding_up_to_the_total_are_the_fact_and_the_paper_is_kept(self):
+        result = self.run_import(self.amount_fact_payload())
+        self.assertEqual((result.outcome, [i for i in result.issues if i["code"] != "optional_omitted"]), ("created", []))
+        power, tomatoes, heating = result.receipt.lines.order_by("position")
+        self.assertEqual((power.quantity, power.unit, power.unit_price, power.amount),
+                         (Decimal("121.000"), "kwh", Decimal("38.0852"), Decimal("4608.31")))
+        self.assertEqual(power.extra, {"printed": {"unit_price": "34.2800"}})
+        self.assertEqual((tomatoes.quantity, tomatoes.unit_price, tomatoes.extra),
+                         (Decimal("0.456"), Decimal("899.1228"), {"printed": {"unit_price": "899.0000"}}))
+        self.assertEqual((heating.quantity, heating.unit, heating.unit_price, heating.amount),
+                         (Decimal("1.000"), "pcs", Decimal("446.0000"), Decimal("446.00")))
+        self.assertEqual(heating.extra, {"printed": {"unit": "gcal", "unit_price": "9909.4900"}})
+        self.assertEqual(result.receipt.total, Decimal("5464.31"))
+
+    def test_amounts_not_adding_up_to_the_total_still_need_a_person(self):
+        data = self.amount_fact_payload()
+        data["total"] = "5000.00"
+        result = self.run_import(data)
+        self.assertEqual(result.outcome, "needs_review")
+        self.assertIn(("total_mismatch", "/lines/0/amount"), [(i["code"], i["field"]) for i in result.issues])
+        self.assertEqual(Receipt.objects.count(), 0)
 
     def test_k1_new_receipt_on_empty_catalog_and_stores(self):
         result = self.run_import()
@@ -255,16 +295,21 @@ class ImportTests(TestCase):
                     self.assertIn("/lines/2/" + key, [v["field"] for v in result.issues])
                     self.assert_no_domain()
 
-    def test_sparse_response_line_arithmetic_conflict_blocks_even_with_balanced_total(self):
+    def test_sparse_response_line_arithmetic_conflict_keeps_the_amount_when_the_total_balances(self):
+        # Until 2026-11-11 such a line blocked the import; the owner's decision: the amount is the fact.
         payload = sparse_lidl_format_payload()
+        printed = payload["lines"][2]["unit_price"]
         payload["lines"][2]["amount"] = "3.49"
         payload["total"] = "41.71"
         result = self.run_import_observation(validate_observation(payload))
-        self.assertEqual((result.outcome, result.image.status), ("needs_review", "needs_review"))
-        self.assertIsNone(result.receipt)
-        self.assertIn(("total_mismatch", "/lines/2/amount"), [(v["code"], v["field"]) for v in result.issues])
-        self.assertEqual(result.image.normalized_result["lines"][2]["amount"], "3.49")
-        self.assert_no_domain()
+        self.assertEqual((result.outcome, result.image.status), ("created", "imported"))
+        self.assertNotIn("total_mismatch", [v["code"] for v in result.issues])
+        line = result.receipt.lines.get(position=payload["lines"][2]["position"])
+        self.assertEqual(line.amount, Decimal("3.49"))
+        self.assertEqual(line.extra, {"printed": {"unit_price": str(Decimal(printed))}})
+        self.assertLessEqual(abs(line.quantity * line.unit_price - line.amount), Decimal("0.01"))
+        # The crop keeps what the model read, untouched.
+        self.assertEqual(result.image.normalized_result["lines"][2]["unit_price"], printed)
 
     def test_amount_only_deposit_return_defaults_negative_quantity_and_positive_price(self):
         payload = receipt_payload()

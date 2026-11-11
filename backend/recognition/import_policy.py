@@ -152,8 +152,45 @@ def _usable_rate(rate, evidence, path):
                  and rate.rate >= 0 and evidence.get(path + "/rate") == "observed"))
 
 
+CENT = Decimal("0.01")
+
+
+class Derived(list):
+    """JSON pointers of derived values, and what the paper said in their place.
+
+    ``printed[i]`` holds the printed ``quantity`` / ``unit`` / ``unit_price`` of line ``i`` that the
+    import replaced because the line's amount is the fact (see ``derive_line_values``). A list
+    subclass, so the pointers travel and serialize exactly as before.
+    """
+
+    def __init__(self, items=(), printed=None):
+        super().__init__(items)
+        self.printed = dict(printed or {})
+
+
+def _amounts_match_total(observation):
+    """Printed line amounts add up to the printed total: the amounts are corroborated."""
+    amounts = [line.amount for line in observation.lines]
+    discounts = [discount.amount for discount in observation.discounts]
+    if observation.total is None or not amounts or None in amounts or None in discounts:
+        return False
+    total = sum(amounts, Decimal(0)) - sum(discounts, Decimal(0))
+    if observation.prices_include_tax is False:
+        taxes = [tax.tax for tax in observation.taxes]
+        if None in taxes:
+            return False
+        total += sum(taxes, Decimal(0))
+    return abs(total - observation.total) <= CENT
+
+
 def derive_line_values(observation):
     """Use two usable numbers; never round an inferred quantity or price.
+
+    One exception, decided by the owner on 2026-11-11 («это финансы: сумма — факт»): when the
+    printed line amounts add up to the printed total, a line whose quantity x price does not give
+    its amount keeps the amount. Its price becomes amount / quantity (a utility bill with a stepped
+    tariff, weighed goods rounded at the till); a line without a usable quantity becomes one piece
+    at its amount. What was printed instead is kept in ``Derived.printed`` for the receipt line.
 
     A missing amount follows the receipt's cent precision. Amount-only product
     and deposit lines default to one piece; negative deposit returns to minus one.
@@ -163,7 +200,8 @@ def derive_line_values(observation):
     use. Unreadable/ambiguous missing numbers and units stay unresolved.
     """
     evidence = {f.path: f.status for f in observation.fields}
-    derived, lines = [], []
+    derived, lines = Derived(), []
+    corroborated = _amounts_match_total(observation)
     weight_rate = r"(?:/\s*|\b(?:per|pro|за)\s+)(?:kg|g|l|ml|кг|г|л|мл)\b"
     for i, line in enumerate(observation.lines):
         path = f"/lines/{i}"
@@ -206,6 +244,31 @@ def derive_line_values(observation):
             if value is not None:
                 values[key] = value
                 derived.append(path + "/" + key)
+        amount, quantity, price = values["amount"], values["quantity"], values["unit_price"]
+        # Explicit uncertainty of the model about any operand of the line still goes to a person.
+        unsure = any(evidence.get(path + "/" + key) in {"ambiguous", "unreadable"}
+                     for key in ("quantity", "unit", "unit_price"))
+        if corroborated and not unsure and usable_number("amount") and (
+                None in (quantity, price) or abs(quantity * price - amount) > CENT):
+            new = None
+            if quantity and amount / quantity >= 0:
+                candidate = (amount / quantity).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+                # ponytail: a 4-digit price cannot reproduce every amount of a large quantity
+                # (error up to quantity x 0.00005); such a line falls through to one piece.
+                if abs(quantity * candidate - amount) <= CENT:
+                    new = {"unit_price": candidate}
+            if new is None and not weighted:
+                new = {"quantity": Decimal("-1.000") if amount < 0 else Decimal("1.000"), "unit": "pcs",
+                       "unit_price": abs(amount).quantize(Decimal("0.0001"))}
+            if new is not None:
+                paper = {"quantity": line.quantity, "unit": line.unit, "unit_price": line.unit_price}
+                printed = {key: str(paper[key]) for key, value in new.items()
+                           if paper[key] is not None and paper[key] != value}
+                if printed:
+                    derived.printed[i] = printed
+                derived.extend(p for p in (path + "/" + key for key in new) if p not in derived)
+                unit = new.pop("unit", unit)
+                values.update(new)
         if (unit is None and evidence.get(path + "/unit") in (None, "absent")
                 and (usable_number("quantity") or path + "/quantity" in derived)
                 and values["quantity"] is not None

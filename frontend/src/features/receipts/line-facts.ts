@@ -1,7 +1,7 @@
 /** Pure helpers of the lines of a receipt: the facts of a phone row and the categories of the header. */
 import type { Line } from '../../api/receipts'
 import type { NamedObject } from '../../api/types'
-import { formatQuantity } from '../../lib/format'
+import { formatQuantity, formatUnit } from '../../lib/format'
 import { money, price, recognizedValue } from './state'
 
 /** The headings of the lines table in the order of its columns; the first one is the row heading. */
@@ -35,6 +35,22 @@ export function lineFacts(line: Line, currency: string | undefined, columns: Lin
     amount !== null && canonical(line.paid_amount) === amount ? null : { key: 'paid', label: columns[5], value: money(line.paid_amount, currency) },
   ]
   return facts.filter((fact): fact is LineFact => fact !== null)
+}
+
+/**
+ * «В чеке: 121 кВт·ч · цена 34,28 ₸» — what the paper said where the import kept the amount of the line as the fact
+ * and recalculated the price (or made the line one piece). Null when nothing was replaced. The client only shows the
+ * printed values; it calculates nothing.
+ */
+export function printedNote(line: Line, currency: string | undefined): string | null {
+  const printed = line.printed
+  if (!printed) return null
+  const parts = [
+    printed.quantity !== null ? formatQuantity(printed.quantity, printed.unit ?? line.unit)
+      : printed.unit !== null ? `единица ${formatUnit(printed.unit)}` : null,
+    printed.unit_price !== null ? `цена ${price(printed.unit_price, currency)}` : null,
+  ].filter((part): part is string => part !== null)
+  return parts.length ? `В чеке: ${parts.join(' · ')}` : null
 }
 
 /** The categories of the lines of a page, once each, in the order of the lines: the chips of the header. */

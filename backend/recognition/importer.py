@@ -25,7 +25,7 @@ from receipts.validation import validate_receipt
 from stores.models import Store
 
 from .dto import ReceiptObservation
-from .import_policy import derive_line_values, optional_field, prepare_observation
+from .import_policy import Derived, derive_line_values, optional_field, prepare_observation
 from .models import ReceiptImage, SourcePhoto
 from .queue import fenced_job, save_image_result
 from .resolution import (
@@ -277,6 +277,7 @@ def _create_graph(header, observation, country, derived, confirmed=None):
     # ponytail: «created here» = pk above the fence; exact while photo imports hold IMPORT_LOCK.
     from catalog.models import Product
     newest = Product.objects.order_by("-pk").values_list("pk", flat=True).first() or 0
+    printed = getattr(derived, "printed", {})
     for i, observed in enumerate(observation.lines):
         resolution = _resolve_product(observed, header["store"].merchant, field=f"/lines/{i}/product_hint")
         product = resolution.product
@@ -290,6 +291,9 @@ def _create_graph(header, observation, country, derived, confirmed=None):
             "discount_amount", "tax_amount", "is_excise", "is_marked",
         )}
         values.update({k: getattr(observed, k) or "" for k in ("store_item_code", "barcode", "tax_code")})
+        if i in printed:
+            # The amount is the fact; what the paper said about quantity, unit and price stays for analysis.
+            values["extra"] = {"printed": printed[i]}
         if product is None and service_charges.applies(observed.kind, observed.raw_name):
             # Service charge or tip: no catalogue product, its own category (None if it is missing).
             values["category_id"] = service_category()
@@ -522,7 +526,7 @@ def _import_domain(observation, derived, *, owner_id, require_duplicate=False, l
             store = Store.objects.select_related("merchant", "country").get(pk=store.merged_into_id)
         currency = resolve_currency(observation, store=store)
         if observation.currency_code is None:
-            derived = [*derived, "/currency_code"]
+            derived = Derived([*derived, "/currency_code"], getattr(derived, "printed", None))
             notices.append(issue("currency_inferred", "/currency_code", "Валюта определена по стране известного магазина."))
         if observation.merchant.tax_id_type and store.merchant.tax_id_type and observation.merchant.tax_id_type != store.merchant.tax_id_type:
             notices.append(issue("merchant_conflict", "/merchant/tax_id_type"))

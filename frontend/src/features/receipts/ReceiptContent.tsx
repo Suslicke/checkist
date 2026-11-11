@@ -12,6 +12,7 @@ import { glue, numbered } from '../../lib/text'
 import { Link } from '../../navigation'
 import ReceiptLineLeaders from './ReceiptLineLeaders'
 import type { LineColumns } from './ReceiptLineLeaders'
+import { printedNote } from './line-facts'
 import { categoryTone } from '../../lib/category-tone'
 import { DownloadOriginal } from '../recognition/MediaImage'
 import ReceiptMedia from './ReceiptMedia'
@@ -110,10 +111,17 @@ export function CurrencyNote({ currency }: { currency?: string }) {
 }
 
 /** The content of the row heading of the table. */
-function LineHeading({ line, lines }: { line: Line; lines: Line[] }) {
+/** «В чеке: …» under a line whose price was recalculated from its amount; nothing otherwise. */
+function PrintedNote({ line, currency }: { line: Line; currency?: string }) {
+  const note = printedNote(line, currency)
+  return note ? <span className="receipt-note">{note}</span> : null
+}
+
+function LineHeading({ line, lines, currency }: { line: Line; lines: Line[]; currency?: string }) {
   return <>
     <span className="receipt-note">{glue('Строка', line.position)} · {lineKinds[line.kind]}</span>
     <span className="receipt-printed-name">{recognizedText(line.name)}</span>
+    <PrintedNote line={line} currency={currency} />
     {/* A named purchase of a manual spend has both: its category and its product of the catalogue. */}
     {line.category && <span className="receipt-note receipt-line-category">Категория: {line.category.name}</span>}
     {line.product ? <Link className="receipt-product-link" to={`/catalog/products/${line.product.id}`}>Товар каталога: {recognizedText(line.product.name)}</Link>
@@ -133,9 +141,10 @@ function LineRelations({ line, lines }: { line: Line; lines: Line[] }) {
 
 /** Under the name of a row of the phone view: the category as a chip, the number on the receipt and the kind (not for a
  * spend typed by hand: its lines were never printed), the catalog link or the unmatched mark, the relations. */
-function LineDetails({ line, lines, manual }: { line: Line; lines: Line[]; manual: boolean }) {
+function LineDetails({ line, lines, manual, currency }: { line: Line; lines: Line[]; manual: boolean; currency?: string }) {
   return <>
     {line.category && <CategoryChip category={line.category} hint />}
+    <PrintedNote line={line} currency={currency} />
     {!manual && <span className="receipt-note">{glue('Строка', line.position)} · {lineKinds[line.kind]}</span>}
     {line.product ? <Link className="receipt-product-link" to={`/catalog/products/${line.product.id}`}>Товар каталога: {recognizedText(line.product.name)}</Link>
       : !line.category && !manual && <span className="receipt-warning">Товар не сопоставлен</span>}
@@ -151,12 +160,12 @@ export function ReceiptLines({ lines, currency, manual = false }: { lines: Line[
     <CurrencyNote currency={currency} />
     {!manual && <p className="receipt-note">«Оплачено» учитывает скидку строки. Скидка всего чека по строкам не распределяется.</p>}
     {narrow ? <ReceiptLineLeaders lines={lines} currency={currency} columns={lineColumns} caption={manual ? undefined : linesCaption}
-      details={(line) => <LineDetails line={line} lines={lines} manual={manual} />} /> : <div className="receipt-table-scroll" role="region" aria-label="Таблица строк чека, прокручивается по горизонтали" tabIndex={0}>
+      details={(line) => <LineDetails line={line} lines={lines} manual={manual} currency={currency} />} /> : <div className="receipt-table-scroll" role="region" aria-label="Таблица строк чека, прокручивается по горизонтали" tabIndex={0}>
       <table className="receipt-lines-table">
         <caption>{linesCaption}</caption>
         <thead><tr>{lineColumns.map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
         <tbody>{lines.map((line) => <tr id={`receipt-line-${line.id}`} key={line.id} tabIndex={-1}>
-          <th scope="row"><LineHeading line={line} lines={lines} /></th>
+          <th scope="row"><LineHeading line={line} lines={lines} currency={currency} /></th>
           <td className="receipt-number">{recognizedValue(formatQuantity(line.quantity, line.unit))}</td>
           <td className="receipt-number">{price(line.unit_price, currency)}</td>
           <td className="receipt-number">{money(line.amount, currency)}</td>

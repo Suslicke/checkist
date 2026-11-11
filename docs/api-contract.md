@@ -946,7 +946,7 @@ Receipt содержит ровно `id,owner,owner_name,source,store,currency,o
 {"id":101,"position":1,"kind":"product","parent_id":null,"name":"MILCH 1 L","name_i18n":{},"store_item_code":"M1","barcode":"","quantity":"2.000","unit":"pcs","unit_price":"1.2900","amount":"2.58","discount_amount":"0.20","paid_amount":"2.38","product":{"id":61,"name":"Молоко 1 л"},"matching_status":"matched","tax_rate":{"id":3,"country":"DE","kind":"vat","rate":"7.00"},"tax_code":"A","tax_amount":null,"is_excise":false,"is_marked":false}
 ```
 
-Line несёт ещё `category` (`{"id","name"}` либо `null`, после `product`) — категорию строки без товара, её задаёт только трата без чека. Строка без товара, но с категорией в `unmatched_products_count` и `review_required` не входит. Line.product=null → matching_status=unmatched; ambiguous здесь отсутствует (отдельных draft assignment нет). `name` — напечатанное raw_name, не весь raw_text; `parent_id` — ID строки, legacy position=0 допустима при чтении. name_i18n содержит только строковые значения с ключами языков. paid_amount = amount - discount_amount, без распределения скидки чека и без float, независимо от Decimal-контекста вызывающего кода. В ответах деньги имеют 2 знака, unit_price 4, quantity 3, tax rate 2; неизвестное значение — null. Валюты не смешиваются.
+Line несёт ещё `printed` (последним, с 2026-11-11): `null` либо `{"quantity": "121.000"|null, "unit": "m3"|null, "unit_price": "34.2800"|null}` — что было напечатано на чеке там, где импорт оставил сумму строки как факт и пересчитал остальное (в объекте заполнены только заменённые значения; правило — ниже, «Сумма строки — факт»). Line несёт ещё `category` (`{"id","name"}` либо `null`, после `product`) — категорию строки без товара, её задаёт только трата без чека. Строка без товара, но с категорией в `unmatched_products_count` и `review_required` не входит. Line.product=null → matching_status=unmatched; ambiguous здесь отсутствует (отдельных draft assignment нет). `name` — напечатанное raw_name, не весь raw_text; `parent_id` — ID строки, legacy position=0 допустима при чтении. name_i18n содержит только строковые значения с ключами языков. paid_amount = amount - discount_amount, без распределения скидки чека и без float, независимо от Decimal-контекста вызывающего кода. В ответах деньги имеют 2 знака, unit_price 4, quantity 3, tax rate 2; неизвестное значение — null. Валюты не смешиваются.
 
 ```json
 {"id":201,"position":1,"line_id":101,"name":"Rabatt MILCH","amount":"0.20"}
@@ -1965,7 +1965,7 @@ Line несёт ещё `category` (`{"id","name"}` либо `null`, после `
    "owner": "andrey", "owner_name": "Андрей", "created_at": "2026-10-03T13:02:11Z", "categories": ["Продукты / Молочное"],
    "lines": [{"position": 1, "kind": "product", "name": "МОЛОКО 3,2% 1Л", "quantity": "2.000", "unit": "pcs", "unit_price": "645.0000",
      "amount": "1290.00", "discount_amount": "0.00", "paid_amount": "1290.00", "category_id": 3, "category_path": "Продукты / Молочное",
-     "product_id": 44, "product_name": "Молоко 3,2% 1 л"}],
+     "product_id": 44, "product_name": "Молоко 3,2% 1 л", "printed": null}],
    "media": {"display_url": "https://…/media/crops/…/preview-1600-v2.webp", "download_url": "https://…/media/originals/…/source.jpg?download=1"}}],
  "limits": [{"category_id": 1, "category_path": "Продукты", "currency": "KZT", "amount": "150000.00"}],
  "summary": {"receipts_count": 1, "lines_count": 1, "max_receipts": 20000, "currencies": [{"currency": "KZT", "receipts_count": 1,

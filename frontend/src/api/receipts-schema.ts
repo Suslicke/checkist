@@ -2,7 +2,7 @@ import { safeMediaUrl } from '../lib/media.ts'
 import { amount, array, bool, choice, country, currency, isId, isISODate, isISODateTime, named, nonNegativeInteger, nullable, object, price, quantity, record, store, text, unit } from './schema.ts'
 import type { Guard } from './schema.ts'
 import { isPaymentMethod } from '../lib/payment-methods.ts'
-import type { Discount, Line, ManualDefaults, ManualSuggestion, ManualSuggestionLine, Receipt, ReceiptListItem, Tax, TaxRate } from './receipts-types.ts'
+import type { Discount, Line, PrintedLine, ManualDefaults, ManualSuggestion, ManualSuggestionLine, Receipt, ReceiptListItem, Tax, TaxRate } from './receipts-types.ts'
 
 export const receiptOperation = choice('sale', 'refund')
 export const receiptSource = choice('photo', 'manual')
@@ -46,13 +46,15 @@ export const isManualSuggestions = object<{ results: ManualSuggestion[] }>({ res
 const translations = (value: unknown) => record(value) && Object.entries(value).every(
   ([key, val]) => /^[a-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(key) && text(val),
 )
-const lineShape = object<Line>({
+const isPrinted = object<PrintedLine>({ quantity: nullable(quantity), unit: nullable(unit), unit_price: nullable(price) })
+const lineShape = object<Omit<Line, 'printed'>>({
   id: isId, position: nonNegativeInteger, kind: lineKind, parent_id: nullable(isId), name: text, name_i18n: translations,
   store_item_code: text, barcode: text, quantity, unit, unit_price: price, amount, discount_amount: amount, paid_amount: amount,
   product: nullable(named), category: nullable(named), matching_status: choice('matched', 'unmatched'), tax_rate: nullable(isTaxRate),
   tax_code: text, tax_amount: nullable(amount), is_excise: bool, is_marked: bool,
 })
 export const isLine: Guard<Line> = (value): value is Line => lineShape(value)
+  && optional(value as Record<string, unknown>, 'printed', nullable(isPrinted))
   && value.matching_status === (value.product === null ? 'unmatched' : 'matched')
 export const isDiscount = object<Discount>({ id: isId, position: nonNegativeInteger, line_id: nullable(isId), name: text, amount })
 export const isTax = object<Tax>({ id: isId, tax_rate: isTaxRate, tax_code: text, net: amount, tax: amount, gross: amount })

@@ -466,7 +466,22 @@ def line_object(line):
         "matching_status": "matched" if line.product_id else "unmatched",
         "tax_rate": tax_rate_object(line.tax_rate), "tax_code": line.tax_code, "tax_amount": amount(line.tax_amount),
         "is_excise": line.is_excise, "is_marked": line.is_marked,
+        "printed": printed_object(line.extra),
     }
+
+
+def printed_object(extra):
+    """What the paper said where the import kept the amount as the fact: ``{quantity, unit, unit_price}`` or None.
+
+    ``ReceiptLine.extra["printed"]`` is written by the importer only (``import_policy.Derived``); the stored
+    JSON is still read defensively, as every other persisted observation here.
+    """
+    value = extra.get("printed") if isinstance(extra, dict) else None
+    if not isinstance(value, dict):
+        return None
+    return {"quantity": safe_decimal(value.get("quantity"), 3),
+            "unit": value.get("unit") if value.get("unit") in Unit.values else None,
+            "unit_price": safe_decimal(value.get("unit_price"), 4)}
 
 
 def discount_object(discount):
