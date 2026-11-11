@@ -133,6 +133,16 @@ class ImportTests(TestCase):
         data["total"] = "4664.52"
         second = self.run_import(data)
         self.assertEqual((second.outcome, second.receipt.store_id, Store.objects.count()), ("created", home.pk, 1))
+        self.assertEqual(list(second.receipt.lines.values_list("category_id", flat=True)), [None, None, None])
+        # A person gives the services of the bill their categories once; the next bill has them by itself,
+        # and goods (a catalogue product) keep the category of their product.
+        utilities = Category.objects.create(name="Demo-Nebenkosten")
+        ReceiptLine.objects.filter(receipt=second.receipt, kind="service").update(category=utilities)
+        data = self.sellerless(self.amount_fact_payload(), 16)
+        next_month = self.run_import(data)
+        self.assertEqual(next_month.outcome, "created")
+        self.assertEqual({line.kind: line.category_id for line in next_month.receipt.lines.all()},
+                         {"service": utilities.pk, "product": None})
         # A printed seller is never overridden by the memory.
         other = self.amount_fact_payload()
         other["local_time"] = "10:14:00"

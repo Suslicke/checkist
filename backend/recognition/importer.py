@@ -270,6 +270,7 @@ def _create_graph(header, observation, country, derived, confirmed=None):
         # discard tax rows. Their new indexes need not match original evidence.
         return resolve_tax_rate(rate, country, field, confirmed=True)
     service_category = service_charges.CategoryLookup()
+    remembered = None  # read once, and only when a line without a product needs it
     # Parents may occur after their child in the printed order. Create all rows
     # first, then connect only the already validated references.
     # The catalogue is shared between families and a receipt is untrusted input: only a product
@@ -297,6 +298,11 @@ def _create_graph(header, observation, country, derived, confirmed=None):
         if product is None and service_charges.applies(observed.kind, observed.raw_name):
             # Service charge or tip: no catalogue product, its own category (None if it is missing).
             values["category_id"] = service_category()
+        elif product is None:
+            # A service of a bill: the category of the family's last line of the same name, if any.
+            if remembered is None:
+                remembered = _remembered_categories(observation, header["owner_id"])
+            values["category_id"] = remembered.get(name_key(observed.raw_name))
         lines[observed.position] = clean_save(ReceiptLine(receipt=receipt, product=product, tax_rate=rate, **values))
     for observed in observation.lines:
         if observed.parent_position is not None:
@@ -557,6 +563,43 @@ def _import_domain(observation, derived, *, owner_id, require_duplicate=False, l
 REMEMBERED_DAYS = 400
 
 
+def _remembered_lines(owner_id):
+    """Lines of the last 400 days that the owner of the crop may read — the only source of the import's memory.
+
+    The family's receipts by the one rule of every read path (``visible_receipts_q``: no payments hidden by the
+    head, nothing before the member's «видит траты семьи с»); the rules of accounts.access read nothing but
+    ``user`` of a request.
+    """
+    from types import SimpleNamespace
+
+    from django.contrib.auth import get_user_model
+
+    from accounts.access import visible_receipts_q
+
+    reader = SimpleNamespace(user=get_user_model().objects.get(pk=owner_id))
+    return ReceiptLine.objects.filter(
+        visible_receipts_q(reader, "receipt__"),
+        receipt__purchased_on__gte=date.today() - timedelta(days=REMEMBERED_DAYS))
+
+
+def _remembered_categories(observation, owner_id):
+    """``{name_key: category_id}`` — the category a person (or an earlier import) gave to a line of the same name.
+
+    A line without a catalogue product (a service: electricity, water, heating of a utility bill) has no category
+    of its own, so the spend had none and a recurring payment was matched by the amount alone (prod 2026-11-11:
+    the utility bill closed «Обслуживание дома»). The newest line of that name with its own category decides.
+    """
+    names = {name_key(line.raw_name) for line in observation.lines if line.raw_name} - {""}
+    found = {}
+    rows = (_remembered_lines(owner_id).filter(category__isnull=False)
+            .order_by("-receipt__purchased_at", "-pk").values_list("raw_name", "category_id"))
+    for raw_name, category_id in rows.iterator():
+        key = name_key(raw_name)
+        if key in names:
+            found.setdefault(key, category_id)
+    return found
+
+
 def _remembered_store(observation, owner_id):
     """Where the family's last paper with the same lines went, for a paper that names no seller; else ``None``.
 
@@ -571,22 +614,10 @@ def _remembered_store(observation, owner_id):
     names = {name_key(line.raw_name) for line in observation.lines if line.raw_name} - {""}
     if len(names) < 2:
         return None
-    from types import SimpleNamespace
-
-    from django.contrib.auth import get_user_model
-
-    from accounts.access import visible_receipts_q
-
-    # Only what the owner of the crop may read: the family's receipts by the one rule of every read path
-    # (no payments hidden by the head, nothing before the member's «видит траты семьи с»). The rules of
-    # accounts.access read nothing but ``user`` of a request.
-    reader = SimpleNamespace(user=get_user_model().objects.get(pk=owner_id))
     # ponytail: one scan of the family's photo lines of the last 400 days, compared in Python
     # (name_key is not an SQL function); an indexed key column if a family ever has 100k such lines.
-    rows = ReceiptLine.objects.filter(
-        visible_receipts_q(reader, "receipt__"), receipt__source=Receipt.Source.PHOTO,
-        receipt__purchased_on__gte=date.today() - timedelta(days=REMEMBERED_DAYS),
-    ).values_list("receipt_id", "receipt__store_id", "raw_name")
+    rows = _remembered_lines(owner_id).filter(receipt__source=Receipt.Source.PHOTO).values_list(
+        "receipt_id", "receipt__store_id", "raw_name")
     matched = {}
     for receipt_id, store_id, raw_name in rows.iterator():
         if name_key(raw_name) in names:
