@@ -209,4 +209,21 @@ describe('navigation without a browser', () => {
     expect(navigation.getSnapshot().href).toBe('/receipts')
     unsubscribe()
   })
+
+  it('opens a page of the menu as a root, and a tab in place of its sibling', () => {
+    const history = memoryHistory('/')
+    const navigation = createNavigation(history.environment)
+    const unsubscribe = navigation.subscribe(() => {})
+    navigation.navigate('/recurring')  // a link of «Главная»
+    expect(stepsBack(navigation.getSnapshot())).toBe(true)
+    navigation.navigate('/receipts', { root: true })  // the menu
+    expect(navigation.getSnapshot()).toEqual({ href: '/receipts', route: expect.anything() })
+    expect(stepsBack(navigation.getSnapshot())).toBe(false)
+    navigation.navigate('/stats')  // a link of «Траты»
+    navigation.navigate('/stats/trends', { replace: true })  // a tab of the section
+    expect(navigation.getSnapshot()).toMatchObject({ href: '/stats/trends', depth: 1, from: '/receipts' })
+    navigation.back('/')
+    expect(navigation.getSnapshot().href).toBe('/receipts')
+    unsubscribe()
+  })
 })

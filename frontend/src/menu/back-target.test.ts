@@ -79,4 +79,18 @@ describe('the round control of the header row (pure, no browser)', () => {
     expect(hubOf('/', undefined, { kind: 'goals' })).toBeUndefined()
     expect(hubOf('/money', undefined, { kind: 'stores' })).toBeUndefined()
   })
+
+  it('gives a section «назад» to the page it was opened from by a link, and none after the menu (2026-11-11)', () => {
+    const recurring = { route: { kind: 'recurring' } as const, href: '/recurring' }
+    // A row of «Требует внимания» on «Главная» → «Платежи».
+    expect(headerAction({ ...recurring, depth: 1, from: '/' })).toEqual({ kind: 'back', to: '/', label: 'Назад', step: true })
+    // Through the menu, entered directly, or only a filter of the same page changed: nothing.
+    expect(headerAction(recurring)).toBeUndefined()
+    expect(headerAction({ ...recurring, href: '/recurring?month=2026-10', depth: 2, from: '/recurring' })).toBeUndefined()
+    // «Главная» never has it; a hub and a detail page keep their own way back.
+    expect(headerAction({ route: { kind: 'dashboard' }, href: '/', depth: 1, from: '/receipts' })).toBeUndefined()
+    expect(headerAction({ ...recurring, depth: 1, from: '/money' }, '/money', '/money')).toEqual({ kind: 'back', to: '/money', label: 'Назад в «Деньги»' })
+    expect(headerAction({ route: { kind: 'receipt', receiptId: 7 }, href: '/receipts/7', depth: 1, from: '/recurring' }))
+      .toEqual({ kind: 'back', to: '/receipts', label: 'Назад к тратам', step: true })
+  })
 })

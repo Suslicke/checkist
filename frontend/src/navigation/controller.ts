@@ -26,6 +26,9 @@ export interface NavigationSnapshot {
 
 export interface NavigateOptions {
   replace?: boolean
+  /** A move through the menu: the page opens as a root, with nothing of the app «behind» it — it gets no «назад»
+   * (the history of the tab itself is untouched). */
+  root?: boolean
 }
 
 export type NavigationTarget = string | NavigableRoute
@@ -93,8 +96,8 @@ export function createNavigation(environment: NavigationEnvironment) {
     const returnTo = listContext(current.href, current.origin, route)
       ?? listContext(snapshot.returnTo, current.origin, route)
     // A push puts one more page of the app behind the new one; a replacement keeps what lay behind the old one.
-    const depth = options.replace ? snapshot.depth ?? 0 : (snapshot.depth ?? 0) + 1
-    const from = options.replace ? snapshot.from : snapshot.href
+    const depth = options.root ? 0 : options.replace ? snapshot.depth ?? 0 : (snapshot.depth ?? 0) + 1
+    const from = options.root ? undefined : options.replace ? snapshot.from : snapshot.href
     const state = returnTo || depth > 0
       ? { ...(returnTo && { checkistReturnTo: returnTo }), ...(depth > 0 && { checkistDepth: depth, checkistFrom: from }) } : null
     if (options.replace) environment.replaceState(state, href)

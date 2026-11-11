@@ -282,7 +282,7 @@ export default function App() {
       <NetworkBar />
       <OfflineBanner />
       <header className="brand-bar">
-        <Link className="brand" to="/" aria-label="Чекист — главная">
+        <Link className="brand" root to="/" aria-label="Чекист — главная">
           <img className="brand-mark" src={emblem} srcSet={`${emblem} 1x, ${emblem2x} 2x`} width={44} height={44} alt="" />
           <span>Чекист</span>
         </Link>
@@ -307,12 +307,12 @@ export default function App() {
           </div>
           {route.kind === 'health' && <p className="intro-note intro-note-after">Сводка о состоянии служб.</p>}
           {catalogActive && view === 'page' && canModerate(session) && <nav className="main-navigation section-navigation" aria-label="Раздел каталога">
-            <Link to="/catalog" aria-current={mergesActive || classificationActive ? undefined : 'page'}>Товары</Link>
-            <Link to="/catalog/merges" aria-current={mergesActive ? 'page' : undefined}>Дубли</Link>
-            <Link to="/catalog/classification" aria-current={classificationActive ? 'page' : undefined}>Категории</Link>
+            <Link replace to="/catalog" aria-current={mergesActive || classificationActive ? undefined : 'page'}>Товары</Link>
+            <Link replace to="/catalog/merges" aria-current={mergesActive ? 'page' : undefined}>Дубли</Link>
+            <Link replace to="/catalog/classification" aria-current={classificationActive ? 'page' : undefined}>Категории</Link>
           </nav>}
           {statsActive && view === 'page' && <nav className="main-navigation section-navigation" aria-label="Раздел статистики">
-            {statsTabs.map((tab) => <Link key={tab.kind} to={statsTabHref(tab.kind, route)} aria-current={route.kind === tab.kind ? 'page' : undefined}>{tab.label}</Link>)}
+            {statsTabs.map((tab) => <Link key={tab.kind} replace to={statsTabHref(tab.kind, route)} aria-current={route.kind === tab.kind ? 'page' : undefined}>{tab.label}</Link>)}
           </nav>}
           {body}
         </main>

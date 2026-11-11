@@ -15,7 +15,7 @@ const ADD_SHEET_ID = 'main-add-sheet'
 
 /** A link of the menu: the word, and a picture that only the bottom bar and the list behind «Ещё» of a phone show. */
 function item({ key, to, label, current, account, icon }: MenuItem) {
-  return <Link key={key} className={account ? 'account-link' : undefined} to={to} aria-label={account ? `Аккаунт: ${label}` : undefined}
+  return <Link key={key} root className={account ? 'account-link' : undefined} to={to} aria-label={account ? `Аккаунт: ${label}` : undefined}
     aria-current={current ? 'page' : undefined}><Icon name={icon} />{label}</Link>
 }
 
@@ -152,7 +152,7 @@ export default function MainMenu({ session, route, menuRef }: { session: Session
       {primary.slice(ADD_AFTER).map(item)}
       {more.length > 0 && <div className="main-more">
         {/* The bar of a phone only. The current section behind it is named: the mark alone is for the eye. */}
-        <Link className="main-more-toggle" to="/more" aria-current={onMore ? 'page' : undefined}
+        <Link className="main-more-toggle" root to="/more" aria-current={onMore ? 'page' : undefined}
           aria-label={currentInMore ? `Ещё, текущий раздел: ${currentInMore.label}` : undefined}
           data-current={currentInMore ? '' : undefined}><Icon name="more" />Ещё</Link>
         {/* The header row of a wide screen and the narrow strip: «Статистика» as a link, «Данные ▾», «Настройки ▾». */}

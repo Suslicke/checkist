@@ -95,15 +95,24 @@ export function backLabel(navigation: Pick<NavigationSnapshot, 'href' | 'depth' 
 /**
  * The control of the header row. A focus screen is closed by «✕»: a changed spend back to its receipt, a new one to
  * the page of the app the person came from (`from`), otherwise to «Главная». Any other nested page goes back by
- * «назад» (`backTarget`); a page of a section has none — unless it was opened from a hub (`hub`: «Ещё» or «Деньги»).
+ * «назад» (`backTarget`); a page of a section has it when it was opened from a hub (`hub`: «Ещё» or «Деньги») or by a
+ * link of another page — and has none when it was opened through the menu (`Link root`) or entered directly.
  */
-export function headerAction(navigation: Pick<NavigationSnapshot, 'route' | 'returnTo'>, from?: string, hub?: HubPath): HeaderAction | undefined {
+export function headerAction(navigation: Pick<NavigationSnapshot, 'route' | 'returnTo'> & Partial<Pick<NavigationSnapshot, 'href' | 'depth' | 'from'>>,
+  from?: string, hub?: HubPath): HeaderAction | undefined {
   const { route } = navigation
   if (route.kind === 'expense-new') return { kind: 'close', to: from ?? '/', label: 'Закрыть', step: true }
   if (route.kind === 'expense-edit') return { kind: 'close', to: `/receipts/${route.receiptId}`, label: 'Закрыть', step: true }
   if (route.kind === 'income-edit') return { kind: 'close', to: from ?? '/incomes', label: 'Закрыть', step: true }
   const detail = backTarget(navigation)
   if (detail) return { kind: 'back', ...detail, step: true }
-  // A section opened from a hub goes back to it, as a pushed screen of a phone app; from anywhere else it has none.
-  return hub && isHubSection(hub, route) ? { kind: 'back', ...target(hub) } : undefined
+  // A section opened from a hub goes back to it, as a pushed screen of a phone app.
+  if (hub && isHubSection(hub, route)) return { kind: 'back', ...target(hub) }
+  // Any other page the person came to by a link of a page (a row of «Требует внимания», a tile), not through the
+  // menu: back to that page (2026-11-11). «Главная» is the root of everything and never has «назад».
+  const { href, depth, from: source } = navigation
+  if (route.kind !== 'dashboard' && href !== undefined && source !== undefined && stepsBack({ href, depth, from: source })) {
+    return { kind: 'back', to: source, label: 'Назад', step: true }
+  }
+  return undefined
 }
