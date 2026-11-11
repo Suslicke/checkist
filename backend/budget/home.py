@@ -29,6 +29,7 @@ from .dashboard import Month
 
 ZERO = Decimal("0.00")
 ATTENTION_ROWS = 3
+ATTENTION_REST = 10  # строк за первыми тремя, которые раскрывает «ещё N»
 DUE_SOON_DAYS = 2
 INCOME_REMINDER_DAY = 10
 LIMIT_NEAR_PERCENT = 80

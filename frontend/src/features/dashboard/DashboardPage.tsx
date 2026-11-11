@@ -156,15 +156,20 @@ function Unconverted({ items }: { items: ExcludedSpends[] }) {
 
 /** «Требует внимания» (2026-10-26): up to three rows the server picked — a payment due, the income not entered, a limit
  * near or over, a verdict of the model — each a link; «ещё N» leads to «Деньги». No rows — no card. */
-function AttentionCard({ rows, more }: { rows: DashboardAttention[]; more: number | undefined }) {
+function AttentionCard({ rows, more, rest = [] }: { rows: DashboardAttention[]; more: number | undefined; rest?: DashboardAttention[] }) {
   const moreText = attentionMoreText(more)
+  // «ещё N» shows the rest right here (2026-11-11: the link led to «Деньги», where those rows are not).
+  const [open, setOpen] = useState(false)
+  const shown = open ? [...rows, ...rest] : rows
   return <section className="ck-panel dash-card dash-attention" aria-labelledby="dash-attention-heading">
     <div className="ck-panel-head">
       <h2 id="dash-attention-heading">Требует внимания</h2>
-      {moreText && <Link className="dash-card-link" to="/money">{moreText}</Link>}
+      {moreText && (rest.length > 0
+        ? <button type="button" className="dash-card-link dash-card-more" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Свернуть' : moreText}</button>
+        : <Link className="dash-card-link" to="/money">{moreText}</Link>)}
     </div>
     <ul className="ck-list">
-      {rows.map((row, index) => {
+      {shown.map((row, index) => {
         const badge = attentionBadge(row.kind)
         return <li key={`${row.kind}-${index}`}>
           <Link className="ck-row dash-attention-row" to={row.href} data-kind={row.kind}>
@@ -361,7 +366,7 @@ export function DashboardView({ data, today = deviceMonth(), family = data.membe
         : <HeroCard block={hero} data={data} family={family} current={current} date={date} />}
       {!empty && others.length > 0 && <OtherCurrencies blocks={others} />}
       {unconverted.length > 0 && <Unconverted items={unconverted} />}
-      {attention.length > 0 && <AttentionCard rows={attention} more={data.attention_more} />}
+      {attention.length > 0 && <AttentionCard rows={attention} more={data.attention_more} rest={data.attention_rest} />}
       <section className="ck-panel dash-card dash-recent" aria-labelledby="dash-recent-heading">
         <div className="ck-panel-head">
           <h2 id="dash-recent-heading">{recent.title}</h2>

@@ -110,6 +110,11 @@ describe('«Главная» of 2026-10-26 (Vitest/SSR, not browser visual accep
     expect(more.match(/dash-attention-(warn|over|success|ai|plain)"/g)).toEqual(['dash-attention-over"', 'dash-attention-over"', 'dash-attention-warn"', 'dash-attention-ai"'])
     expect(more).not.toContain('ещё')
     expect(view({ ...homeFixture(), attention: [] })).not.toContain('dash-attention')
+    // The rows behind the first three come with the answer: «ещё N» is a button that opens them in place.
+    const rest = between(view({ ...homeFixture(), attention_more: 1, attention_rest: [attentionFixture()[0]] }), 'dash-attention"', '</section>')
+    expect(rest).toContain('<button type="button" class="dash-card-link dash-card-more" aria-expanded="false">ещё\u00a01</button>')
+    expect(rest).not.toContain('href="/money"')
+    expect(rest.match(/<a class="ck-row dash-attention-row"/g)).toHaveLength(3)
     expect(view(dashboardFixture())).not.toContain('Требует внимания')
   })
 

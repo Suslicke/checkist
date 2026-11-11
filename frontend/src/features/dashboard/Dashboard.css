@@ -20,6 +20,8 @@
 /* A small link in the head of a card («Динамика», «Изменить», «Все»): a 44 px target that takes no room of the row. */
 .ck-panel-head > .dash-card-link { display: inline-flex; align-items: center; min-height: 44px; margin-block: -12px; color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; white-space: nowrap; }
 .dash-card-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* «ещё N» of «Требует внимания» opens the rest in place: a button that reads as the link beside a heading. */
+.ck-panel-head > .dash-card-more { padding: 0; border: 0; background: none; cursor: pointer; }
 .dash-note { margin: 0; color: var(--ck-text-muted); }
 .dash-inline-link, .dash-link { color: var(--ck-link); font-weight: 700; white-space: nowrap; }
 .dash-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

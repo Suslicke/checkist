@@ -36,7 +36,7 @@ const dashboardRecent = object<Omit<DashboardRecent, 'owner_name' | 'base_total'
 })
 const recentItem: Check = (value) => dashboardRecent(value) && optional(value, 'owner_name', text)
   && optional(value, 'base_total', nullable(amount))
-const dashboardShape = object<Omit<Dashboard, 'people' | 'base' | 'budget' | 'allowance' | 'planned' | 'by_day' | 'average_day' | 'attention' | 'attention_more' | 'tiles' | keyof InBase>>({
+const dashboardShape = object<Omit<Dashboard, 'people' | 'base' | 'budget' | 'allowance' | 'planned' | 'by_day' | 'average_day' | 'attention' | 'attention_more' | 'attention_rest' | 'tiles' | keyof InBase>>({
   month: isMonthCode, previous_month: isMonthCode, days_left: nonNegativeInteger, members: array(username),
   currencies: array(dashboardCurrency), recent: array(recentItem),
 })
@@ -71,6 +71,7 @@ export const isDashboard = withBase<Dashboard>((value): value is Dashboard => da
   && optional(value, 'allowance', nullable(dashboardAllowance)) && optional(value, 'planned', nullable(dashboardPlanned))
   && optional(value, 'by_day', array(dashboardDay)) && optional(value, 'average_day', nullable(amount))
   && optional(value, 'attention', array(dashboardAttention)) && optional(value, 'attention_more', nonNegativeInteger)
+  && optional(value, 'attention_rest', array(dashboardAttention))
   && optional(value, 'tiles', dashboardTiles), undefined, false)
 
 export const isMonthBudget = object<MonthBudget>({ amount: nullable(amount), currency: nullable(currency), base_currency: currency })

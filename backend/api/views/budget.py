@@ -322,9 +322,12 @@ def attention_object(row):
 
 
 def attention_fields(rows):
-    """``attention`` — первые три строки, ``attention_more`` — сколько осталось за ними."""
-    return {"attention": [attention_object(row) for row in rows[:home.ATTENTION_ROWS]],
-            "attention_more": max(0, len(rows) - home.ATTENTION_ROWS)}
+    """``attention`` — первые три строки, ``attention_more`` — сколько осталось за ними, ``attention_rest`` —
+    сами эти строки (не больше ``ATTENTION_REST``): «ещё N» раскрывает их на месте, а не уводит на другой экран."""
+    first, rest = rows[:home.ATTENTION_ROWS], rows[home.ATTENTION_ROWS:home.ATTENTION_ROWS + home.ATTENTION_REST]
+    return {"attention": [attention_object(row) for row in first],
+            "attention_more": max(0, len(rows) - home.ATTENTION_ROWS),
+            "attention_rest": [attention_object(row) for row in rest]}
 
 
 def payments_tile_object(tile):

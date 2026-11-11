@@ -91,6 +91,8 @@ export type Dashboard = InBase & {
   /** «Требует внимания»: up to three rows and how many more there are; missing from an older server. */
   attention?: DashboardAttention[]
   attention_more?: number
+  /** The rows behind the first three, shown in place by «ещё N» (2026-11-11); missing from an older server. */
+  attention_rest?: DashboardAttention[]
   tiles?: DashboardTiles
   month: MonthCode; previous_month: MonthCode; days_left: number; members: string[]; people?: Person[]
   /** One block per currency from an older server; one block of the base currency (or none) from a newer one (api/base-currency.ts). */

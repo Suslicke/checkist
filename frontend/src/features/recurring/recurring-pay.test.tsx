@@ -55,7 +55,7 @@ describe('«Оплатил» and the history of a payment (Vitest/SSR, not brows
     expect(page.match(/<a class="ck-row rec-year-row rec-year-link" href="\/receipts\/100\/edit">/g)).toHaveLength(2)
     const photo = { ...year, months: [{ month: '2026-10', state: 'paid' as const, paid: paid('2026-10-05', '220000.00', '', 'photo') }] }
     expect(html(<PaymentYear row={monthPaymentFixture({ year: photo })} today={TODAY} />))
-      .toContain('<a class="ck-row rec-year-row rec-year-link" href="/receipts/100">')
+      .toContain('<a class="ck-row rec-year-row rec-year-link" href="/receipts/100/edit">')
     expect(page).not.toContain('Май')
     expect(html(<PaymentYear row={monthPaymentFixture({ year: null })} today={TODAY} />)).toBe('')
     expect(html(<PaymentYear row={monthPaymentFixture({ year, kind: 'income' })} today={TODAY} />)).toBe('')
