@@ -122,6 +122,27 @@ class AuthApiError(ApiError):
         super().__init__()
 
 
+class TokenRefused(ApiError):
+    """Отказ входа по личному токену (``Authorization: Bearer ck_…``, ``accounts.access.ApiTokenAuthentication``).
+
+    ``invalid_token`` — токена нет, он неверный, отозван либо его владелец неактивен; ``permission_denied`` —
+    токен ``read`` там, где нужна запись. Код и заголовок ``401`` — те же, что у ``/mcp``.
+    """
+
+    ERRORS = {
+        "invalid_token": (401, "Токен Чекиста не подошёл: его нет, он неверный или отозван.",
+                          'Bearer error="invalid_token"'),
+        "permission_denied": (403, "Токен Чекиста только читает: для загрузки нужен токен с правом записи.",
+                              'Bearer error="insufficient_scope", scope="write"'),
+    }
+
+    def __init__(self, code):
+        self.code = code
+        self.status_code, self.message, challenge = self.ERRORS[code]
+        self.headers = {"WWW-Authenticate": challenge}
+        super().__init__()
+
+
 class PasswordRejected(InvalidParameter):
     """400: новый пароль не прошёл проверку; рядом с ``error`` — коды причин ``password_issues``."""
 

@@ -356,10 +356,16 @@ def _result(id_, result):
     return JsonResponse({"jsonrpc": "2.0", "id": id_, "result": result})
 
 
+def bearer(request):
+    """The token of ``Authorization: Bearer …`` or None; also read by ``accounts.access.ApiTokenAuthentication``."""
+    header = request.headers.get("Authorization", "")
+    return header[7:].strip() if header.startswith("Bearer ") else None
+
+
 def _bearer(request, path_token):
     """(token, from_header). A token in the address may stay in histories and proxy logs: it only reads."""
-    header = request.headers.get("Authorization", "")
-    return (header[7:].strip(), True) if header.startswith("Bearer ") else (path_token, False)
+    secret = bearer(request)
+    return (secret, True) if secret is not None else (path_token, False)
 
 
 @csrf_exempt

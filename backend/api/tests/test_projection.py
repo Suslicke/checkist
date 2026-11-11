@@ -446,7 +446,7 @@ SKIPPED_ROUTES = {
          "store-merges-merge", "store-merges-dismiss", "store-merges-category", "auth-tokens", "auth-token", "family-ai", "family-new-invites", "family-new-invite",
          "auth-new-family", "auth-new-family-check", "statements-save", "statements-goal", "goal-contributions",
          "push-subscribe", "push-unsubscribe", "push-test", "goal-reconcile", "planned-deposit",
-         "insights-thread-messages", "insights-action-confirm"),
+         "insights-thread-messages", "insights-action-confirm", "hub-import"),
         "только POST",
     ),
     "family-ai-model": "только PATCH",

@@ -18,7 +18,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from config.exceptions import RecognitionApiError
+from config.exceptions import ObjectNotFound, RecognitionApiError, TokenRefused
 from receipts.ownership import LOCAL_USERNAME, local_user
 from recognition.auth import enforce_csrf
 
@@ -242,4 +242,47 @@ class Moderator(LocalOrSignedIn):
         super().has_permission(request, view)
         if not is_moderator(request):
             raise RecognitionApiError("permission_denied")
+        return True
+
+
+class ApiTokenAuthentication(BaseAuthentication):
+    """The owner of a live personal token in ``Authorization: Bearer ck_…`` — the lookup of ``/mcp``
+    (``accounts.mcp.authenticate``: revoked tokens and inactive owners do not pass). Only ``accounts``.
+
+    ``request.user`` is the owner, ``request.auth`` the ``ApiToken`` row. The session is never read and CSRF is
+    not checked: a token is not a cookie, a browser does not send it by itself. No header — nobody (the
+    permission refuses); a wrong token — ``401 invalid_token``.
+    """
+
+    def authenticate(self, request):
+        if mode() != ACCOUNTS:
+            return None
+        from accounts import mcp
+
+        secret = mcp.bearer(request._request)
+        if secret is None:
+            return None
+        token = mcp.authenticate(secret)
+        if token is None:
+            raise TokenRefused("invalid_token")
+        return token.user, token
+
+    def authenticate_header(self, request):
+        return 'Bearer error="invalid_token"'
+
+
+class WriteToken(BasePermission):
+    """``accounts``: a live token with the ``write`` scope (``ApiTokenAuthentication``), otherwise
+    ``401 invalid_token`` / ``403 permission_denied``. ``local_single`` has no tokens: ``404``, as ``/mcp``."""
+
+    def has_permission(self, request, view):
+        if mode() != ACCOUNTS:
+            raise ObjectNotFound()
+        from accounts.models import ApiToken
+
+        token = request.auth
+        if not isinstance(token, ApiToken):
+            raise TokenRefused("invalid_token")
+        if token.scope != ApiToken.Scope.WRITE:
+            raise TokenRefused("permission_denied")
         return True

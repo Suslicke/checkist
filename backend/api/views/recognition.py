@@ -38,6 +38,31 @@ def list_controls(request):
     return params, page, (ordering, "-id" if ordering.startswith("-") else "id")
 
 
+def receive_photo(owner, upload):
+    """receive_photo(owner, upload) -> (SourcePhoto, ProcessingJob, created); a photo upload without HTTP.
+
+    One rule for ``POST /api/recognition/photos/`` and the hub import (``api.views.hub``): the family's AI, the
+    file checks of ``accept_upload`` (actual bytes, never the name or the MIME), the same file of the owner reused,
+    the latest job of the photo or a new one. Refusals are API errors.
+    """
+    # Фото уходит модели: ИИ семьи выключен — 403 ai_disabled, квота суток исчерпана — 429 ai_quota.
+    use_ai(owner)
+    try:
+        photo, created = accept_upload(upload, owner=owner)
+    except ImageError as exc:
+        raise RecognitionApiError("upload_too_large" if exc.code == "file_too_large" else exc.code) from None
+    except StorageError:
+        raise RecognitionApiError("storage_unavailable") from None
+    # S1 commits the immutable photo independently. Serialize latest-job
+    # selection with retry/upload on the photo, including missing-job repair.
+    with transaction.atomic():
+        SourcePhoto.objects.select_for_update().get(pk=photo.pk)
+        job = ProcessingJob.objects.filter(photo=photo).order_by("-created_at", "-id").first()
+        if job is None:
+            job, _ = create_job(photo)
+    return photo, job, created
+
+
 def job_response(jobs, job_id, *, status=200):
     """``jobs`` — ``jobs_queryset(request)``: a job of another user is ``404`` like a missing one."""
     job = get_or_404(jobs, job_id)
@@ -76,24 +101,9 @@ class PhotosView(LocalAPIView):
             raise InvalidRequest()
         if len(request.FILES.getlist("file")) != 1 or len(data.getlist("file")) != 1:
             raise InvalidParameter({"file": ["Выберите один файл."]})
-        owner = request_owner(request)
-        # Фото уходит модели: ИИ семьи выключен — 403 ai_disabled, квота суток исчерпана — 429 ai_quota.
-        use_ai(owner)
-        try:
-            photo, created = accept_upload(request.FILES["file"], owner=owner)
-        except ImageError as exc:
-            raise RecognitionApiError("upload_too_large" if exc.code == "file_too_large" else exc.code) from None
-        except StorageError:
-            raise RecognitionApiError("storage_unavailable") from None
-        # S1 commits the immutable photo independently. Serialize latest-job
-        # selection with retry/upload on the photo, including missing-job repair.
-        with transaction.atomic():
-            SourcePhoto.objects.select_for_update().get(pk=photo.pk)
-            job = ProcessingJob.objects.filter(photo=photo).order_by("-created_at", "-id").first()
-            if job is None:
-                job, _ = create_job(photo)
+        photo, job, created = receive_photo(request_owner(request), request.FILES["file"])
         # accept_upload returned this photo for the owner of the request, and the job is
-        # the photo's: both are read by key, like the rows locked above.
+        # the photo's: both are read by key, like the rows locked in receive_photo.
         photo = annotate_photos(SourcePhoto.objects.filter(pk=photo.pk)).get()
         response = job_response(annotate_jobs(ProcessingJob.objects.all()), job.pk, status=202 if created else 200)
         response.data = {"reused": not created, "photo": photo_object(photo), "job": response.data}
