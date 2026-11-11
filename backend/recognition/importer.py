@@ -10,7 +10,7 @@ Do not wrap this service in a caller transaction or run OCR while importing.
 """
 import logging
 from dataclasses import dataclass, replace
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -513,6 +513,8 @@ def _import_domain(observation, derived, *, owner_id, require_duplicate=False, l
     country resolution. ``confirmed`` is recorded in ``extra`` of a NEW receipt
     only; an existing receipt is never rewritten.
     """
+    if store is None:
+        store = _remembered_store(observation, owner_id)
     notices = _preflight(observation, derived, store=store)
     country = resolve_country(observation) if store is None else store.country
     with transaction.atomic():
@@ -550,6 +552,45 @@ def _import_domain(observation, derived, *, owner_id, require_duplicate=False, l
     mark = () if confirmed is None else (confirmed,)
     receipt, effect, issues = _create_graph(header, observation, country, derived, *mark)
     return receipt, effect, notices + issues
+
+
+REMEMBERED_DAYS = 400
+
+
+def _remembered_store(observation, owner_id):
+    """Where the family's last paper with the same lines went, for a paper that names no seller; else ``None``.
+
+    A utility bill prints no supplier and the payer's address, so a person had to name the place every month
+    (prod 2026-11-11). Its lines repeat from month to month: when at least half of them (and no fewer than two)
+    are the lines of earlier photo receipts of the owner's family, and all those receipts are of one place,
+    the bill goes there by itself. The first such paper is still named by a person; a printed seller is never
+    overridden; two candidate places leave the choice to a person.
+    """
+    if observation.merchant.legal_name or observation.merchant.brand_name or observation.store.name:
+        return None
+    names = {name_key(line.raw_name) for line in observation.lines if line.raw_name} - {""}
+    if len(names) < 2:
+        return None
+    from accounts.models import Membership
+
+    household = Membership.objects.filter(user_id=owner_id).values_list("household_id", flat=True).first()
+    owners = (Membership.objects.filter(household_id=household).values_list("user_id", flat=True)
+              if household else [owner_id])
+    # ponytail: one scan of the family's photo lines of the last 400 days, compared in Python
+    # (name_key is not an SQL function); an indexed key column if a family ever has 100k such lines.
+    rows = ReceiptLine.objects.filter(
+        receipt__owner_id__in=owners, receipt__source=Receipt.Source.PHOTO,
+        receipt__purchased_on__gte=date.today() - timedelta(days=REMEMBERED_DAYS),
+    ).values_list("receipt_id", "receipt__store_id", "raw_name")
+    matched = {}
+    for receipt_id, store_id, raw_name in rows.iterator():
+        if name_key(raw_name) in names:
+            matched.setdefault((receipt_id, store_id), set()).add(name_key(raw_name))
+    needed = max(2, (len(names) + 1) // 2)
+    stores = {store_id for (_, store_id), found in matched.items() if len(found) >= needed}
+    if len(stores) != 1:
+        return None
+    return Store.objects.select_related("merchant", "country").get(pk=stores.pop())
 
 
 def _constraint_name(error):

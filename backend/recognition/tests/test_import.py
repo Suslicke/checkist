@@ -98,6 +98,43 @@ class ImportTests(TestCase):
         self.assertEqual(heating.extra, {"printed": {"unit": "gcal", "unit_price": "9909.4900"}})
         self.assertEqual(result.receipt.total, Decimal("5464.31"))
 
+    def sellerless(self, data, minute):
+        """A paper that names no seller, at its own minute: a distinct receipt."""
+        data["merchant"].update(legal_name=None, brand_name=None, tax_id=None, tax_id_type=None)
+        data["store"]["name"] = None
+        data["receipt_number"] = None
+        data["fiscal"] = dict.fromkeys(data["fiscal"])
+        data["local_time"] = f"10:{minute}:00"
+        for stamp in data["timestamps"].values():
+            stamp.update(date=None, time=None, utc_offset=None, precision=None)
+        data["timestamps"]["header"].update(date=data["purchased_on"], time=data["local_time"], precision="second")
+        return data
+
+    def test_a_paper_without_a_seller_goes_where_the_same_lines_went_before(self):
+        # Prod 2026-11-11: a utility bill needed its place named by a person every month.
+        first = self.run_import(self.sellerless(self.amount_fact_payload(), 11))
+        self.assertEqual(first.outcome, "needs_review")  # nothing to remember yet
+        self.assertIn(("missing_required", "/store/name"), [(i["code"], i["field"]) for i in first.issues])
+        merchant = Merchant.objects.create(country_id="DE", legal_name="Demo-Wohnung", brand_name="Demo-Wohnung")
+        home = Store.objects.create(merchant=merchant, country_id="DE", name="Demo-Wohnung",
+                                    address_raw="Anderswo 1, 10115 Berlin", timezone="Europe/Berlin")
+        image, job = live_image()
+        named = importer._import_domain(*importer.effective_observation(
+            observation(self.sellerless(self.amount_fact_payload(), 12)))[::2], owner_id=local_user().pk, store=home)[0]
+        self.assertEqual(named.store_id, home.pk)
+        # Next month: other amounts, the same lines — no person needed.
+        data = self.sellerless(self.amount_fact_payload(), 13)
+        data["lines"][0].update(quantity="100.000", amount="3808.52")
+        data["total"] = "4664.52"
+        second = self.run_import(data)
+        self.assertEqual((second.outcome, second.receipt.store_id, Store.objects.count()), ("created", home.pk, 1))
+        # A printed seller is never overridden by the memory.
+        other = self.amount_fact_payload()
+        other["local_time"] = "10:14:00"
+        other["timestamps"]["header"]["time"] = other["local_time"]
+        third = self.run_import(another_receipt(other))
+        self.assertNotEqual(third.receipt.store_id, home.pk)
+
     def test_amounts_not_adding_up_to_the_total_still_need_a_person(self):
         data = self.amount_fact_payload()
         data["total"] = "5000.00"
