@@ -25,7 +25,7 @@ from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
 
-from django.db.models import Count, F, Sum
+from django.db.models import Count, F, Q, Sum
 
 from catalog.models import Product
 from receipts import spending
@@ -255,7 +255,10 @@ def recent(receipts, tree, limit=RECENT_LIMIT, product_ref=None):
                 .annotate(lines_total=Count("lines")).order_by("-purchased_at", "-id")[:limit])
     paid, leaves = {}, {}
     lines = list(
-        ReceiptLine.objects.filter(receipt_id__in=[row.pk for row in rows], kind=ReceiptLine.Kind.PRODUCT)
+        # Товары и любая строка со своей категорией: услуги квитанции (электричество, вода) — не товары,
+        # но категория у них есть, и без них у траты не было подписи (прод 2026-11-11).
+        ReceiptLine.objects.filter(Q(kind=ReceiptLine.Kind.PRODUCT) | Q(category__isnull=False),
+                                   receipt_id__in=[row.pk for row in rows])
         .values("receipt_id", "category_id")
         .annotate(owner=product_ref if product_ref is not None else F("product_id"),
                   paid=Sum(F("amount") - F("discount_amount")))

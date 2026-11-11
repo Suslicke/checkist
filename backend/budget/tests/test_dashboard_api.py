@@ -172,6 +172,17 @@ class DashboardNumbersTests(FixtureMixin, TestCase):
         self.assertEqual(next(row for row in self.get()["recent"] if row["id"] == self.coffee_spend.pk)["category_icon"],
                          "heart")
 
+    def test_recent_category_of_a_bill_whose_lines_are_services(self):
+        # Прод 2026-11-11: квитанция за коммунальные услуги — одни услуги со своими категориями.
+        Category.objects.filter(pk=self.transport.pk).update(icon="bus")
+        bill = make_receipt(self.store, "KZT", date(2026, 10, 21), owner=local_user(), total=D("500.00"))
+        make_line(bill, position=1, kind=ReceiptLine.Kind.SERVICE, raw_name="Демо-свет", amount=D("300.00"),
+                  category=self.transport)
+        make_line(bill, position=2, kind=ReceiptLine.Kind.SERVICE, raw_name="Демо-вода", amount=D("200.00"),
+                  category=self.transport)
+        row = next(row for row in self.get()["recent"] if row["id"] == bill.pk)
+        self.assertEqual((row["category_name"], row["category_icon"]), ("Демо-транспорт", "bus"))
+
     def test_recent_category_follows_the_merge_survivor_like_the_categories_block(self):
         from api.tests.test_stats_spending import absorb
 
