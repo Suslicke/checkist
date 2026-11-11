@@ -51,11 +51,11 @@ describe('«Оплатил» and the history of a payment (Vitest/SSR, not brows
       + '<span class="ck-row-amount ck-figures">220 000 ₸</span>')
     expect(page).toContain('<span class="ck-row-meta rec-meta-overdue">просрочен</span></span><span class="ck-row-amount ck-figures">—</span>')
     expect(page.match(/<li[ >]/g)).toHaveLength(5)
-    // A paid month opens its spend: a manual one straight on its form, a receipt with a photo on its page.
-    expect(page.match(/<a class="ck-row rec-year-row rec-year-link" href="\/receipts\/100\/edit">/g)).toHaveLength(2)
+    // A paid month opens the page of its spend, whatever its source; «Изменить» is there.
+    expect(page.match(/<a class="ck-row rec-year-row rec-year-link" href="\/receipts\/100">/g)).toHaveLength(2)
     const photo = { ...year, months: [{ month: '2026-10', state: 'paid' as const, paid: paid('2026-10-05', '220000.00', '', 'photo') }] }
     expect(html(<PaymentYear row={monthPaymentFixture({ year: photo })} today={TODAY} />))
-      .toContain('<a class="ck-row rec-year-row rec-year-link" href="/receipts/100/edit">')
+      .toContain('<a class="ck-row rec-year-row rec-year-link" href="/receipts/100">')
     expect(page).not.toContain('Май')
     expect(html(<PaymentYear row={monthPaymentFixture({ year: null })} today={TODAY} />)).toBe('')
     expect(html(<PaymentYear row={monthPaymentFixture({ year, kind: 'income' })} today={TODAY} />)).toBe('')

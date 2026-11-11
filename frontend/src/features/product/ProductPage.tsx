@@ -148,11 +148,11 @@ function ProductScreen({ productId, query, returnTo }: ProductPageProps) {
           {merges.mark && <ProductMergeNotice mark={merges.mark} />}
           {classification && <ProductClassificationNotice mark={classification} />}
           <div className="product-actions">
-            {returnTo && <Link className="action-link" to={returnTo}>{returnTo.startsWith('/receipts/') ? 'К чеку' : 'Назад к списку'}</Link>}
+            {returnTo && <Link className="action-link" back to={returnTo}>{returnTo.startsWith('/receipts/') ? 'К чеку' : 'Назад к списку'}</Link>}
             <Link className="action-link" to={{ kind: 'category', categoryId: product.category.id, query: { page: 1 } }}>Назад в категорию</Link>
           </div>
         </>}
-        {!product && (returnTo || !missing) && <Link className="action-link" to={returnTo ?? '/catalog'}>{returnTo?.startsWith('/receipts/') ? 'К чеку' : 'Назад в каталог'}</Link>}
+        {!product && (returnTo || !missing) && <Link className="action-link" back to={returnTo ?? '/catalog'}>{returnTo?.startsWith('/receipts/') ? 'К чеку' : 'Назад в каталог'}</Link>}
       </section>
       {!missing && <>
         <aside className="product-limitations" aria-label="Ограничения данных о ценах">

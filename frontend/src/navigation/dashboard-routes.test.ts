@@ -42,6 +42,6 @@ describe('«Главная» and «Лимиты» routes', () => {
       listenPopState: () => () => {},
     })
     navigation.navigate('/receipts/12')
-    expect(navigation.getSnapshot()).toEqual({ href: '/receipts/12', route: { kind: 'receipt', receiptId: 12 }, returnTo: '/?month=2026-09' })
+    expect(navigation.getSnapshot()).toEqual({ href: '/receipts/12', route: { kind: 'receipt', receiptId: 12 }, returnTo: '/?month=2026-09', depth: 1, from: '/?month=2026-09' })
   })
 })

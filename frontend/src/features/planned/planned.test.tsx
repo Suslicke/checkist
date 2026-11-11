@@ -296,7 +296,7 @@ describe('a spend from a plan (/receipts/new?planned=)', () => {
     expect(plannedHref(data.undated[0])).toBe('/planned')
     const source = readFileSync(new URL('../expense/ExpensePage.tsx', import.meta.url), 'utf8')
     expect(source).toContain('updatePlanned(planned, { receipt_id: result.data.id }')
-    expect(source).toContain('navigate(plannedHref(plan))')
+    expect(source).toContain('leave(plannedHref(plan))')
   })
 })
 

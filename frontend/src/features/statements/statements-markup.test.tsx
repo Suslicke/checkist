@@ -138,7 +138,7 @@ describe('addresses of the statements', () => {
     expect(parseRoute('/statements/12')).toEqual({ kind: 'statement', statementId: 12 })
     expect(parseRoute('/statements/abc')).toEqual({ kind: 'not-found', path: '/statements/abc' })
     expect(buildRoute({ kind: 'statement', statementId: 12 })).toBe('/statements/12')
-    expect(headerAction({ route: { kind: 'statement', statementId: 12 } })).toEqual({ kind: 'back', to: '/statements/new', label: 'Назад к выпискам' })
+    expect(headerAction({ route: { kind: 'statement', statementId: 12 } })).toEqual({ kind: 'back', to: '/statements/new', label: 'Назад к выпискам', step: true })
   })
 })
 

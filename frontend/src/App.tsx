@@ -25,7 +25,7 @@ import { canModerate, loadSession, useSession } from './session'
 import { menuKey, useCurrentItemInView } from './menu-view'
 import MainMenu from './menu/MainMenu'
 import { useWarmUp } from './menu/warm-up'
-import { headerAction, hubOf, isFocusRoute } from './menu/back-target'
+import { backLabel, headerAction, hubOf, isFocusRoute } from './menu/back-target'
 import type { HubPath } from './menu/back-target'
 import { ThemeToggle } from './theme'
 import OfflineBanner from './offline/OfflineBanner'
@@ -298,12 +298,12 @@ export default function App() {
         <main id="main" ref={content}>
           {/* One header row on the page background; on a phone it is pinned to the top of the window. */}
           <div className="intro">
-            {action?.kind === 'back' && <Link className="ck-back ck-round" to={action.to} aria-label={action.label}><Icon name="back" size={20} /></Link>}
+            {action?.kind === 'back' && <Link className="ck-back ck-round" back={action.step} to={action.to} aria-label={action.step ? backLabel(navigation, action.label) : action.label}><Icon name="back" size={20} /></Link>}
             <div className="intro-slot" ref={setHeadStart} />
             <h1 id="page-heading" ref={heading} tabIndex={-1}>{heading1}</h1>
             <div className="intro-slot" ref={setHeadEnd} />
             {signedIn && view === 'page' && !focus && <Link className="ck-chat-link ck-chat-link-page" to="/chat" aria-label="Чат с ИИ"><Icon name="insight" size={20} /></Link>}
-            {action?.kind === 'close' && <Link className="ck-close ck-round" to={action.to} aria-label={action.label}><Icon name="close" size={20} /></Link>}
+            {action?.kind === 'close' && <Link className="ck-close ck-round" back={action.step} to={action.to} aria-label={action.label}><Icon name="close" size={20} /></Link>}
           </div>
           {route.kind === 'health' && <p className="intro-note intro-note-after">Сводка о состоянии служб.</p>}
           {catalogActive && view === 'page' && canModerate(session) && <nav className="main-navigation section-navigation" aria-label="Раздел каталога">

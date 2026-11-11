@@ -39,17 +39,17 @@ describe('«назад» of the phone top bar (pure, no browser)', () => {
 
 describe('the round control of the header row (pure, no browser)', () => {
   it('closes a focus screen with «✕»: a changed spend to its receipt, a new one to where the person came from', () => {
-    expect(headerAction({ route: { kind: 'expense-edit', receiptId: 12 } })).toEqual({ kind: 'close', to: '/receipts/12', label: 'Закрыть' })
-    expect(headerAction({ route: { kind: 'expense-new' } }, '/receipts?page=2')).toEqual({ kind: 'close', to: '/receipts?page=2', label: 'Закрыть' })
+    expect(headerAction({ route: { kind: 'expense-edit', receiptId: 12 } })).toEqual({ kind: 'close', to: '/receipts/12', label: 'Закрыть', step: true })
+    expect(headerAction({ route: { kind: 'expense-new' } }, '/receipts?page=2')).toEqual({ kind: 'close', to: '/receipts?page=2', label: 'Закрыть', step: true })
     // Opened directly: «Главная».
-    expect(headerAction({ route: { kind: 'expense-new' } })).toEqual({ kind: 'close', to: '/', label: 'Закрыть' })
+    expect(headerAction({ route: { kind: 'expense-new' } })).toEqual({ kind: 'close', to: '/', label: 'Закрыть', step: true })
     expect(isFocusRoute({ kind: 'expense-new' })).toBe(true)
     expect(isFocusRoute({ kind: 'expense-edit', receiptId: 3 })).toBe(true)
     expect(isFocusRoute({ kind: 'receipts', query: { page: 1 } })).toBe(false)
   })
 
   it('goes back from any other nested page and has nothing on a page of a section', () => {
-    expect(headerAction({ route: { kind: 'receipt', receiptId: 7 } }, '/stats')).toEqual({ kind: 'back', to: '/receipts', label: 'Назад к тратам' })
+    expect(headerAction({ route: { kind: 'receipt', receiptId: 7 } }, '/stats')).toEqual({ kind: 'back', to: '/receipts', label: 'Назад к тратам', step: true })
     expect(headerAction({ route: { kind: 'dashboard' } }, '/receipts')).toBeUndefined()
   })
 
@@ -63,7 +63,7 @@ describe('the round control of the header row (pure, no browser)', () => {
     expect(headerAction({ route: { kind: 'stores' } }, '/money', '/money')).toBeUndefined()
     expect(headerAction({ route: { kind: 'goals' } }, '/money')).toBeUndefined()
     // A nested page keeps its own parent.
-    expect(headerAction({ route: { kind: 'goal', goalId: 4 } }, '/goals', '/money')).toEqual({ kind: 'back', to: '/goals', label: 'Назад к целям' })
+    expect(headerAction({ route: { kind: 'goal', goalId: 4 } }, '/goals', '/money')).toEqual({ kind: 'back', to: '/goals', label: 'Назад к целям', step: true })
   })
 
   it('keeps the hub while the person stays in one of its sections, and drops it anywhere else', () => {

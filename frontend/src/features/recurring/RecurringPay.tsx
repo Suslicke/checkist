@@ -109,11 +109,10 @@ export function PaymentYear({ row, today }: { row: RecurringMonthPayment; today:
         <span className="ck-row-amount ck-figures">{item.paid ? formatMoney(item.paid.total, row.currency) : '—'}</span>
       </>
       const receipt = item.paid?.receipt_id
-      // The spend of a month opens from here straight on its form (the way of payment, the amount), whatever its
-      // source: since the one form of 2026-10-13 a receipt with a photo is edited there too, and a page of another
-      // look for one month of the list read as a mistake (2026-11-11).
+      // The spend of a month opens on its page, whatever its source — as from «Траты» and «Главная»; «Изменить» is
+      // there, and «назад» returns here (2026-11-11: a form for one month and a page for another read as a mistake).
       return receipt ? <li key={item.month}>
-        <Link className="ck-row rec-year-row rec-year-link" to={`/receipts/${receipt}/edit`}>
+        <Link className="ck-row rec-year-row rec-year-link" to={`/receipts/${receipt}`}>
           {body}<Icon name="forward" size={18} className="ck-icon rec-year-go" /></Link>
       </li> : <li key={item.month} className="ck-row rec-year-row">{body}</li>
     })}</ul>

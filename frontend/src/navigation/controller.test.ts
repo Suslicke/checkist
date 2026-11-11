@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createNavigation } from './controller'
+import { createNavigation, stepsBack } from './controller'
 
 function memoryHistory(initial = '/catalog') {
   const entries: { href: string; state: unknown }[] = [{ href: new URL(initial, 'http://localhost').href, state: null }]
@@ -21,13 +21,11 @@ function memoryHistory(initial = '/catalog') {
       return () => { popListeners.delete(listener) }
     },
   }
-  return {
-    environment, entries, popListeners,
-    go(delta: number) {
-      position += delta
-      popListeners.forEach((listener) => listener())
-    },
+  const go = (delta: number) => {
+    position += delta
+    popListeners.forEach((listener) => listener())
   }
+  return { environment: { ...environment, back: () => go(-1) }, entries, popListeners, go }
 }
 
 describe('navigation without a browser', () => {
@@ -156,5 +154,59 @@ describe('navigation without a browser', () => {
     expect(navigation.getSnapshot().route.kind).toBe('catalog')
     expect(history.popListeners.size).toBe(1)
     third()
+  })
+
+  it('steps «назад» back to the screen the person came from, whatever it is, and to the parent when entered directly', () => {
+    const history = memoryHistory('/recurring')
+    const navigation = createNavigation(history.environment)
+    const unsubscribe = navigation.subscribe(() => {})
+    expect(stepsBack(navigation.getSnapshot())).toBe(false)
+    navigation.navigate('/receipts/71')  // from «Платежи», not a list of spends
+    expect(navigation.getSnapshot()).toMatchObject({ href: '/receipts/71', depth: 1, from: '/recurring' })
+    expect(navigation.getSnapshot().returnTo).toBeUndefined()
+    navigation.navigate('/receipts/71/edit')
+    navigation.back('/receipts/71')  // «✕» of the form
+    expect(navigation.getSnapshot().href).toBe('/receipts/71')
+    navigation.back('/receipts')  // «назад» of the spend: to «Платежи», not to «Траты»
+    expect(navigation.getSnapshot().href).toBe('/recurring')
+    // Entered directly (a link, a notification): nothing of the app behind — the parent page.
+    const direct = createNavigation(memoryHistory('/receipts/71').environment)
+    direct.back('/receipts')
+    expect(direct.getSnapshot().href).toBe('/receipts')
+    unsubscribe()
+  })
+
+  it('does not step back through the filters of the same page, and survives a reload', () => {
+    const history = memoryHistory('/catalog')
+    const navigation = createNavigation(history.environment)
+    const unsubscribe = navigation.subscribe(() => {})
+    navigation.navigate('/catalog/products/61')
+    navigation.navigate('/catalog/products/61?currency=EUR')
+    expect(stepsBack(navigation.getSnapshot())).toBe(false)
+    navigation.back('/catalog')
+    expect(navigation.getSnapshot().href).toBe('/catalog')
+    // The depth lives in the state of the history entry: a new controller (a reload) reads it.
+    const again = memoryHistory('/recurring')
+    createNavigation(again.environment).navigate('/receipts/71')
+    expect(createNavigation(again.environment).getSnapshot()).toMatchObject({ depth: 1, from: '/recurring' })
+    unsubscribe()
+  })
+
+  it('leaves a saved form so that «назад» never opens it again', () => {
+    const history = memoryHistory('/receipts')
+    const navigation = createNavigation(history.environment)
+    const unsubscribe = navigation.subscribe(() => {})
+    navigation.navigate('/receipts/71')
+    navigation.navigate('/receipts/71/edit')
+    navigation.leave('/receipts/71')  // saved: the page the form was opened from — one step back
+    expect(navigation.getSnapshot()).toMatchObject({ href: '/receipts/71', depth: 1 })
+    navigation.back('/receipts')
+    expect(navigation.getSnapshot().href).toBe('/receipts')
+    navigation.navigate('/receipts/new')
+    navigation.leave('/receipts/90')  // a new spend: its page takes the place of the form
+    expect(navigation.getSnapshot()).toMatchObject({ href: '/receipts/90', depth: 1, from: '/receipts' })
+    navigation.back('/receipts')
+    expect(navigation.getSnapshot().href).toBe('/receipts')
+    unsubscribe()
   })
 })

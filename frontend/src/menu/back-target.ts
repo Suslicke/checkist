@@ -1,11 +1,13 @@
-import { parseRoute } from '../navigation'
+import { parseRoute, stepsBack } from '../navigation'
 import type { NavigationSnapshot, Route } from '../navigation'
 
 /** The «назад» of the phone's top bar: where it leads and its name for a screen reader. */
 export type BackTarget = { to: string; label: string }
 
-/** The round control of the header row: «назад» before the heading, or «✕» after it on a focus screen. */
-export type HeaderAction = BackTarget & { kind: 'back' | 'close' }
+/** The round control of the header row: «назад» before the heading, or «✕» after it on a focus screen. `step` — the
+ * control steps back to the screen the person came from (`Link back`), `to` being where it leads when there is none;
+ * without it (a section opened from a hub) it always leads to `to`, past the tabs and filters tried on the way. */
+export type HeaderAction = BackTarget & { kind: 'back' | 'close'; step?: boolean }
 
 /** A new or changed spend: a screen of one task, with «✕» instead of «назад» and without the bottom bar of a phone. */
 export function isFocusRoute(route: Route): boolean {
@@ -82,16 +84,26 @@ export function backTarget({ route, returnTo }: Pick<NavigationSnapshot, 'route'
 }
 
 /**
+ * The name of «назад» for a screen reader. The control steps back to the screen the person came from
+ * (`Link back`); only when that screen is the known list (`returnTo`) or there is nothing behind (`depth` 0, the
+ * control leads to the parent page) the name of the parent is true — otherwise it is plain «Назад».
+ */
+export function backLabel(navigation: Pick<NavigationSnapshot, 'href' | 'depth' | 'from' | 'returnTo'>, label: string): string {
+  return stepsBack(navigation) && !navigation.returnTo ? 'Назад' : label
+}
+
+/**
  * The control of the header row. A focus screen is closed by «✕»: a changed spend back to its receipt, a new one to
  * the page of the app the person came from (`from`), otherwise to «Главная». Any other nested page goes back by
  * «назад» (`backTarget`); a page of a section has none — unless it was opened from a hub (`hub`: «Ещё» or «Деньги»).
  */
 export function headerAction(navigation: Pick<NavigationSnapshot, 'route' | 'returnTo'>, from?: string, hub?: HubPath): HeaderAction | undefined {
   const { route } = navigation
-  if (route.kind === 'expense-new') return { kind: 'close', to: from ?? '/', label: 'Закрыть' }
-  if (route.kind === 'expense-edit') return { kind: 'close', to: `/receipts/${route.receiptId}`, label: 'Закрыть' }
-  if (route.kind === 'income-edit') return { kind: 'close', to: from ?? '/incomes', label: 'Закрыть' }
+  if (route.kind === 'expense-new') return { kind: 'close', to: from ?? '/', label: 'Закрыть', step: true }
+  if (route.kind === 'expense-edit') return { kind: 'close', to: `/receipts/${route.receiptId}`, label: 'Закрыть', step: true }
+  if (route.kind === 'income-edit') return { kind: 'close', to: from ?? '/incomes', label: 'Закрыть', step: true }
+  const detail = backTarget(navigation)
+  if (detail) return { kind: 'back', ...detail, step: true }
   // A section opened from a hub goes back to it, as a pushed screen of a phone app; from anywhere else it has none.
-  const back = backTarget(navigation) ?? (hub && isHubSection(hub, route) ? target(hub) : undefined)
-  return back && { kind: 'back', ...back }
+  return hub && isHubSection(hub, route) ? { kind: 'back', ...target(hub) } : undefined
 }

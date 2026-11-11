@@ -73,7 +73,7 @@ export function ReceiptView({ receiptId, returnTo, header, images, lines, discou
     download={images.state.kind === 'ok' ? images.state.data.results[0]?.download_url : undefined} /> : undefined
   return <div className="receipts-page receipt-screen">
     {notice && <p className="expense-notice" role="status">{notice}</p>}
-    {!narrow && <p className="receipt-back"><Link className="action-link" to={returnTo ?? '/receipts'}>{backLabel(returnTo)}</Link></p>}
+    {!narrow && <p className="receipt-back"><Link className="action-link" back to={returnTo ?? '/receipts'}>{backLabel(returnTo)}</Link></p>}
     {/* The header card: the number of the receipt small above the place, the hero total, the facts, then the actions. */}
     <ReceiptBlock title={numbered(manual ? 'Трата' : 'Чек', receiptId)} className="receipt-hero" state={header.state} retry={header.retry}>
       {receipt && <ReceiptHeader receipt={receipt} showOwner={showOwner} photo={photo} categories={lineCategories(visibleLines)} />}

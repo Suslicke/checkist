@@ -49,7 +49,7 @@ describe('«Ещё» as a screen of its own (2026-10-13, Vitest/SSR, not browser
     // «Цели» are a section of «Деньги» now: from «Ещё» they are not reached, so they never go back to it.
     expect(headerAction({ route: { kind: 'goals' } }, '/more', '/more')).toBeUndefined()
     // A nested page keeps its own parent; a page outside of «Ещё» never goes back to it.
-    expect(headerAction({ route: { kind: 'product', productId: 4, query: { page: 1 } } }, '/catalog', '/more')).toEqual({ kind: 'back', to: '/catalog', label: 'Назад в каталог' })
+    expect(headerAction({ route: { kind: 'product', productId: 4, query: { page: 1 } } }, '/catalog', '/more')).toEqual({ kind: 'back', to: '/catalog', label: 'Назад в каталог', step: true })
     expect(headerAction({ route: { kind: 'dashboard' } }, '/more', '/more')).toBeUndefined()
   })
 })

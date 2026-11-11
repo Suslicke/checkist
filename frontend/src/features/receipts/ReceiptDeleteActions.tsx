@@ -38,7 +38,7 @@ export function ReceiptDeleteActions({ receiptId, initial = { kind: 'idle' }, na
     if (current.signal.aborted || result.kind === 'aborted') return
     if (result.kind === 'ok' || result.reason === 'not_found') {
       setReceiptsNotice(result.kind === 'ok' ? deletedNotice(withPhoto) : 'Чек уже удалён.')
-      navigate('/receipts')
+      navigate('/receipts', { replace: true })  // «назад» must not open the deleted spend
       return
     }
     setStep({ kind: 'failed', withPhoto, message: deleteFailureMessage(result) })

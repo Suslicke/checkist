@@ -33,7 +33,7 @@ function useSpendDeletion(receiptId: number, initial: DeleteStep, what = SPEND) 
     if (current.signal.aborted || result.kind === 'aborted') return
     if (result.kind === 'ok' || result.reason === 'not_found') {
       what.notice(result.kind === 'ok' ? what.done : what.gone)
-      navigate(what.to)
+      navigate(what.to, { replace: true })  // «назад» must not open the deleted spend
       return
     }
     setStep({ kind: 'failed', message: saveMessage(result) })

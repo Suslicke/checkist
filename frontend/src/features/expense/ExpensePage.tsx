@@ -15,7 +15,7 @@ import type { Line, ManualDefaults, Receipt } from '../../api/receipts'
 import type { Category, LocalApiResult } from '../../api/types'
 import RequestState from '../../components/RequestState'
 import { usePageTitle } from '../../components/page-header'
-import { Link, navigate } from '../../navigation'
+import { Link, leave } from '../../navigation'
 import { isNetworkFailure } from '../../offline/pending'
 import { clearHandoff, discardPending, draftFromPending, enqueueSpend, peekHandoff } from '../../offline/pending-store'
 import { useSession } from '../../session'
@@ -479,7 +479,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
     if (result.kind === 'ok') {
       announceIncome()
       setIncomeNotice(incomeId === undefined ? 'Доход сохранён.' : updatedNotice)
-      navigate({ kind: 'incomes', month: result.data.received_on.slice(0, 7) })
+      leave({ kind: 'incomes', month: result.data.received_on.slice(0, 7) })
       return
     }
     if (result.reason === 'invalid_parameter' && result.fields?.length) setErrors(serverErrors(result.fields))
@@ -513,7 +513,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
     }
     const { image } = result.data
     const receipt = image.receipt_id
-    if (receipt === null) { navigate(`/recognition/jobs/${image.job_id}`); return }
+    if (receipt === null) { leave(`/recognition/jobs/${image.job_id}`); return }
     // A receipt found already saved is not changed by the form (the rule of the confirmation): nothing follows.
     let extraFailed = false
     if (image.status === 'imported') {
@@ -525,7 +525,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
     }
     setExpenseNotice(receipt, extraFailed ? 'Чек сохранён, но комментарий, способ оплаты или категории не записались — измените трату ещё раз.'
       : image.status === 'imported' ? 'Чек проверен и сохранён.' : 'Такой чек уже был сохранён: фото привязано к нему, его данные не изменены.')
-    navigate({ kind: 'receipt', receiptId: receipt })
+    leave({ kind: 'receipt', receiptId: receipt })
   }
 
   const save = async () => {
@@ -547,7 +547,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
       // No network: the spend waits on the phone and is sent from «Чеки» (src/offline).
       await enqueueSpend(checked.body, owner)
       if (handed) await discardPending(handed.id)
-      navigate('/receipts')
+      leave('/receipts')
       return
     }
     setSaving(false)
@@ -559,13 +559,13 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
       if (plan && planned !== undefined) {
         const tied = await updatePlanned(planned, { receipt_id: result.data.id }, { signal: controller.signal })
         if (controller.signal.aborted || tied.kind === 'aborted') return
-        if (tied.kind === 'ok') { navigate(plannedHref(plan)); return }
+        if (tied.kind === 'ok') { leave(plannedHref(plan)); return }
         setExpenseNotice(result.data.id, 'Трата сохранена, но план не закрыт: откройте «Планы» и выберите «Это она».')
-        navigate({ kind: 'receipt', receiptId: result.data.id })
+        leave({ kind: 'receipt', receiptId: result.data.id })
         return
       }
       setExpenseNotice(result.data.id, receiptId === undefined ? savedNotice : updatedNotice)
-      navigate({ kind: 'receipt', receiptId: result.data.id })
+      leave({ kind: 'receipt', receiptId: result.data.id })
       return
     }
     if (result.reason === 'invalid_parameter' && result.fields?.length) setErrors(serverErrors(result.fields))

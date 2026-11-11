@@ -199,7 +199,7 @@ describe('goal screens', () => {
     expect(parseRoute('/goals/5')).toEqual({ kind: 'goal', goalId: 5 })
     expect(parseRoute('/goals/x')).toEqual({ kind: 'not-found', path: '/goals/x' })
     expect(buildRoute({ kind: 'goal', goalId: 5 })).toBe('/goals/5')
-    expect(headerAction({ route: { kind: 'goal', goalId: 5 } })).toEqual({ kind: 'back', to: '/goals', label: 'Назад к целям' })
+    expect(headerAction({ route: { kind: 'goal', goalId: 5 } })).toEqual({ kind: 'back', to: '/goals', label: 'Назад к целям', step: true })
   })
 })
 
