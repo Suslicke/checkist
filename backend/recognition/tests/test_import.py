@@ -47,7 +47,7 @@ class ImportTests(TestCase):
                       Receipt, ReceiptLine, ReceiptDiscount, ReceiptTax):
             self.assertEqual(model.objects.count(), 0, model.__name__)
 
-    def test_printed_model_reaches_a_new_product_and_fills_an_empty_one(self):
+    def test_printed_model_reaches_a_new_product_and_never_an_existing_one(self):
         first = self.run_import()
         product = first.receipt.lines.get(position=1).product
         self.assertEqual(product.model, "")
@@ -56,7 +56,7 @@ class ImportTests(TestCase):
         second = self.run_import(another_receipt(data))
         self.assertEqual(second.receipt.lines.get(position=1).product_id, product.pk)
         product.refresh_from_db()
-        self.assertEqual(product.model, "AC-M17-SC")
+        self.assertEqual(product.model, "")  # shared catalogue: a later receipt changes nothing
         data = another_receipt()
         data.update(receipt_number="000125", local_time="15:45:20")
         data["fiscal"]["tse_transaction"] = "98767"

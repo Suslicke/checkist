@@ -272,13 +272,16 @@ def _create_graph(header, observation, country, derived, confirmed=None):
     service_category = service_charges.CategoryLookup()
     # Parents may occur after their child in the printed order. Create all rows
     # first, then connect only the already validated references.
+    # The catalogue is shared between families and a receipt is untrusted input: only a product
+    # this very import creates takes the printed model, an existing one is never changed by it.
+    # ponytail: «created here» = pk above the fence; exact while photo imports hold IMPORT_LOCK.
+    from catalog.models import Product
+    newest = Product.objects.order_by("-pk").values_list("pk", flat=True).first() or 0
     for i, observed in enumerate(observation.lines):
         resolution = _resolve_product(observed, header["store"].merchant, field=f"/lines/{i}/product_hint")
         product = resolution.product
         issues.extend(resolution.issues)
-        if product is not None and observed.product_hint.model and not product.model:
-            # One place for a new and an existing product: a filled model is never overwritten,
-            # an empty one is learnt from the receipt (resolution.py knows nothing about models).
+        if product is not None and product.pk > newest and observed.product_hint.model and not product.model:
             product.model = observed.product_hint.model
             product.save(update_fields=["model"])
         rate = tax_rate(observed.tax_rate, f"/lines/{i}/tax_rate")
