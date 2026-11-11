@@ -195,12 +195,15 @@ def _normalize_observation(data):
 
     def normalize(value, path=""):
         if type(value) is dict:
-            return {key: normalize(child, path + "/" + key) for key, child in value.items()}
+            value = {key: normalize(child, path + "/" + key) for key, child in value.items()}
+            if re.fullmatch(r"/lines/[0-9]+/product_hint", path):
+                value.setdefault("model", None)  # answers stored before schema 3 have no model
+            return value
         if type(value) is list:
             return [normalize(child, path + f"/{i}") for i, child in enumerate(value)]
         if type(value) is str:
             if (path in text_paths or re.fullmatch(
-                    r"/lines/[0-9]+/(?:raw_name|product_hint/(?:name|brand))|/discounts/[0-9]+/name", path)):
+                    r"/lines/[0-9]+/(?:raw_name|product_hint/(?:name|brand|model))|/discounts/[0-9]+/name", path)):
                 if any(c in value for c in "\r\n\t"):
                     separator = ", " if path == "/store/address_raw" else " "
                     return re.sub(r"[ \r\n\t]*[\r\n\t][ \r\n\t]*", separator, value.strip(" \r\n\t"))
@@ -246,10 +249,12 @@ def validate_observation(data):
         if field["path"] in paths:
             _fail("/fields", "duplicate_pointer")
         paths.add(field["path"])
+        # A note that contradicts its value must not cost the whole receipt: the value stays,
+        # the note is weakened, and the importer's own policy sends the field to a person.
         if field["status"] == "observed" and value in (None, ""):
-            _fail("/fields", "evidence")
-        if field["status"] in ("absent", "unreadable") and value is not None:
-            _fail("/fields", "evidence")
+            field["status"] = "unreadable"  # seen on paper, not delivered: the value is missing
+        elif field["status"] in ("absent", "unreadable") and value is not None:
+            field["status"] = "ambiguous"  # a value next to «not read» is a guess
     for collection in ("lines", "discounts"):
         positions = [v["position"] for v in data[collection]]
         if len(positions) != len(set(positions)):

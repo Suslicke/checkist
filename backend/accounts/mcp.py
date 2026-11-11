@@ -87,7 +87,7 @@ MONTH = _s("YYYY-MM; default — the current month")
 LINE = {"type": "object", "properties": {
     "id": _i("existing line id (update_spend only): kept with its product"), "name": _s("position name"),
     "amount": _s("sum to pay for the line, before the line discount"), "quantity": _s("default 1"),
-    "unit": _s("pcs|kg|g|l|ml|m"), "unit_price": _s("price per unit"), "discount_amount": _s("line discount"),
+    "unit": _s("pcs|kg|g|l|ml|m|kwh|m3|gcal"), "unit_price": _s("price per unit"), "discount_amount": _s("line discount"),
     "category": _i("category id of this position"),
 }, "required": ["name", "amount"]}
 SPEND = {

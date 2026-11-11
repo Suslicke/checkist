@@ -17,7 +17,7 @@ const array = (check: Check): Check => (value) => Array.isArray(value) && value.
 const choice = (...values: string[]): Check => (value) => typeof value === 'string' && values.includes(value)
 const baseUnit = choice('pcs', 'kg', 'l')
 const normalizedUnit = choice('pcs', 'kg', 'l', 'm')
-const unit = choice('pcs', 'g', 'kg', 'ml', 'l', 'm')
+const unit = choice('pcs', 'g', 'kg', 'ml', 'l', 'm', 'kwh', 'm3', 'gcal')
 // Reference models limit length, but do not validate ISO syntax on stored codes.
 // Query syntax is stricter and belongs to the request/navigation validation.
 const referenceCode = (maximum: number): Check => (value) => typeof value === 'string'

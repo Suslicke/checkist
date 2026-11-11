@@ -141,9 +141,25 @@ class DTOTests(SimpleTestCase):
         data = receipt_payload()
         data["fields"].append(copy.deepcopy(data["fields"][0]))
         with self.assertRaises(SchemaValidationError): validate_observation(data)
+
+    def test_evidence_contradicting_its_value_is_weakened_not_fatal(self):
+        # Prod 2026-11-11, a utility bill: «Printed м³ is not supported by the unit enum» —
+        # unit null with an observed note. The whole receipt was thrown away as invalid_output.
         data = receipt_payload()
-        data["fields"][0]["status"] = "absent"
-        with self.assertRaises(SchemaValidationError): validate_observation(data)
+        data["fields"] = [f for f in data["fields"] if f["path"] != "/lines/0/unit"]
+        guessed = data["fields"][0]["path"]
+        data["fields"][0]["status"] = "absent"  # its value is present
+        data["lines"][0]["unit"] = None
+        data["fields"].append({"path": "/lines/0/unit", "status": "observed", "confidence": 0.99, "note": None})
+        statuses = {f.path: f.status for f in validate_observation(data).fields}
+        self.assertEqual((statuses[guessed], statuses["/lines/0/unit"]), ("ambiguous", "unreadable"))
+
+    def test_utility_units_and_answers_stored_before_the_model_key(self):
+        data = receipt_payload()
+        data["lines"][0]["product_hint"].pop("model", None)
+        data["lines"][0]["unit"] = "m3"
+        line = validate_observation(data).lines[0]
+        self.assertEqual((line.unit, line.product_hint.model), ("m3", None))
 
     def test_bounded_arrays_strings_raw_text_and_positions(self):
         edits = [lambda d: d.update(lines=d["lines"] * 251), lambda d: d.update(taxes=d["taxes"] * 51),

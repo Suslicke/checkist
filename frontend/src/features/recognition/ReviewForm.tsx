@@ -15,7 +15,7 @@ import { lineAmountText, lineCardId, lineDetailsForced, lineIssues, problemSumma
 import type { LineIssue } from './mobile-state'
 
 const kinds = { product: 'Товар', service: 'Услуга', deposit: 'Залог', deposit_return: 'Возврат залога' }
-const units: Unit[] = ['pcs', 'g', 'kg', 'ml', 'l', 'm']
+const units: Unit[] = ['pcs', 'g', 'kg', 'ml', 'l', 'm', 'kwh', 'm3', 'gcal']
 const decimalHint = 'Запятая или точка.'
 type Option = [value: string, label: string]
 type FieldBox = { id: string; label: string; problems: string[]; unread?: boolean; hint?: string }

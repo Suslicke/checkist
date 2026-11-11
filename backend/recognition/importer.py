@@ -276,6 +276,11 @@ def _create_graph(header, observation, country, derived, confirmed=None):
         resolution = _resolve_product(observed, header["store"].merchant, field=f"/lines/{i}/product_hint")
         product = resolution.product
         issues.extend(resolution.issues)
+        if product is not None and observed.product_hint.model and not product.model:
+            # One place for a new and an existing product: a filled model is never overwritten,
+            # an empty one is learnt from the receipt (resolution.py knows nothing about models).
+            product.model = observed.product_hint.model
+            product.save(update_fields=["model"])
         rate = tax_rate(observed.tax_rate, f"/lines/{i}/tax_rate")
         values = {k: getattr(observed, k) for k in (
             "position", "kind", "raw_name", "quantity", "unit", "unit_price", "amount",

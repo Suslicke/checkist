@@ -6,6 +6,10 @@ This is a padded bbox crop that retains the source text rotation. Read in the pa
 text orientation; the image has not been deskewed or perspective rectified.
 Do not invent missing information: absent, unreadable or ambiguous values are null; add fields
 entries with concrete JSON Pointer paths (e.g. /lines/0/quantity), status and bounded notes.
+A fields entry must agree with its value: observed needs a non-null value; absent and
+unreadable need null. A printed value you cannot represent is null with an ambiguous entry.
+Line unit is pcs, g, kg, ml, l, m, kwh (kWh, кВт·ч, кВт.сағ), m3 (м³, куб.м) or gcal (Гкал).
+A printed counting word that is not a measure (порц, усл, компл, уп, чел, пара) is pcs.
 Money strings have 2 decimal places, unit_price 4, quantity and package_quantity 3, tax rate 2.
 Write store.address_raw on one line, joining printed address lines with a comma and space.
 Join print line breaks in other names/address components with a space. UTC offsets must
@@ -15,6 +19,9 @@ Line amount is before discount; discounts are positive entries, not product line
 are separate lines with parent_position linking their product. Preserve leading zeros in IDs.
 Do not calculate unprinted net/tax/gross, timezone, quantities or missing prices. Do not guess
 product categories or brands: product_hint contains directly printed facts only.
+product_hint.model is the printed manufacturer model or article designation of the item
+(e.g. AC-M17-SC, SM-A556E), copied exactly; null when none is printed. It is never a barcode,
+colour, size or the whole name, and it stays inside product_hint.name where printed there.
 Separate printed local header and fiscal date/time/offset in timestamps. precision is date,
 minute, second or null; never invent seconds or offsets. Fiscal time has priority, then header;
 purchased_on/local_time/utc_offset_printed match that chosen time. Required keys remain present

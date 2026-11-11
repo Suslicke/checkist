@@ -18,6 +18,7 @@ from recognition.models import ProcessingJob, ReceiptImage, SourcePhoto
 from recognition.previews import variant_url
 from recognition.queue import WORKER_LOCK
 from recognition.statuses import EXECUTING_JOB_STATUSES
+from catalog.units import Unit
 
 
 ISSUE_MESSAGES = {
@@ -332,7 +333,7 @@ def normalized_public(value):
             "position": safe_int(line.get("position")), "parent_position": safe_int(line.get("parent_position")),
             "kind": line.get("kind") if line.get("kind") in ReceiptLine.Kind.values else None,
             "name": safe_text(line.get("raw_name")),
-            "unit": line.get("unit") if line.get("unit") in ("pcs", "kg", "g", "l", "ml", "m") else None,
+            "unit": line.get("unit") if line.get("unit") in Unit.values else None,
             **{key: safe_decimal(line.get(key), places) for key, places in
                (("quantity", 3), ("unit_price", 4), ("amount", 2), ("discount_amount", 2), ("tax_amount", 2))},
             **{key: safe_text(line.get(key), limit) for key, limit in

@@ -38,8 +38,8 @@ export type LineField = 'name' | 'quantity' | 'price' | 'discount' | 'amount'
 export type LineErrors = Partial<Record<LineField, string>>
 
 /** The units of lines, as on recognised receipts (`ReceiptLine.unit`). */
-export const UNITS: Unit[] = ['pcs', 'kg', 'g', 'l', 'ml', 'm']
-export const UNIT_LABELS: Record<Unit, string> = { pcs: 'шт', kg: 'кг', g: 'г', l: 'л', ml: 'мл', m: 'м' }
+export const UNITS: Unit[] = ['pcs', 'kg', 'g', 'l', 'ml', 'm', 'kwh', 'm3', 'gcal']
+export const UNIT_LABELS: Record<Unit, string> = { pcs: 'шт', kg: 'кг', g: 'г', l: 'л', ml: 'мл', m: 'м', kwh: 'кВт·ч', m3: 'м³', gcal: 'Гкал' }
 export const NAME_MAX = 200
 
 export const lineMessages = {

@@ -7,7 +7,7 @@ from catalog.units import BaseUnit, Unit, to_base
 
 class UnitTests(SimpleTestCase):
     def test_unit_values(self):
-        self.assertEqual(Unit.values, ["pcs", "g", "kg", "ml", "l", "m"])
+        self.assertEqual(Unit.values, ["pcs", "g", "kg", "ml", "l", "m", "kwh", "m3", "gcal"])
         self.assertEqual(BaseUnit.values, ["kg", "l", "pcs"])
         self.assertLessEqual(set(BaseUnit.values), set(Unit.values))
 

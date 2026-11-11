@@ -111,7 +111,7 @@
 - Unique `(brand, name, package_quantity, package_unit)`, `nulls_distinct=False` — `catalog_product_brand_name_package_uniq`. Сравнение `name` здесь чувствительно к регистру.
 - Check: фасовка задана целиком или не задана — `catalog_product_package_both_or_none`; `package_quantity > 0` — `catalog_product_package_quantity_positive`.
 
-**Единицы** (`catalog/units.py`): `Unit` — `pcs`, `g`, `kg`, `ml`, `l`, `m`; `BaseUnit` — `kg`, `l`, `pcs`. `to_base(quantity, unit)` возвращает `(Decimal, Unit)`: г → кг, мл → л, остальное без изменений (метр остаётся метром, хотя в `BaseUnit` его нет). `float` и `bool` отклоняются с `TypeError`, неизвестная единица — `ValueError`.
+**Единицы** (`catalog/units.py`): `Unit` — `pcs`, `g`, `kg`, `ml`, `l`, `m`, с 2026-11-11 — `kwh` (кВт·ч), `m3` (м³), `gcal` (Гкал) для квитанций (ни во что не пересчитываются, как метр); `BaseUnit` — `kg`, `l`, `pcs`. `to_base(quantity, unit)` возвращает `(Decimal, Unit)`: г → кг, мл → л, остальное без изменений (метр остаётся метром, хотя в `BaseUnit` его нет). `float` и `bool` отклоняются с `TypeError`, неизвестная единица — `ValueError`.
 
 Значения `choices` (`kind`, `unit`, `base_unit`, `operation`, `tax_id_type`) проверяет только `full_clean()`; в БД check-ограничений на них нет, `save()` и `objects.create()` недопустимое значение пропустят.
 

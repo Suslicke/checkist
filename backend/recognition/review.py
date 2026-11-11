@@ -37,6 +37,7 @@ from .queue import db_now, refresh_progress
 from .resolution import ResolutionError, issue
 from .schema_validation import SchemaValidationError, validate_observation
 from .statuses import ImageStatus, ImportEffect, JobStatus, TERMINAL_JOB_STATUSES
+from catalog.units import Unit
 
 MAX_ID = 2**63 - 1  # BigAutoField
 MAX_POSITION = 32767
@@ -60,7 +61,7 @@ TAX_KEYS = ("tax_rate", "tax_code", "net", "tax", "gross")
 LIMITS = {"lines": (1, 1000), "discounts": (0, 1000), "taxes": (0, 100)}
 
 KINDS = ("product", "service", "deposit", "deposit_return")
-UNITS = ("pcs", "g", "kg", "ml", "l", "m")
+UNITS = tuple(Unit.values)
 MONEY = re.compile(r"-?[0-9]{1,12}\.[0-9]{2}")
 QUANTITY = re.compile(r"-?[0-9]{1,9}\.[0-9]{3}")
 UNIT_PRICE = re.compile(r"[0-9]{1,10}\.[0-9]{4}")

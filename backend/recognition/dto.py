@@ -166,6 +166,7 @@ class ProductHint(JSONDTO):
     gtin: str | None
     package_quantity: Decimal | None
     package_unit: str | None
+    model: str | None = None
 
 
 @dataclass(frozen=True)

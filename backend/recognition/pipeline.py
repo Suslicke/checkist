@@ -166,8 +166,8 @@ class JobPipeline:
                 provider=settings.RECEIPT_OCR_PROVIDER,
                 model="" if settings.RECEIPT_OCR_PROVIDER == "fake" else getattr(self.provider, "model_name", settings.RECEIPT_OCR_MODEL),
                 provider_version="1", cli_version=getattr(self.provider, "cli_version", ""),
-                prompt_version="2" if phase == AttemptPhase.DETECT else "5",
-                schema_version="1" if phase == AttemptPhase.DETECT else "2",
+                prompt_version="2" if phase == AttemptPhase.DETECT else "6",
+                schema_version="1" if phase == AttemptPhase.DETECT else "3",
                 input_sha256=prepared.sha256,
             )
             previous.append(attempt)

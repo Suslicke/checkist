@@ -47,6 +47,25 @@ class ImportTests(TestCase):
                       Receipt, ReceiptLine, ReceiptDiscount, ReceiptTax):
             self.assertEqual(model.objects.count(), 0, model.__name__)
 
+    def test_printed_model_reaches_a_new_product_and_fills_an_empty_one(self):
+        first = self.run_import()
+        product = first.receipt.lines.get(position=1).product
+        self.assertEqual(product.model, "")
+        data = receipt_payload()
+        data["lines"][0]["product_hint"]["model"] = "AC-M17-SC"
+        second = self.run_import(another_receipt(data))
+        self.assertEqual(second.receipt.lines.get(position=1).product_id, product.pk)
+        product.refresh_from_db()
+        self.assertEqual(product.model, "AC-M17-SC")
+        data = another_receipt()
+        data.update(receipt_number="000125", local_time="15:45:20")
+        data["fiscal"]["tse_transaction"] = "98767"
+        data["timestamps"]["header"]["time"] = data["local_time"]
+        data["lines"][0]["raw_name"] = "LUFTREINIGER NEU"
+        data["lines"][0]["product_hint"].update(name="Luftreiniger Neu", model="XM-1")
+        third = self.run_import(data)
+        self.assertEqual(third.receipt.lines.get(position=1).product.model, "XM-1")
+
     def test_k1_new_receipt_on_empty_catalog_and_stores(self):
         result = self.run_import()
         self.assertEqual(result.outcome, "created")

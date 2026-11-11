@@ -265,10 +265,10 @@ class ObservationTests(SimpleTestCase):
         first, second, third = built["lines"]
         self.assertEqual((first["raw_name"], first["store_item_code"], first["tax_amount"]), ("APFEL ROT", "A7", "0.07"))
         self.assertEqual(first["product_hint"], {"name": None, "brand": "TESTHOF", "gtin": "4006381333931",
-                                                 "package_quantity": None, "package_unit": None})
+                                                 "package_quantity": None, "package_unit": None, "model": None})
         self.assertEqual(third["product_hint"]["name"], "MILCH 1 L")
         self.assertEqual(second["product_hint"], dict.fromkeys(("name", "brand", "gtin", "package_quantity",
-                                                                "package_unit")))
+                                                                "package_unit", "model")))
         self.assertEqual([second[key] for key in ("store_item_code", "barcode", "tax_amount", "is_excise",
                                                   "is_marked")], [None] * 5)
         marks = evidence(built)

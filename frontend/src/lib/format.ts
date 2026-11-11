@@ -4,7 +4,7 @@ import { currencySymbol } from './money.ts'
 
 const missing = '—'
 const space = '\u00a0'
-const units: Record<Unit, string> = { pcs: 'шт', g: 'г', kg: 'кг', ml: 'мл', l: 'л', m: 'м' }
+const units: Record<Unit, string> = { pcs: 'шт', g: 'г', kg: 'кг', ml: 'мл', l: 'л', m: 'м', kwh: 'кВт·ч', m3: 'м³', gcal: 'Гкал' }
 
 /** String/BigInt formatting only; never convert a Decimal to Number. */
 function decimal(value: Decimal | null, maximum: number, minimum = 0): string {

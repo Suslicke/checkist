@@ -10,6 +10,9 @@ class Unit(models.TextChoices):
     ML = "ml", "мл"
     L = "l", "л"
     M = "m", "м"
+    KWH = "kwh", "кВт·ч"
+    M3 = "m3", "м³"
+    GCAL = "gcal", "Гкал"
 
 
 class BaseUnit(models.TextChoices):
@@ -30,6 +33,10 @@ _TO_BASE = {
     Unit.L: (Unit.L, _ONE),
     # Metres have no comparison unit among BaseUnit and stay as they are.
     Unit.M: (Unit.M, _ONE),
+    # Utility bills: energy, volume, heat. Compared with nothing, kept as printed.
+    Unit.KWH: (Unit.KWH, _ONE),
+    Unit.M3: (Unit.M3, _ONE),
+    Unit.GCAL: (Unit.GCAL, _ONE),
 }
 
 

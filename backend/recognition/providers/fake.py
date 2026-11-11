@@ -47,7 +47,7 @@ def _line(position, name, quantity, unit, price, amount, rate="7.00", *, kind="p
             "tax_rate": {"kind": "vat", "rate": rate}, "tax_code": "A" if rate == "7.00" else "B",
             "tax_amount": None, "is_excise": None, "is_marked": None,
             "product_hint": {"name": name if kind == "product" else None, "brand": None,
-                             "gtin": None, "package_quantity": None, "package_unit": None}}
+                             "gtin": None, "package_quantity": None, "package_unit": None, "model": None}}
 
 
 def receipt_payload(position=1):

@@ -461,6 +461,9 @@
               "ml",
               "l",
               "m",
+              "kwh",
+              "m3",
+              "gcal",
               null
             ]
           },
@@ -548,7 +551,8 @@
               "brand",
               "gtin",
               "package_quantity",
-              "package_unit"
+              "package_unit",
+              "model"
             ],
             "properties": {
               "name": {
@@ -590,6 +594,13 @@
                   "m",
                   null
                 ]
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 64
               }
             }
           }

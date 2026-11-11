@@ -407,7 +407,7 @@ class RecognitionEndToEndTests(TransactionTestCase):
         self.assertEqual(lines[18]["discount_amount"], "0.20")
         self.assertEqual(self.get(detail["discounts_url"])["count"], 3)
         self.assertEqual(self.get(detail["taxes_url"])["count"], tax_count)
-        self.assertEqual(ProcessingJob.objects.get(pk=result["id"]).attempts.get(phase="recognize").prompt_version, "5")
+        self.assertEqual(ProcessingJob.objects.get(pk=result["id"]).attempts.get(phase="recognize").prompt_version, "6")
         self.assertEqual(ReceiptImage.objects.get(job_id=result["id"]).normalized_result,
                          validate_observation(payload_factory()).to_dict())
 
@@ -607,7 +607,7 @@ class RecognitionEndToEndTests(TransactionTestCase):
         self.assertEqual([(v["code"], v["field"]) for v in image.issues],
                          [("optional_omitted", path) for path in expected])
         attempt = ProcessingJob.objects.get(pk=job["id"]).attempts.get(phase="recognize")
-        self.assertEqual((attempt.prompt_version, attempt.schema_version), ("5", "2"))
+        self.assertEqual((attempt.prompt_version, attempt.schema_version), ("6", "3"))
         receipt = Receipt.objects.get(pk=image.receipt_id)
         lines = list(receipt.lines.select_related("tax_rate").order_by("position"))
         self.assertEqual(([line.kind for line in lines].count("product"), [line.kind for line in lines].count("deposit"),
