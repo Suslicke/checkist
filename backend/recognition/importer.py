@@ -279,6 +279,9 @@ def _create_graph(header, observation, country, derived, confirmed=None):
     from catalog.models import Product
     newest = Product.objects.order_by("-pk").values_list("pk", flat=True).first() or 0
     printed = getattr(derived, "printed", {})
+    # A tip is paid on top of goods: on a paper of services only (a condominium bill) «Обслуживание домофона»
+    # is a service of the bill, not a tip (prod 2026-11-18), so its category comes from the memory below.
+    goods = any(line.kind == ReceiptLine.Kind.PRODUCT for line in observation.lines)
     for i, observed in enumerate(observation.lines):
         resolution = _resolve_product(observed, header["store"].merchant, field=f"/lines/{i}/product_hint")
         product = resolution.product
@@ -295,7 +298,7 @@ def _create_graph(header, observation, country, derived, confirmed=None):
         if i in printed:
             # The amount is the fact; what the paper said about quantity, unit and price stays for analysis.
             values["extra"] = {"printed": printed[i]}
-        if product is None and service_charges.applies(observed.kind, observed.raw_name):
+        if product is None and goods and service_charges.applies(observed.kind, observed.raw_name):
             # Service charge or tip: no catalogue product, its own category (None if it is missing).
             values["category_id"] = service_category()
         elif product is None:

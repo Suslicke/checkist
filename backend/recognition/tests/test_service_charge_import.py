@@ -51,6 +51,15 @@ class ImportTests(TestCase):
         self.assertIsNotNone(product)
         self.assertFalse(Product.objects.filter(name__icontains="service").exists())
 
+    def test_a_bill_of_services_only_has_no_tips(self):
+        # Prod 2026-11-18: «Обслуживание домофона» of a condominium bill went to «Обслуживание и чаевые».
+        data = with_service(first="Текущие взносы", second="Обслуживание домофона")
+        data["lines"][0].update(kind="service")
+        data["lines"][0]["product_hint"]["name"] = None
+        result = self.run_import(data)
+        self.assertEqual(result.outcome, "created")
+        self.assertEqual(self.lines(result.receipt)["Обслуживание домофона"], ("service", None, None))
+
     def test_other_services_stay_as_they_were(self):
         result = self.run_import(with_service(second="LIEFERUNG"))
         self.assertEqual(self.lines(result.receipt)["LIEFERUNG"], ("service", None, None))
