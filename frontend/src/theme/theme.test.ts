@@ -316,13 +316,14 @@ describe('theme contract in the files', () => {
     expect(html.indexOf('<script>')).toBeLessThan(html.indexOf('<script type="module"'))
   })
 
-  it('paints the installed app and the tab icon in the red/gold palette', () => {
-    // The splash and the bar of an installed app take the dark page colour; the icon background is the red brand.
+  it('paints the installed app and the tab icon in the colours of 2.0: the seal under the gold band', () => {
+    // The splash and the bar of an installed app take the dark page colour; the icon background is the seal (#C0161D).
     const manifest = JSON.parse(read('../../public/manifest.json')) as { theme_color: string; background_color: string }
     expect(manifest.theme_color.toLowerCase()).toBe(themeColors.dark)
     expect(manifest.background_color.toLowerCase()).toBe(themeColors.dark)
-    expect(read('../../public/favicon.svg')).toContain('fill="#B01212"')
-    expect(read('../../brand/app-icon.svg')).toContain('<rect width="512" height="512" fill="#B01212"/>')
+    expect(read('../../public/favicon.svg')).toContain('fill="#C0161D"')
+    expect(read('../../brand/app-icon.svg')).toContain('<rect width="512" height="512" fill="#C0161D"/>')
+    for (const file of ['../../public/favicon.svg', '../../brand/app-icon.svg']) expect(read(file)).not.toMatch(/#(B01212|2A1B16|FFFAF0)/i)
   })
 
   it('loads Geologica, Onest and JetBrains Mono from Google Fonts with display=swap and no font file of its own', () => {
