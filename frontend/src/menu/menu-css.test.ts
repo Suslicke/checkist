@@ -149,7 +149,9 @@ describe('the bottom bar of a phone (text of the rules)', () => {
     expect(iosCurrent).toContain('background: color-mix(')
     expect(rule(`${ios} .brand-bar .main-more-toggle[data-current]`, bar)).toBe(iosCurrent)
     expect(rule(`${ios} .brand-bar a.main-more-toggle[aria-current]`, bar)).toBe(iosCurrent)
-    expect(rule(`${android} .brand-bar .main-navigation > a[aria-current]`, bar)).toBe('color: var(--ck-ink); font-weight: 700;')
+    // The cell itself has no fill: the shared `.main-navigation a[aria-current]` would paint the whole «Ещё» cell, which is
+    // no child of the nav (seen in Chrome on Android, 2026-11-20); the pill is the picture's.
+    expect(rule(`${android} .brand-bar .main-navigation > a[aria-current]`, bar)).toBe('background: none; color: var(--ck-ink); font-weight: 700;')
     expect(rule(`${android} .brand-bar .main-navigation > a[aria-current] .ck-icon`, bar)).toBe('background: var(--ck-seal-soft); color: var(--ck-seal-ink);')
     // The pill of Android: 56 × 32 around a 24 px picture.
     expect(rule(`${android} .brand-bar .main-navigation > a .ck-icon`, bar)).toBe('box-sizing: content-box; width: 24px; height: 24px; padding: var(--ck-space-1) var(--ck-space-4); border-radius: var(--ck-radius-pill);')
