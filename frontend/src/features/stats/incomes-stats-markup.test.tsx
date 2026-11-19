@@ -5,7 +5,9 @@ import { incomeSeries } from '../incomes/incomes-state'
 import { IncomeStatsBlocks } from './IncomesStatsPage'
 
 const plain = (markup: string) => markup.replace(/[\u00a0\u202f]/g, ' ')
-const text = (markup: string) => plain(markup).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+/** The words of the markup: a sum drawn by Money reads as one value, «+950 000 ₸». */
+const text = (markup: string) => plain(markup.replace(/<span class="ck-money-(?:int|frac|cur|sign|approx)">([^<]*)<\/span>/g, '$1'))
+  .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 const stats = (patch: Partial<IncomeStats> = {}): IncomeStats => ({
   months: 12, month_from: '2025-11', month_to: '2026-10', base_currency: 'KZT', income: '1000000.00', spent: '200000.00',
   saved: '800000.00', saved_percent: '80.00', categories_scope: 'family', excluded: [],
@@ -16,9 +18,12 @@ const render = (data: IncomeStats) => renderToStaticMarkup(<IncomeStatsBlocks st
 describe('«Статистика → Доходы» (Vitest/SSR, not the browser)', () => {
   it('shows the family total of the period and every category of the head with a bar against the largest one', () => {
     const markup = render(stats())
-    expect(text(markup)).toContain('Доход 1 000 000 ₸ Потрачено 200 000 ₸ Отложено 800 000 ₸ (80 %)')
-    expect(text(markup)).toContain('Зарплата 950 000 ₸')
-    expect(text(markup)).toContain('Подработка 50 000 ₸')
+    // The income is the main number in the income tone with «+» (Чекист 2.0); spent and saved are ordinary sums.
+    expect(text(markup)).toContain('Доход +1 000 000 ₸ Потрачено 200 000 ₸ Отложено 800 000 ₸ (80 %)')
+    expect(markup).toContain('<span class="ck-money ck-money--display ck-money--in">')
+    expect((markup.match(/ck-money--display/g) ?? []).length).toBe(1)
+    expect(text(markup)).toContain('Зарплата +950 000 ₸')
+    expect(text(markup)).toContain('Подработка +50 000 ₸')
     expect(markup).toContain('<li class="trends-row trends-cat-1">')
     expect(markup).toContain('<span style="width:100%"></span>')
     expect(markup).toContain('<span style="width:5%"></span>')
@@ -27,7 +32,7 @@ describe('«Статистика → Доходы» (Vitest/SSR, not the browser
   it('says that a member of a family sees the categories of their own records only', () => {
     const markup = render(stats({ categories_scope: 'own', categories: [{ id: 1, name: 'Зарплата', total: '300000.00' }] }))
     expect(text(markup)).toContain('Только ваши записи: записи других членов семьи видит главный в семье. Итог выше — доход всей семьи.')
-    expect(text(markup)).toContain('Зарплата 300 000 ₸')
+    expect(text(markup)).toContain('Зарплата +300 000 ₸')
     expect(text(render(stats({ categories_scope: 'own', categories: [] })))).toContain('Ваших записей дохода за период нет.')
   })
   it('asks for an income instead of a zero, and names the sums without a rate', () => {

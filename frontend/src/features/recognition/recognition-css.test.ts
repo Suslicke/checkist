@@ -47,19 +47,26 @@ describe('recognition stylesheet guards (text of the rules, not rendering)', () 
   it('takes every size of the text from the scale of the theme and never changes it on a phone', () => {
     const sizes = all.flatMap((item) => value(item.body, 'font-size') ?? [])
     expect(sizes.length).toBeGreaterThan(0)
-    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl)\)$/)
+    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading)\)$/)
     expect(narrow).not.toMatch(/font-size/)
   })
 
-  it('draws the blocks as cards of the artifact, the jobs as rows of their card, states as pills', () => {
-    expect(rule('.ck-rec-panel')).toContain('background: var(--ck-surface); box-shadow: var(--ck-card-shadow);')
-    expect(rule('.ck-rec-card')).toContain('border-top: 1px solid var(--ck-divider);')
+  it('draws the blocks as panels of 2.0, the jobs as rows of their panel, states as chips in their tone', () => {
+    // A panel: the surface, a line, the radius of a card, no shadow.
+    expect(rule('.ck-rec-panel')).toContain('border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface);')
+    expect(rule('.ck-rec-panel')).not.toContain('shadow')
+    expect(rule('.ck-rec-card')).toContain('border-top: 1px solid var(--ck-line);')
     expect(rule('.ck-rec-status')).toContain('border-radius: var(--ck-radius-pill);')
-    // «Отменить» is a quiet danger: an outline in the error colours while it can be pressed.
-    expect(rule('.ck-rec-cancel:not(:disabled)')).toBe('border: 1.5px solid var(--ck-error-border); background: var(--ck-surface); color: var(--ck-error-text);')
+    // Done — income, needs a check — over, failed — error; the words of the state are always in the chip.
+    expect(rule('.ck-rec-status-succeeded')).toBe('background: var(--ck-income-soft); color: var(--ck-income);')
+    expect(rule('.ck-rec-status-review')).toBe('background: var(--ck-over-soft); color: var(--ck-over);')
+    expect(rule('.ck-rec-status-failed')).toBe('background: var(--ck-error-soft); color: var(--ck-error);')
+    // «Отменить» is a quiet danger: an outline in the error colour while it can be pressed.
+    expect(rule('.ck-rec-cancel:not(:disabled)')).toBe('border: 1px solid var(--ck-error); background: transparent; color: var(--ck-error);')
   })
 
-  it('takes every colour from the theme tokens', () => {
+  it('takes every colour from the 2.0 tokens', () => {
     expect(css.match(/#[0-9a-f]{3,8}\b|(?:rgb|hsl)a?\(/gi)).toBeNull()
+    expect(css).not.toMatch(/--ck-(bg|text|text-muted|accent[a-z-]*|primary[a-z-]*|link[a-z-]*|border[a-z-]*|divider|neutral-[a-z]+|success-[a-z]+|warning-[a-z]+|disabled-[a-z]+|surface-raised|card-shadow|radius|radius-sm|font-figures|text-(xs|sm|base|lg|xl|hero|2xs))\)/)
   })
 })

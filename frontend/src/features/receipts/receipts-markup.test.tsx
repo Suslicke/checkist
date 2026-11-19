@@ -101,19 +101,18 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     expect(list).toContain('Загружаем')
     const detail = renderToStaticMarkup(<ReceiptPage receiptId={71} returnTo="/receipts?q=MILCH&amp;page=2" />)
     expect(detail).toContain('Чек\u00a0№71')
-    expect(detail.match(/class="request-state request-state-loading"/g)).toHaveLength(5)
+    expect(detail.match(/class="request-state request-state-loading[^"]*"/g)).toHaveLength(5)
     for (const html of [list, detail]) { expect(html).not.toContain('<h1'); expect(html).not.toContain('<main') }
   })
   it('renders canonical receipt, printed line, linked catalog item, discount and tax from backend fixtures', () => {
     const html = renderToStaticMarkup(<ReceiptView {...view} />)
-    for (const text of ['Тестовый магазин', 'Teststrasse 12', '04.10.2026', '14:35', 'Продажа', '2,38 €', '0,20 €', 'MILCH 1 L', '2 шт', '1,29 €', '2,58 €', 'Rabatt MILCH', 'НДС 7,00 %', '2,38 €', '0,16 €']) expect(html).toContain(text)
+    // The paper prints its numbers without the currency; ИТОГО names it once.
+    for (const text of ['Тестовый магазин', 'Teststrasse 12', '04.10.2026', '14:35', 'Продажа', '2,38\u00a0€', '\u22120,20', 'MILCH 1 L', '2\u00a0шт × 1,29', '2,58', 'Rabatt MILCH', 'НДС 7,00\u00a0%', '0,16']) expect(html).toContain(text)
     expect(html).toContain('href="/catalog/products/61"')
     expect(html).toContain('href="/recognition/jobs/31"')
     expect(html).toContain('href="#receipt-line-101"')
-    expect(html).toContain('scope="row"')
-    expect(html).toContain('scope="col"')
-    expect(html).toContain('role="region"')
-    expect(html).toContain('прокручивается по горизонтали')
+    // No table any more: the lines are the paper on every width.
+    expect(html).not.toContain('<table')
     expect(html).not.toContain('raw_text')
   })
   it('shows an unmatched product, service, linked deposit, and return of deposit explicitly', () => {
@@ -124,12 +123,12 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     const returned: Line = { ...deposit, id: 105, position: 5, kind: 'deposit_return', parent_id: null, quantity: '-1.000', amount: '-0.25', paid_amount: '-0.25' }
     const html = renderToStaticMarkup(<ReceiptLines lines={[parent, unmatched, deposit, service, returned]} currency="EUR" />)
     expect(html.match(/Товар не сопоставлен/g)).toHaveLength(4)
-    expect(html).toContain('Строка\u00a03 · Залог')
+    expect(html).toContain('<span class="receipt-note">Залог</span>')
     expect(html).toContain('Залог к <a href="#receipt-line-101">Строка\u00a01: MILCH 1 L</a>')
     expect(html).toContain('href="#receipt-line-103"')
-    expect(html).toContain('Строка\u00a04 · Услуга')
+    expect(html).toContain('<span class="receipt-note">Услуга</span>')
     expect(html).toContain('Возврат залога')
-    expect(html).toContain('-0,25 €')
+    expect(html).toContain('\u22120,25')
   })
   it('keeps parent identity visible when a deposit/discount references another page', () => {
     const deposit: Line = { ...lines.results[0], kind: 'deposit', parent_id: 999 }
@@ -146,7 +145,7 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     expect(html).toContain('Проверьте соединение')
     if (block !== 'lines') expect(html).toContain('MILCH 1 L')
     if (block !== 'discounts') expect(html).toContain('Rabatt MILCH')
-    if (block !== 'taxes') expect(html).toContain('НДС 7,00 %')
+    if (block !== 'taxes') expect(html).toContain('НДС 7,00\u00a0%')
     if (block !== 'images') expect(html).toContain('href="/recognition/jobs/31"')
     if (block === 'header') { expect(html).toContain('Валюта: Не распознано'); expect(html).not.toContain('EUR') }
   })
@@ -158,7 +157,9 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
   })
   it('shows empty states for individual child resources', () => {
     const html = renderToStaticMarkup(<ReceiptView {...view} images={loaded(emptyPage())} lines={loaded(emptyPage())} discounts={loaded(emptyPage())} taxes={loaded(emptyPage())} />)
-    for (const text of ['У этого чека нет изображений', 'В этом чеке нет строк', 'Отдельные скидки в чеке не указаны', 'Налоги в чеке не указаны']) expect(html).toContain(text)
+    for (const text of ['У этого чека нет изображений', 'В этом чеке нет строк']) expect(html).toContain(text)
+    // A paper without separate discounts or taxes prints no empty part for them.
+    for (const id of ['receipt-discounts', 'receipt-taxes']) expect(html).not.toContain(`id="${id}"`)
     expect(html).toContain('Тестовый магазин')
   })
   it('renders all linked photos including multiple jobs and fixed issue descriptions', () => {
@@ -191,8 +192,9 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     const html = renderToStaticMarkup(<ReceiptHeader receipt={{ ...receipt, operation: 'refund', total: '-2.38', discount_total: '0.00', store: { ...receipt.store!, name: '', address: '' } }} />)
     expect(html.match(/Не распознано/g)).toHaveLength(2)
     expect(html).toContain('Возврат')
-    expect(html).toContain('-2,38 €')
-    expect(html).toContain('0 €')
+    // The amounts are Money of 2.0: the minus U+2212, the kopecks apart; a zero stays a zero.
+    expect(html).toContain('<span class="ck-money ck-money--display"><span class="ck-money-sign">\u2212</span><span class="ck-money-int">2</span><span class="ck-money-frac">,38</span><span class="ck-money-cur">\u202f€</span></span>')
+    expect(html).toContain('<dt>Сумма скидок</dt><dd class="receipt-number"><span class="ck-money ck-money--inline"><span class="ck-money-int">0</span><span class="ck-money-cur">\u202f€</span></span></dd>')
     expect(renderToStaticMarkup(<ReceiptTaxes taxes={[{ ...taxes.results[0], tax_rate: { ...taxes.results[0].tax_rate, kind: 'exempt', rate: null }, tax_code: '' }]} currency="EUR" />)).toContain('Без НДС')
   })
   it('empty unfiltered list invites first upload, filtered list offers reset', () => {
@@ -212,7 +214,7 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     const data = { ...(publicFixture('receipts.json') as Page<Receipt>), count: 5, page: 2, pages: 3,
       results: [{ ...receipt, unmatched_products_count: 1, review_required: true }] }
     const html = renderToStaticMarkup(<ReceiptsView query={{ page: 2, q: 'MILCH', date_from: '2026-10-01', date_to: '2026-10-04', operation: 'sale' }} state={{ kind: 'ok', data }} retry={noop} />)
-    for (const text of ['Тестовый магазин', '<span class="spends-row-flag">требует проверки</span>', '2,38\u00a0€', '<time dateTime="2026-10-04">', 'Страница 2 из 3']) expect(html).toContain(text)
+    for (const text of ['Тестовый магазин', '<span class="spends-row-flag">требует проверки</span>', '<span class="ck-money-int">2</span><span class="ck-money-frac">,38</span>', '<time dateTime="2026-10-04">', 'Страница 2 из 3']) expect(html).toContain(text)
     expect(html).toContain('href="/receipts/71"')
     const nextHref = /<a rel="next" href="([^"]+)"/.exec(html)![1].replaceAll('&amp;', '&')
     expect(Object.fromEntries(new URL(nextHref, 'http://checkist.local').searchParams)).toEqual({
@@ -250,7 +252,7 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     const detail = renderToStaticMarkup(<ReceiptView {...view} />)
     expect(detail).toMatch(/<h3>Фото\u00a0№\d+ · вырезка\u00a0\d+<\/h3>/)
     expect(detail).toContain('>Задание\u00a0№31</a>')
-    expect(detail).toMatch(/<span class="receipt-note">Строка\u00a0\d+ · Товар<\/span>/)
+    expect(detail).toContain('Скидка к <a href="#receipt-line-101">Строка\u00a01: MILCH 1 L</a>')
     // No visible label of these screens keeps an ordinary space between the word and its number.
     for (const html of [list, detail]) expect(html.replace(/(alt|aria-label)="[^"]*"/g, '')).not.toMatch(/(чек|Фото|Задание) №|вырезка \d|Строка \d/)
   })
@@ -262,29 +264,34 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     expect(list).toContain('<time dateTime="2026-10-04">4\u00a0окт</time>')
     expect(detail).toMatch(/<time dateTime="[^"]+">\d{2}\.\d{2}\.\d{4}/)
     for (const html of [list, detail]) expect(html.replace(/<time\b[^>]*>[^<]*<\/time>|aria-label="[^"]*"/g, '')).not.toMatch(/\d{2}\.\d{2}\.\d{4}|\d+\u00a0окт/)
-    expect(detail.match(/<time\b/g)).toHaveLength(2)
+    // The moment in words in the head, as the till printed it on the paper, and the confirmation of the crop.
+    expect(detail.match(/<time\b/g)).toHaveLength(3)
+    expect(detail).toContain('<time dateTime="2026-10-04T12:35:00Z">4\u00a0октября,\u00a014:35</time>')
   })
-  it('marks the numbers of the lines table and the totals with the classes that keep a value whole', () => {
+  it('keeps every number of the paper whole and draws the total as the one large figure of the page', () => {
     const html = renderToStaticMarkup(<ReceiptView {...view} />)
-    const row = /<tr id="receipt-line-101"[^>]*>([\s\S]*?)<\/tr>/.exec(html)![1]
-    expect(row.match(/<td\b/g)).toHaveLength(5)
-    expect(row.match(/<td class="receipt-number">/g)).toHaveLength(5)
-    expect(row.match(/<th scope="row">/g)).toHaveLength(1)
-    // The total of the header is the one hero figure of the page (its class keeps the value whole).
-    expect(html).toContain('<p class="receipt-head-total"><span class="receipt-head-label">Итог</span><span class="ck-hero-figure">')
-    expect(html.match(/ck-hero-figure/g)).toHaveLength(1)
+    const line = /<li id="receipt-line-101"[^>]*>([\s\S]*?)<\/li>/.exec(html)![1]
+    expect(line.match(/<span class="receipt-slip-value">/g)).toHaveLength(3)
+    // The total of the head is the large figure of the page (Money size="display"); no hero figure here.
+    expect(html.match(/ck-money--display/g)).toHaveLength(1)
+    expect(html).not.toContain('ck-hero-figure')
+    expect(html).toContain('<p class="receipt-head-total"><span class="receipt-head-label">Итог</span><span class="ck-money ck-money--display">')
   })
-  it('heads the receipt with its card: place, date, who added it and from where, the total, the categories, then the facts', () => {
+  it('heads the receipt with the trip of 2.0: the tile, the place, the total, the facts as chips, the categories, the rest folded', () => {
     const html = renderToStaticMarkup(<ReceiptHeader receipt={receipt} showOwner categories={[{ id: 3, name: 'Продукты' }]} />)
-    expect(html.startsWith('<div class="receipt-head"><div class="receipt-head-top"><div class="receipt-head-main"><h3 class="receipt-store-name">')).toBe(true)
+    expect(html.startsWith('<div class="receipt-head"><div class="receipt-head-top"><span class="receipt-head-tile" data-tone="3" aria-hidden="true">')).toBe(true)
+    expect(html).toContain('<div class="receipt-head-main"><h3 class="receipt-store-name">Тестовый магазин</h3><p class="receipt-head-kind">Продукты</p></div>')
     expect(html).toContain('<dl class="receipt-head-meta"><div><dt>Дата и время покупки</dt><dd><time dateTime=')
     expect(html).toContain('<div><dt>Добавил</dt><dd class="receipt-owner">')
-    expect(html).toContain('<div><dt>Откуда</dt><dd>по чеку</dd></div></dl>')
-    expect(html).toContain('<ul class="receipt-head-chips" aria-label="Категории"><li><span class="receipt-line-chip" data-tone="3">Продукты</span></li></ul>')
-    expect(html.indexOf('receipt-head-total')).toBeLessThan(html.indexOf('receipt-head-chips'))
-    expect(html.indexOf('receipt-head-chips')).toBeLessThan(html.indexOf('<dl class="receipt-facts">'))
+    expect(html).toContain('<div><dt>Откуда</dt><dd>Фото</dd></div></dl>')
+    expect(html.indexOf('receipt-head-total')).toBeLessThan(html.indexOf('receipt-head-meta'))
+    // A photo receipt keeps the facts of its paper folded.
+    expect(html).toContain('<details class="receipt-more"><summary>Подробности</summary><dl class="receipt-facts">')
     expect(html).not.toContain('<dt>Итог</dt>')
-    expect(html).not.toContain('ck-tape')
+    // Several categories of the lines: chips with their tones instead of the one word.
+    const two = renderToStaticMarkup(<ReceiptHeader receipt={receipt} categories={[{ id: 3, name: 'Продукты' }, { id: 8, name: 'Транспорт' }]} />)
+    expect(two).toContain('<ul class="receipt-head-chips" aria-label="Категории"><li><span class="receipt-line-chip" data-tone="3">Продукты</span></li>')
+    expect(two).not.toContain('receipt-head-kind')
   })
 
   it('names the statement of an imported spend as its source and keeps the rest of the note as the comment', () => {
@@ -292,31 +299,32 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     const html = renderToStaticMarkup(<ReceiptHeader receipt={imported} />)
     expect(html).toContain('<div><dt>Откуда</dt><dd>Выписка Kaspi Gold</dd></div>')
     expect(html).toContain('<div><dt>Комментарий</dt><dd>Аренда</dd></div>')
+    // A spend by hand shows its facts at once, without the currency row: its amount names the currency.
+    expect(html).not.toContain('<details')
+    expect(html).not.toContain('<dt>Валюта</dt>')
     // A place typed by hand has no address: no «Не распознано» rows for it.
     expect(html).not.toContain('Не распознано')
     expect(html).not.toContain('<dt>Адрес</dt>')
   })
-  it('puts the actions into the header card, the photo as a thumbnail on a phone and the deletion in a sheet', () => {
+  it('puts the actions and the question to the assistant into the head, the photo as a thumbnail on a phone', () => {
     const withPhoto = { ...receipt, preview_image_url: '/media/receipts/71.jpg', preview_thumb_url: '/media/receipts/71-thumb.jpg' }
     const phone = renderToStaticMarkup(<ReceiptView {...view} header={{ state: { kind: 'ok', data: withPhoto }, retry: noop }} narrow />)
-    // The last thing of the header card, before the images; no pinned bar of its own above the navigation.
-    expect(phone).toContain('<div class="receipt-toolbar"><div class="receipt-actions receipt-delete-bar ck-action-bar"><a class="action-link receipt-primary" href="/receipts/71/edit">Изменить</a><button type="button" class="receipt-secondary" aria-label="Удалить чек">Удалить</button></div></div><button type="button" class="ck-button-secondary chat-ask-spend" data-chat-start="spend">Спросить ИИ об этой трате</button></section>')
-    expect(phone.indexOf('receipt-toolbar')).toBeLessThan(phone.indexOf('Изображения чека'))
+    // The last things of the head, before the paper: the tiles, then «Спросить ИИ» in the gold of the assistant.
+    expect(phone).toContain('<div class="receipt-toolbar"><div class="receipt-actions receipt-delete-bar ck-action-bar"><a class="action-link receipt-primary" href="/receipts/71/edit">Изменить</a><button type="button" class="receipt-secondary" aria-label="Удалить чек" aria-expanded="false">Удалить</button></div></div><button type="button" class="receipt-ask chat-ask-spend" data-chat-start="spend"><svg')
+    expect(phone).toContain('</svg>Спросить ИИ об этой трате</button></section><div class="receipt-slip-wrap">')
+    expect(phone.indexOf('receipt-toolbar')).toBeLessThan(phone.indexOf('id="receipt-images"'))
     expect(phone).toContain('<button type="button" class="receipt-photo-thumb" aria-haspopup="dialog" aria-expanded="false"><img src="/media/receipts/71-thumb.jpg" alt=""')
     // A phone goes back with the top bar of the shell; a wide screen keeps its link.
     expect(phone).not.toContain('receipt-back')
     const wide = renderToStaticMarkup(<ReceiptView {...view} header={{ state: { kind: 'ok', data: withPhoto }, retry: noop }} />)
     expect(wide).not.toContain('receipt-photo-thumb')
     expect(wide).toContain('<p class="receipt-back"><a class="action-link" href="/receipts">К тратам</a></p>')
-    expect(wide.indexOf('receipt-delete-bar')).toBeLessThan(wide.indexOf('Изображения чека'))
-    const asking = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} narrow initial={{ kind: 'confirm', withPhoto: true }} />)
-    expect(asking).toContain('<div class="ck-sheet" role="dialog" aria-modal="true"')
-    expect(asking).toContain('Удалить чек?</h2>')
-    expect(asking).toContain('<div class="expense-confirm" role="group" aria-labelledby="receipt-delete-71">')
-    expect(asking.indexOf('receipt-delete-bar')).toBeLessThan(asking.indexOf('ck-sheet'))
-    const inline = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={{ kind: 'confirm', withPhoto: true }} />)
-    expect(inline).not.toContain('ck-sheet')
-    expect(inline.startsWith('<div class="expense-confirm"')).toBe(true)
+    // The photos stand beside the facts and the paper on a wide screen (theme/desktop.css): after their column.
+    expect(wide.indexOf('<div class="receipt-main">')).toBeLessThan(wide.indexOf('id="receipt-images"'))
+    // The choice of a deletion opens under the actions on every width, no sheet.
+    const asking = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={{ kind: 'confirm', withPhoto: true }} />)
+    expect(asking).not.toContain('ck-sheet')
+    expect(asking.indexOf('receipt-delete-bar')).toBeLessThan(asking.indexOf('receipt-delete-choice'))
   })
   it('opens the full photo with «Скачать оригинал» in a sheet', () => {
     const html = renderToStaticMarkup(<ReceiptPhoto receiptId={71} thumb="/media/a-thumb.jpg" image="/media/a.jpg" download="/media/a.jpg?download=1" initialOpen />)
@@ -340,7 +348,7 @@ describe('who added the receipt (family)', () => {
     expect(receipt.owner).toBe('local')
     const list = renderToStaticMarkup(<ReceiptsView query={{ page: 1 }} state={{ kind: 'ok', data: page }} retry={noop} showOwner />)
     // The name from «Имя» of the admin, not the username: first in the line under the place.
-    expect(list).toContain('<span class="spends-row-meta"><span>Лиза</span>')
+    expect(list).toContain('<span class="spends-row-meta"><span class="ck-stamp spends-stamp" data-source="photo">Фото</span><span>Лиза</span>')
     expect(list).not.toContain('synthetic-two')
     // An older server without `owner_name`: the username.
     const { owner_name: _name, ...older } = page.results[0]

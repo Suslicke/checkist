@@ -44,11 +44,13 @@ describe('touch stylesheet guards (text of the rules, not rendering)', () => {
     }
     expect(rules(charts).filter((item) => item.selector.includes('ck-line-steps') && /display:\s*none/.test(item.body)).map((item) => item.selector)).toEqual(['.ck-line-steps'])
   })
-  it('gives a switched-off step button the disabled tokens whatever the order of the stylesheets', () => {
+  it('draws a switched-off step button as an outline in ink-2 whatever the order of the stylesheets', () => {
+    // Чекист 2.0: the enabled step is a tonal pill (surface-2 under ink); switched off it loses the fill and keeps a line.
+    expect(value(body(base, '.ck-line-steps button'), 'background')).toBe('var(--ck-chart-highlight)')
     const disabled = body(base, '.ck-line-steps button:disabled')
-    expect(value(disabled, 'background')).toBe('var(--ck-disabled-bg)')
-    expect(value(disabled, 'border-color')).toBe('var(--ck-disabled-border)')
-    expect(value(disabled, 'color')).toBe('var(--ck-disabled-text)')
+    expect(value(disabled, 'background')).toBe('transparent')
+    expect(value(disabled, 'border-color')).toBe('var(--ck-line)')
+    expect(value(disabled, 'color')).toBe('var(--ck-ink-2)')
   })
   it('makes the links of the pie legend 44px under a finger, over a screen’s own link rule', () => {
     const coarse = media(charts, 'pointer: coarse')

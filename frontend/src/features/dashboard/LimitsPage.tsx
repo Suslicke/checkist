@@ -9,8 +9,10 @@ import Icon from '../../components/Icon'
 import RequestState from '../../components/RequestState'
 import { Link } from '../../navigation'
 import { useSession } from '../../session'
-import { categoryTone, dashboardErrorMessage, formatMoney } from './dashboard-state'
-import { currencySymbol, formatMoneyWithBase } from '../../lib/money'
+import { categoryTone, dashboardErrorMessage } from './dashboard-state'
+import { currencySymbol } from '../../lib/money'
+import Money from '../../components/Money'
+import Words from './Words'
 import {
   amountInput, changedRows, filterHistory, historyCategories, historyEntries, isDuplicateCreate, legacyLimit, limitCurrencies, limitFailureMessage, limitFor, limitMessages, parseLimitAmount,
   limitTree, openByDefault, parseCurrency, rowAction, saveBarLabel, subCategoriesText, visibleRows, withLimit, withoutLimit,
@@ -79,10 +81,10 @@ export function LimitHistory({ state, category = null, onCategory = () => {}, on
           </div>
           <div className="limits-history-category">{entry.category}</div>
           <div className="limits-history-change">
-            <span className="ck-figures">{entry.text}</span>
+            <span className="limits-history-text"><Words phrases={[entry.phrase]} /></span>
             {entry.badge && <span className={`limits-history-badge limits-history-${entry.direction}`}>
-              <span className="dash-visually-hidden">{entry.direction === 'up' ? 'больше на ' : 'меньше на '}</span>
-              <span className="ck-figures">{entry.badge}</span>
+              <span className="ck-visually-hidden">{entry.direction === 'up' ? 'больше на ' : 'меньше на '}</span>
+              {entry.badge}
             </span>}
           </div>
         </li>)}
@@ -132,7 +134,7 @@ export function MonthBudgetPanel({ state, family, onSave }: {
     <form className="limits-form" noValidate aria-busy={busy} onSubmit={submit}>
       <div className="limits-row-head">
         <label className="limits-name" htmlFor="limits-budget">Сумма на месяц</label>
-        <span className="limits-current ck-figures">{amount && currency ? formatMoney(amount, currency) : 'не задан'}</span>
+        <span className="limits-current">{amount && currency ? <Money value={amount} currency={currency} /> : 'не задан'}</span>
       </div>
       <div className="limits-controls">
         <span className="limits-input">
@@ -141,7 +143,7 @@ export function MonthBudgetPanel({ state, family, onSave }: {
             onChange={(event) => { setDraft(event.target.value); setStatus(idle) }} />
           <span className="limits-input-currency" aria-hidden="true">{currencySymbol(base)}</span>
         </span>
-        <button type="submit" className="limits-budget-save" disabled={busy}>Сохранить бюджет</button>
+        <button type="submit" className="ck-button-secondary limits-budget-save" disabled={busy}>Сохранить бюджет</button>
         {amount && <button type="button" className="ck-button-danger limits-delete" disabled={busy} onClick={() => { void save(null) }}>Убрать</button>}
       </div>
       {status.kind === 'error' && <p className="receipt-field-error" id="limits-budget-message" role="alert">{status.text}</p>}
@@ -196,7 +198,7 @@ export function LimitsView({
     </section> : <section className="ck-panel dash-card limits-currencies" aria-labelledby="limits-currency-heading">
       <h2 id="limits-currency-heading" className="limits-small-heading">Валюта</h2>
       <ChipScroller label="Валюта лимитов">
-        {currencies.map((code) => <button key={code} type="button" className="dash-chip" aria-pressed={code === currency}
+        {currencies.map((code) => <button key={code} type="button" className="ck-chip" aria-pressed={code === currency}
           onClick={() => onCurrency(code)}>{code}</button>)}
       </ChipScroller>
       <AddCurrency onAdd={onAddCurrency} />
@@ -219,17 +221,18 @@ export function LimitsView({
         const indent = { '--limits-depth': Math.min(depth, 4) } as CSSProperties
         // A full-width row of one list; Enter in its field saves this row alone, the bar below saves every changed one.
         return <li key={key}
-          className={`limits-row${depth ? ' limits-row-sub' : ''}${action.kind === 'none' ? '' : ' limits-row-changed'} dash-cat-${categoryTone(rootId)}`}
+          className={`limits-row${depth ? ' limits-row-sub' : ''}${action.kind === 'none' ? '' : ' limits-row-changed'} ck-tone-${categoryTone(rootId)}`}
           style={depth ? indent : undefined}>
           <form className="limits-form" noValidate aria-busy={busy} onSubmit={(event) => { event.preventDefault(); onSave(category) }}>
             <div className="limits-row-head">
-              <span className="dash-dot" aria-hidden="true" />
+              <span className="dash-limit-dot" aria-hidden="true" />
               <label className="limits-name" htmlFor={inputId}>
-                {depth > 0 && <span className="dash-visually-hidden">{category.path.slice(0, -1).map((step) => step.name).join(' › ')} › </span>}
+                {depth > 0 && <span className="ck-visually-hidden">{category.path.slice(0, -1).map((step) => step.name).join(' › ')} › </span>}
                 {category.name}
               </label>
-              <span className="limits-current ck-figures">{limit ? formatMoney(limit.amount, currency)
-                : legacy ? formatMoneyWithBase(legacy.amount, legacy.currency, legacy.base_amount, base) : 'без лимита'}</span>
+              <span className="limits-current">{limit ? <Money value={limit.amount} currency={currency} />
+                : legacy ? <><Money value={legacy.amount} currency={legacy.currency} />{legacy.base_amount != null && base && base !== legacy.currency
+                  && <> · <Money className="ck-twin" value={legacy.base_amount} currency={base} approx /></>}</> : 'без лимита'}</span>
             </div>
             <div className="limits-controls">
               <span className="limits-input">
@@ -239,8 +242,8 @@ export function LimitsView({
                   onChange={(event) => onDraft(key, event.target.value)} />
                 <span className="limits-input-currency" aria-hidden="true">{currencySymbol(currency)}</span>
               </span>
-              {(limit ?? legacy) && <button type="button" className="ck-button-danger limits-delete" disabled={busy}
-                aria-label={`Удалить лимит «${category.name}»`} onClick={() => onDelete((limit ?? legacy) as BudgetLimit)}>Удалить</button>}
+              {(limit ?? legacy) && <button type="button" className="ck-icon-button limits-delete" disabled={busy}
+                aria-label={`Удалить лимит «${category.name}»`} title="Удалить лимит" onClick={() => onDelete((limit ?? legacy) as BudgetLimit)}><Icon name="trash" size={20} /></button>}
             </div>
             {status.kind === 'error' && <p className="receipt-field-error" id={messageId} role="alert">{status.text}</p>}
             {status.kind === 'done' && <p className="limits-done" id={messageId} role="status">{status.text}</p>}

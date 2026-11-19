@@ -1,5 +1,6 @@
 import { Fragment, memo, useCallback, useEffect, useId, useReducer, useRef, useState } from 'react'
 import type { ComponentType, CSSProperties, Dispatch, MouseEvent, PointerEvent, ReactNode } from 'react'
+import Money from '../../components/Money'
 import { layoutPieLabels, pieSlices, pieTones } from './pie.ts'
 import { seriesColors } from './line.ts'
 import { usePlotWidth } from './plot-width.ts'
@@ -40,6 +41,8 @@ export interface PieChartChild {
   href?: string
   valueText: string
   shareText: string
+  /** The wire decimal of the sum: with `PieChartProps.currency` the cell draws it as `Money`. */
+  amount?: string
   /** Small text under the name, as in the top rows; the hint of a remainder row goes here too. */
   note?: string
 }
@@ -53,6 +56,11 @@ export interface PieChartItem {
   /** Formatted by the caller: sum with currency and the share, e.g. «412,30 EUR» and «20,70 %». */
   valueText: string
   shareText: string
+  /** The wire decimal of the sum: with `PieChartProps.currency` the legend and the middle draw it as `Money`. */
+  amount?: string
+  /** 1–6 — the item is a category: its tone `--ck-cat-N`, the same as on «Главная»; 0 — no category. Wins over the
+   *  series palette for an ordinary item. */
+  categoryTone?: number
   /** Short text next to the sector (up to ~8 characters); `shareText` by default. */
   chartLabel?: string
   /** Drill-down address. Without it the sector and its legend name are plain. */
@@ -82,15 +90,17 @@ export interface PieChartProps {
   headers?: { name: string; value: string; share: string }
   /** Shown in the middle while no sector is highlighted, e.g. «Всего» / «1 986,40 EUR». */
   centerLabel?: string
-  centerValue?: string
+  centerValue?: ReactNode
+  /** The currency of the `amount` of the items: with it the sums are drawn as `Money`. */
+  currency?: string
   /** Mark of a legend row whose sum is not positive. */
   excludedNote?: string
   emptyMessage?: string
   linkComponent?: ChartLinkComponent
 }
 
-const base = { width: 320, height: 240, outer: 76, inner: 46 }
-const figureWidth = { fallback: base.width, min: 240, max: 380 }
+const base = { width: 320, height: 240, outer: 76, inner: 56 }
+const figureWidth = { fallback: base.width, min: 240, max: 420 }
 
 /**
  * The drawing for a figure of the given width, one to one: the text stays 12px at any width. A figure narrower than
@@ -109,7 +119,7 @@ function PlainLink({ to, ...props }: ChartLinkProps) {
 }
 
 /** A sum wider than the hole of the ring is left to the legend: cut or wrapped digits would read as another number. */
-function CenterValue({ text }: { text: string }) {
+function CenterValue({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLElement>(null)
   const [fits, setFits] = useState(true)
   useEffect(() => {
@@ -120,7 +130,7 @@ function CenterValue({ text }: { text: string }) {
     observer.observe(node)
     return () => observer.disconnect()
   }, [])
-  return <strong ref={ref} className="ck-pie-center-value" data-fits={fits ? undefined : 'false'}>{text}</strong>
+  return <strong ref={ref} className="ck-pie-center-value" data-fits={fits ? undefined : 'false'}>{children}</strong>
 }
 
 /* A finger has no hover: its tap pins the highlight instead (a touch that scrolls the page ends with
@@ -137,7 +147,11 @@ const highlightHandlers = (dispatch: Dispatch<PieHighlightAction>, key: string, 
   onBlur: () => dispatch({ type: 'blur', key }),
 })
 
+/** The sum of a row: `Money` when the chart knows the currency and the row its wire decimal, the caller's text otherwise. */
+type ValueOf = (entry: { amount?: string; valueText: string }) => ReactNode
+
 interface ChildRowsProps {
+  valueOf: ValueOf
   parentKey: string
   rows: readonly PieChartChild[]
   prefix?: string
@@ -149,7 +163,7 @@ interface ChildRowsProps {
 
 /* Memoised and without a highlight state of its own (the row under the pointer is marked by CSS): hundreds of
    rows are not rendered again each time the pointer crosses from one row to the next. */
-const ChildRows = memo(function ChildRows({ parentKey, rows, prefix, swatchClass, hatched, LinkComponent, dispatch }: ChildRowsProps) {
+const ChildRows = memo(function ChildRows({ valueOf, parentKey, rows, prefix, swatchClass, hatched, LinkComponent, dispatch }: ChildRowsProps) {
   // A child row highlights the item it belongs to.
   const handlers = highlightHandlers(dispatch, parentKey)
   return rows.map((child) => (
@@ -166,7 +180,7 @@ const ChildRows = memo(function ChildRows({ parentKey, rows, prefix, swatchClass
           </span>
         </span>
       </th>
-      <td className="ck-chart-number">{child.valueText}</td>
+      <td className="ck-chart-number">{valueOf(child)}</td>
       <td className="ck-chart-number">{child.shareText}</td>
     </tr>
   ))
@@ -176,7 +190,7 @@ export default function PieChart({
   title, items, headers = defaultHeaders, centerLabel, centerValue,
   excludedNote = 'Не входит в диаграмму: сумма не положительная.',
   emptyMessage = 'Нет данных для диаграммы.',
-  linkComponent: LinkComponent = PlainLink,
+  linkComponent: LinkComponent = PlainLink, currency,
 }: PieChartProps) {
   const patternId = useId()
   const [figureRef, width] = usePlotWidth<HTMLDivElement>(figureWidth)
@@ -184,6 +198,8 @@ export default function PieChart({
   const rootRef = useRef<HTMLDivElement>(null)
   const lastPointerType = useRef('')
   const unpin = useCallback(() => dispatch({ type: 'unpin' }), [])
+  const valueOf = useCallback<ValueOf>((entry) => (currency !== undefined && entry.amount !== undefined
+    ? <Money value={entry.amount} currency={currency} size="row" /> : entry.valueText), [currency])
   useOutsideTouch(rootRef, (highlight.pinned ?? null) !== null, unpin)
   if (items.length === 0) return <p className="ck-chart ck-chart-empty">{emptyMessage}</p>
 
@@ -197,7 +213,10 @@ export default function PieChart({
   // The thin bar under a legend name compares the items for the eye, the largest one full; the share column is the number.
   const largest = Math.max(0, ...items.map((item) => item.value))
   const barWidth = (item: PieChartItem) => (largest > 0 && item.value > 0 ? Math.max(2, Math.round((item.value / largest) * 1000) / 10) : 0)
-  const toneList = pieTones(items.map((item) => item.tone), seriesColors)
+  const toneList = pieTones(items.map((item) => item.tone), seriesColors).map((tone, index) => {
+    const { categoryTone, tone: kind = 'series' } = items[index]
+    return categoryTone !== undefined && kind === 'series' ? { className: `ck-chart-cat-${categoryTone}`, hatched: false } : tone
+  })
   const tones = new Map(items.map((item, index) => [item.key, toneList[index]]))
   const handlers = (key: string) => highlightHandlers(dispatch, key)
   const state = (key: string) => (active === null ? undefined : active === key ? 'active' : 'dim')
@@ -251,13 +270,13 @@ export default function PieChart({
             {activeItem ? (
               <>
                 <span className="ck-pie-center-label">{activeItem.label}</span>
-                <CenterValue text={activeItem.valueText} />
+                <CenterValue>{valueOf(activeItem)}</CenterValue>
                 <span>{activeItem.shareText}</span>
               </>
             ) : (
               <>
                 {centerLabel && <span className="ck-pie-center-label">{centerLabel}</span>}
-                {centerValue && <CenterValue text={centerValue} />}
+                {centerValue && <CenterValue>{centerValue}</CenterValue>}
               </>
             )}
           </div>
@@ -300,7 +319,7 @@ export default function PieChart({
                       </span>
                     </span>
                   </th>
-                  <td className="ck-chart-number">{item.valueText}</td>
+                  <td className="ck-chart-number">{valueOf(item)}</td>
                   <td className="ck-chart-number">{item.shareText}</td>
                 </tr>
               )
@@ -310,7 +329,7 @@ export default function PieChart({
                 <Fragment key={item.key}>
                   {row}
                   {item.children && item.children.length > 0 && (
-                    <ChildRows parentKey={item.key} rows={item.children} prefix={item.childrenPrefix} swatchClass={swatchClass} hatched={hatched}
+                    <ChildRows valueOf={valueOf} parentKey={item.key} rows={item.children} prefix={item.childrenPrefix} swatchClass={swatchClass} hatched={hatched}
                       LinkComponent={LinkComponent} dispatch={dispatch} />
                   )}
                   {status !== false && (

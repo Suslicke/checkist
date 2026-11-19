@@ -28,7 +28,7 @@ import TextHint from './TextHint'
 import { caretAfter, charsBefore, evaluateAmount, groupDigits, hasOperator, ungrouped } from './amount-calc'
 import {
   categoryChips, categoryTree, chipParent, chipToneId, dateChoice, sumText, dayBefore, draftBody, draftFromReceipt, emptyDraft, fieldScrollDelta,
-  itemizedTotal, filledLines, saveLabel, spendAsLine, savedNotice, serverErrors, setExpenseNotice, shortDay, todayISO, updatedNotice, visibleChips,
+  itemizedTotal, filledLines, saveTotal, spendAsLine, savedNotice, serverErrors, setExpenseNotice, shortDay, todayISO, updatedNotice, visibleChips,
   draftFromIncome, incomeBody, incomeChip, withoutIds,
 } from './expense-form'
 import LineEditor from './LineEditor'
@@ -42,6 +42,10 @@ import MethodChips from '../../components/MethodChips'
 import { lastMethod } from '../../lib/payment-methods'
 import { ownerName, personName } from '../../lib/people'
 import { DeleteSpend } from './ManualSpendActions'
+import Icon from '../../components/Icon'
+import Money from '../../components/Money'
+import { haptic } from '../../theme/platform'
+import { markFreshReceipt } from '../recognition/fresh-receipt'
 import type { ExpenseDraft, ExpenseErrors } from './expense-form'
 import './Expense.css'
 
@@ -191,35 +195,37 @@ export function ExpenseForm({ draft, chips, errors, saving, failure, receiptId, 
   const submit = (event: FormEvent) => { event.preventDefault(); onSubmit() }
   useKeyboardSafeFields(formRef)
   useFocusFirstError(formRef, errors)
+  const total = saveTotal(draft)
+  const tone = (category: Category) => ({ '--ck-tone': `var(--ck-cat-${categoryTone(chipToneId(category))})` } as CSSProperties)
   return <form ref={formRef} className="expense-form" onSubmit={submit} noValidate aria-busy={saving}>
     {/* The source is only a mark (one form for every spend): the photo stays beside the lines to check them against. */}
-    {photo && (receiptId !== undefined || media?.back) && <section className="expense-card expense-source" aria-label="Фото чека">
+    {photo && (receiptId !== undefined || media?.back) && <section className={`expense-card expense-source${media?.back ? ' expense-source-review' : ''}`} aria-label="Фото чека">
       {media?.thumb || media?.image
         ? <a className="expense-source-photo" href={media.image ?? media.thumb ?? undefined} target="_blank" rel="noreferrer">
-          <img src={media.thumb ?? media.image ?? undefined} alt="Фото чека" loading="lazy" /></a>
-        : <span className="expense-source-photo expense-source-empty" aria-hidden="true" />}
+          <img src={(media.back ? media.image ?? media.thumb : media.thumb ?? media.image) ?? undefined} alt="Фото чека" loading="lazy" /></a>
+        : <span className="expense-source-photo expense-source-empty" aria-hidden="true"><Icon name="receipt" size={28} /></span>}
       <div className="expense-source-text">
         <p className="expense-source-title">Чек с фото</p>
         <p className="expense-hint-note">{media?.back ? 'Сверьте место, дату и строки с фото — нажмите на фото, чтобы увеличить.' : 'Сверьте строки с фото: правка меняет итог, скидки и налог чека.'}</p>
-        {media?.causes && media.causes.length > 0 && <div className="expense-failure" role="note">
-          <p className="expense-source-title">Что проверить</p>
+        {media?.causes && media.causes.length > 0 && <div className="expense-check" role="note">
+          <p className="expense-check-title"><Icon name="search" size={16} className="expense-check-icon" />Что проверить</p>
           <ul className="expense-causes">{media.causes.map((cause) => <li key={cause}>{cause}</li>)}</ul>
         </div>}
-        <Link className="expense-source-link" to={media?.back?.to ?? `/receipts/${receiptId}`}>{media?.back?.text ?? 'Открыть чек с фото'}</Link>
+        <Link className="expense-source-link" to={media?.back?.to ?? `/receipts/${receiptId}`}>{media?.back?.text ?? 'Открыть чек с фото'}<Icon name="forward" size={16} className="expense-link-chevron" /></Link>
       </div>
     </section>}
-    {draft.statement && <p className="expense-source-mark" role="note">{`Из выписки: ${draft.statement.replace(/^Выписка /, '')}`}</p>}
-    <section className="expense-card expense-amount">
+    {draft.statement && <p className="expense-source-mark" role="note"><Icon name="statement" size={18} className="expense-mark-icon" />{`Из выписки: ${draft.statement.replace(/^Выписка /, '')}`}</p>}
+    <section className={`expense-amount${income ? ' expense-amount-income' : ''}`}>
       <label htmlFor="expense-amount" className="expense-label">{itemized ? 'Сумма позиций' : 'Сумма'}</label>
       <div className="expense-amount-row">
-        <input ref={amountInput} id="expense-amount" className={`expense-amount-input ck-hero-figure${draft.amount.length > AMOUNT_HERO_CHARS ? ' expense-amount-long' : ''}`}
+        <input ref={amountInput} id="expense-amount" className={`expense-amount-input${draft.amount.length > AMOUNT_HERO_CHARS ? ' expense-amount-long' : ''}`}
           inputMode="decimal" autoComplete="off" enterKeyHint="done"
           placeholder="0" value={itemized ? (sum === undefined ? '' : sumText(sum)) : groupDigits(draft.amount)} readOnly={itemized} aria-invalid={Boolean(errors.amount)}
           aria-describedby={describedBy(errors, 'amount')} onChange={(event) => typeAmount(event.target.value, event.target.selectionStart)}
           onBlur={() => { if (counted) set({ amount: counted }) }} />
         <label className={`expense-currency${signed ? ' expense-currency-signed' : ''}`}>
           {signed && <span className="expense-currency-sign" aria-hidden="true">{symbol}</span>}
-          <span className="expense-visually-hidden">Валюта</span>
+          <span className="ck-visually-hidden">Валюта</span>
           <input value={draft.currency} maxLength={3} autoCapitalize="characters" autoComplete="off" spellCheck={false}
             aria-invalid={Boolean(errors.currency)} aria-describedby={describedBy(errors, 'currency')}
             onChange={(event) => set({ currency: event.target.value.toUpperCase() })} />
@@ -229,7 +235,7 @@ export function ExpenseForm({ draft, chips, errors, saving, failure, receiptId, 
       {!itemized && draft.amount !== '' && <div className="expense-calc">
         {/* «1200+350» on a phone, whose number keyboard has no «+»: the keys keep the field focused. */}
         <div className="expense-calc-keys" role="group" aria-label="Посчитать сумму">
-          {CALC_KEYS.map(([key, label]) => <button key={key} type="button" className="expense-calc-key" aria-label={label}
+          {CALC_KEYS.map(([key, label]) => <button key={key} type="button" className="ck-icon-button expense-calc-key" aria-label={label}
             onPointerDown={(event) => event.preventDefault()} onMouseDown={(event) => event.preventDefault()}
             onClick={() => insertOperator(key)}>{key}</button>)}
         </div>
@@ -242,14 +248,14 @@ export function ExpenseForm({ draft, chips, errors, saving, failure, receiptId, 
     <fieldset className="expense-card expense-categories" aria-describedby={describedBy(errors, 'category')}>
       <legend className="expense-label">Категория{itemized && ' позиций без своей'}</legend>
       {chips.length > 0 && <div className="expense-chips">
-        {shown.map((category) => <button type="button" key={category.id} className="expense-chip"
+        {shown.map((category) => <button type="button" key={category.id} className="ck-chip expense-chip"
           aria-pressed={draft.category === category.id} title={category.path.map((step) => step.name).join(' › ') || category.name}
           onClick={() => set({ category: draft.category === category.id && itemized ? null : category.id })}>
-          <span className="expense-dot" style={{ '--expense-tone': `var(--ck-cat-${categoryTone(chipToneId(category))})` } as CSSProperties} aria-hidden="true" />
-          {chipParent(category) && <span className="expense-visually-hidden">{chipParent(category)} › </span>}
+          <span className="expense-dot" style={tone(category)} aria-hidden="true" />
+          {chipParent(category) && <span className="ck-visually-hidden">{chipParent(category)} › </span>}
           <span className="expense-chip-name">{category.name}</span>
         </button>)}
-        {!income && <button type="button" className="expense-chip expense-more" aria-haspopup="dialog" aria-expanded={sheet}
+        {!income && <button type="button" className="ck-chip expense-chip expense-more" aria-haspopup="dialog" aria-expanded={sheet}
           onClick={() => setSheet(true)}>Все категории…</button>}
       </div>}
       {!chips.length && <p className="expense-hint-note">Категорий пока нет: их заводят в каталоге.</p>}
@@ -266,7 +272,7 @@ export function ExpenseForm({ draft, chips, errors, saving, failure, receiptId, 
           style={{ '--expense-depth': depth } as CSSProperties}>
           <button type="button" className="expense-tree-item" aria-pressed={draft.category === category.id}
             onClick={() => { set({ category: category.id }); setSheet(false) }}>
-            <span className="expense-dot" style={{ '--expense-tone': `var(--ck-cat-${categoryTone(chipToneId(category))})` } as CSSProperties} aria-hidden="true" />
+            <span className="expense-dot" style={tone(category)} aria-hidden="true" />
             {label}
           </button>
         </li>)}</ul> : <p className="expense-hint-note" role="status">Ничего не нашлось.</p>
@@ -291,12 +297,12 @@ export function ExpenseForm({ draft, chips, errors, saving, failure, receiptId, 
         <div className="expense-row" role="group" aria-labelledby="expense-when-label" aria-describedby={describedBy(errors, dateField)}>
           <span id="expense-when-label" className="expense-row-label">Когда</span>
           <div className="expense-when">
-            <button type="button" className="expense-chip expense-day" aria-pressed={choice === 'today'} onClick={() => set({ date: today })}>Сегодня</button>
-            <button type="button" className="expense-chip expense-day" aria-pressed={choice === 'yesterday'} onClick={() => set({ date: dayBefore(today) })}>Вчера</button>
+            <button type="button" className="ck-chip expense-day" aria-pressed={choice === 'today'} onClick={() => set({ date: today })}>Сегодня</button>
+            <button type="button" className="ck-chip expense-day" aria-pressed={choice === 'yesterday'} onClick={() => set({ date: dayBefore(today) })}>Вчера</button>
             <label className={`expense-date-pick${choice === 'other' ? ' expense-date-pick-chosen' : ''}`}>
               <CalendarIcon />
               {choice === 'other' && /^\d{4}-\d{2}-\d{2}$/.test(draft.date) && <time dateTime={draft.date}>{shortDay(draft.date, today)}</time>}
-              <span className="expense-visually-hidden">Дата покупки</span>
+              <span className="ck-visually-hidden">Дата покупки</span>
               <input id="expense-date" type="date" value={draft.date} aria-invalid={Boolean(errors.date)} aria-describedby={describedBy(errors, dateField)}
                 onClick={(event) => openPicker(event.currentTarget)} onChange={(event) => set({ date: event.target.value })} />
             </label>
@@ -339,7 +345,8 @@ export function ExpenseForm({ draft, chips, errors, saving, failure, receiptId, 
     <div className="expense-actions ck-action-bar">
       {failure && <p className="expense-failure" role="alert">{failure}</p>}
       {errors.form && <p className="expense-failure" role="alert">{errors.form}</p>}
-      <button type="submit" className="expense-save" disabled={saving}>{saving ? 'Сохраняем…' : saveLabel(draft)}</button>
+      <button type="submit" className="ck-btn-block expense-save" disabled={saving}>{saving ? 'Сохраняем…'
+        : total ? <>Сохранить · <Money value={total.value} currency={total.currency} /></> : 'Сохранить'}</button>
     </div>
   </form>
 }
@@ -477,6 +484,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
     if (controller.signal.aborted || result.kind === 'aborted') return
     setSaving(false)
     if (result.kind === 'ok') {
+      haptic()
       announceIncome()
       setIncomeNotice(incomeId === undefined ? 'Доход сохранён.' : updatedNotice)
       leave({ kind: 'incomes', month: result.data.received_on.slice(0, 7) })
@@ -523,6 +531,9 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
       if (body) extraFailed = (await updateManualSpend(receipt, body, { signal })).kind !== 'ok'
       if (signal.aborted) return
     }
+    haptic()
+    // A receipt printed by this confirmation: its page plays the «print» of the slip once (features/receipts).
+    if (image.status === 'imported') markFreshReceipt(receipt)
     setExpenseNotice(receipt, extraFailed ? 'Чек сохранён, но комментарий, способ оплаты или категории не записались — измените трату ещё раз.'
       : image.status === 'imported' ? 'Чек проверен и сохранён.' : 'Такой чек уже был сохранён: фото привязано к нему, его данные не изменены.')
     leave({ kind: 'receipt', receiptId: receipt })
@@ -552,6 +563,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
     }
     setSaving(false)
     if (result.kind === 'ok') {
+      haptic()
       if (handed) await discardPending(handed.id)
       // The spend closes its plan: one more request, then «Планы» of the plan's month. A refused tie leaves the spend
       // saved and says so on its page («Это она» in the sheet of the plan ties it by hand).
@@ -594,7 +606,7 @@ export default function ExpensePage({ receiptId, repeat, income = false, incomeI
     setKind(next); setDraft({ ...filled, method: filled.method ?? draft?.method }); setErrors({}); setFailure(undefined)
   }
   return <div className="expense-page">
-    {isNew && incomeChips.length > 0 && <div className="expense-kind" role="group" aria-label="Что вносим">
+    {isNew && incomeChips.length > 0 && <div className="ck-segments expense-kind" role="group" aria-label="Что вносим">
       <button type="button" aria-pressed={kind === 'spend'} onClick={() => switchKind('spend')}>Трата</button>
       <button type="button" aria-pressed={kind === 'income'} onClick={() => switchKind('income')}>Доход</button>
     </div>}

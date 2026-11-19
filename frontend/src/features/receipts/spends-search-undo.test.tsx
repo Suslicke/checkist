@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import type { ReceiptListItem } from '../../api/receipts'
 import { publicFixture } from '../../api/recognition-test-support'
 import type { Page } from '../../api/types'
-import { ReceiptsView, UndoBar } from './ReceiptsPage'
+import { ReceiptsView, UndoBar, undoMessage } from './ReceiptsPage'
+import { UNDO_MS } from './undo-delete'
 import { SpendDays } from './SpendDays'
 import SpendSearch from './SpendSearch'
 import { askHref } from './spends'
@@ -25,7 +26,8 @@ describe('the search line of «Траты» (2026-10-13)', () => {
     expect(empty).not.toContain('Спросить')
     const asked = renderToStaticMarkup(<SpendSearch query={{ page: 1, q: 'сколько на кафе?' }} />)
     expect(asked).toContain('name="q" value="сколько на кафе?"')
-    expect(asked).toContain(`<a class="spends-ask" href="${askHref('сколько на кафе?')}">Спросить</a>`)
+    // The question goes to the assistant: its gold link with its sparkle, the same words.
+    expect(asked).toMatch(new RegExp(`<a class="spends-ask" href="${askHref('сколько на кафе?').replace(/[?]/g, '\\?')}"><svg[^>]*>.*?</svg>Спросить</a>`))
     expect(askHref('кофе & чай')).toBe('/chat?q=%D0%BA%D0%BE%D1%84%D0%B5%20%26%20%D1%87%D0%B0%D0%B9')
   })
 
@@ -54,7 +56,7 @@ describe('swipe and «Удалено · Отменить» (2026-10-13)', () => 
     const html = renderToStaticMarkup(<ReceiptsView query={{ page: 1 }} state={{ kind: 'ok', data: page([photo, manual]) }} retry={noop}
       hidden={new Set([2])} onDelete={noop} today="2026-10-12" />)
     expect(html).not.toContain('href="/receipts/2"')
-    expect(html).toMatch(/<span class="spends-day-sum ck-figures">18.940.₸<\/span>/)
+    expect(html).toContain('<span class="spends-day-sum"><span class="ck-money ck-money--inline"><span class="ck-money-int">18\u202f940</span><span class="ck-money-cur">\u202f₸</span></span></span>')
     expect(html).toContain(`1${NBSP}трата · Страница 1 из 1`)
   })
 
@@ -64,10 +66,14 @@ describe('swipe and «Удалено · Отменить» (2026-10-13)', () => 
     expect(html).toContain('<p class="receipt-warning spends-delete-failure" role="alert">Не удалось связаться с сервером.</p>')
   })
 
-  it('keeps a live region and fills it while a deletion waits', () => {
+  it('keeps a live region and fills it with the shared Snackbar while a deletion waits', () => {
     expect(renderToStaticMarkup(<UndoBar pending={null} onUndo={noop} />)).toBe('<div class="spends-undo-region" role="status"></div>')
     const html = renderToStaticMarkup(<UndoBar pending={{ id: 2, title: 'Такси' }} onUndo={noop} />)
-    expect(html).toContain('<span class="spends-undo-text">Удалено · Такси</span>')
-    expect(html).toContain('<button type="button" class="spends-undo-action">Отменить</button>')
+    expect(html.startsWith('<div class="spends-undo-region" role="status"><div class="spends-undo"><div class="ck-snackbar" role="status"')).toBe(true)
+    // What happened by the word of the action, the place of the spend; one action «Отменить»; the 5 s of the countdown.
+    expect(html).toContain(`<span class="ck-snackbar-message">${undoMessage} · Такси</span>`)
+    expect(undoMessage).toBe('Трата удалена')
+    expect(html).toContain('<button type="button" class="ck-snackbar-action">Отменить</button>')
+    expect(html).toContain(`--ck-snackbar-countdown:${UNDO_MS}ms`)
   })
 })

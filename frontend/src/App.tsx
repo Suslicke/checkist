@@ -25,8 +25,9 @@ import { canModerate, loadSession, useSession } from './session'
 import { menuKey, useCurrentItemInView } from './menu-view'
 import MainMenu from './menu/MainMenu'
 import { useWarmUp } from './menu/warm-up'
-import { backLabel, headerAction, hubOf, isFocusRoute } from './menu/back-target'
+import { backName, headerAction, hubOf, isFocusRoute } from './menu/back-target'
 import type { HubPath } from './menu/back-target'
+import { topBarKind, watchTopBar } from './menu/top-bar'
 import { ThemeToggle } from './theme'
 import OfflineBanner from './offline/OfflineBanner'
 import { usePendingSync } from './offline/pending-store'
@@ -144,11 +145,30 @@ function pageContent({ route, returnTo }: NavigationSnapshot, username: string) 
   }
 }
 
+/**
+ * «Назад» of the top bar: iOS — the chevron and the name of the screen it leads to («‹ Траты»), Android — the arrow
+ * «←» alone (shell.css shows one of the two pictures). The name is the text of the link, so a voice command and the
+ * screen reader say what the eye reads: «Назад: Траты».
+ */
+function BackLink({ action, name }: { action: { to: string; step?: boolean }; name: string }) {
+  return <Link className="ck-back" back={action.step} to={action.to}>
+    <Icon name="back" size={24} className="ck-icon ck-back-chevron" />
+    <Icon name="arrow-left" size={24} className="ck-icon ck-back-arrow" />
+    {name === 'Назад'
+      ? <span className="ck-back-text">Назад</span>
+      : <span className="ck-back-text"><span className="ck-shell-hidden">Назад: </span>{name}</span>}
+  </Link>
+}
+
 export default function App() {
   const navigation = useNavigation()
   const { route } = navigation
   const heading = useRef<HTMLHeadingElement>(null)
   const content = useRef<HTMLElement>(null)
+  // The top bar (shell.css): the short bar of an iOS section root, the header row and the mark under it.
+  const shortBar = useRef<HTMLDivElement>(null)
+  const headerRow = useRef<HTMLDivElement>(null)
+  const scrollMark = useRef<HTMLDivElement>(null)
   const previousNavigation = useRef<NavigationSnapshot | undefined>(undefined)
   const previousShell = useRef<string | undefined>(undefined)
   const pathname = navigation.href.split(/[?#]/)[0]
@@ -243,10 +263,14 @@ export default function App() {
   // after it on a focus screen: a new or changed spend, drawn without the bottom bar of a phone.
   const action = view === 'page' ? headerAction(navigation, trail.from, trail.hub) : undefined
   const focus = view === 'page' && isFocusRoute(route)
+  // The kind of the header row: a section root draws the large title of iOS, a nested page «‹ Траты» or «←».
+  const nav = topBarKind(action)
   useLayoutEffect(() => {
     document.documentElement.classList.toggle('ck-focus-mode', focus)
     return () => document.documentElement.classList.remove('ck-focus-mode')
   }, [focus])
+  // The bar turns into glass (iOS) or fills (Android) once the page lies under it; measured again on every page.
+  useEffect(() => watchTopBar(content.current, [shortBar.current, headerRow.current], scrollMark.current), [pathname, nav, view])
 
   const mergesActive = route.kind === 'merges' || route.kind === 'merge'
   const classificationActive = route.kind === 'classification'
@@ -281,37 +305,44 @@ export default function App() {
       <a className="skip-link" href="#page-heading">К содержимому</a>
       <NetworkBar />
       <OfflineBanner />
+      {/* A wide screen: the header on the surface — the logo, the menu, the chat and the theme. A phone keeps only the
+          menu of it, pinned to the bottom of the window (shell.css). */}
       <header className="brand-bar">
         <Link className="brand" root to="/" aria-label="Чекист — главная">
-          <img className="brand-mark" src={emblem} srcSet={`${emblem} 1x, ${emblem2x} 2x`} width={44} height={44} alt="" />
+          <img className="brand-mark" src={emblem} srcSet={`${emblem} 1x, ${emblem2x} 2x`} width={40} height={40} alt="" />
           <span>Чекист</span>
         </Link>
+        <MainMenu session={session} route={route} menuRef={mainNavigation} />
         <div className="brand-actions">
           {/* «Чат с ИИ» from every screen (2026-10-26): here on a wide screen, in the header row of the page on a phone. */}
           {signedIn && <Link className="ck-chat-link" to="/chat" aria-label="Чат с ИИ"><Icon name="insight" size={20} /></Link>}
           <ThemeToggle placement="header" />
         </div>
-        <MainMenu session={session} route={route} menuRef={mainNavigation} />
       </header>
 
       <div className="page">
         <main id="main" ref={content}>
-          {/* One header row on the page background; on a phone it is pinned to the top of the window. */}
-          <div className="intro">
-            {action?.kind === 'back' && <Link className="ck-back ck-round" back={action.step} to={action.to} aria-label={action.step ? backLabel(navigation, action.label) : action.label}><Icon name="back" size={20} /></Link>}
+          {/* The short bar of an iOS section root: pinned above the large title, it shows the title once the large one
+              has gone under it. A picture of the heading: the screen reader reads the heading itself. */}
+          <div className="ck-topbar" data-nav={nav} ref={shortBar} aria-hidden="true"><span className="ck-topbar-title">{heading1}</span></div>
+          {/* The header row of the page: the top bar of a phone (iOS: «‹ Траты», the title in the middle; Android: «←» and
+              the title on the left), the large title of an iOS section root, the heading of a wide screen. */}
+          <div className="intro" data-nav={nav} ref={headerRow}>
+            {action?.kind === 'back' && <BackLink action={action} name={backName(navigation, action)} />}
             <div className="intro-slot" ref={setHeadStart} />
             <h1 id="page-heading" ref={heading} tabIndex={-1}>{heading1}</h1>
             <div className="intro-slot" ref={setHeadEnd} />
             {signedIn && view === 'page' && !focus && <Link className="ck-chat-link ck-chat-link-page" to="/chat" aria-label="Чат с ИИ"><Icon name="insight" size={20} /></Link>}
-            {action?.kind === 'close' && <Link className="ck-close ck-round" back={action.step} to={action.to} aria-label={action.label}><Icon name="close" size={20} /></Link>}
+            {action?.kind === 'close' && <Link className="ck-close" back={action.step} to={action.to} aria-label={action.label}><Icon name="close" size={20} /></Link>}
           </div>
+          <div className="ck-scroll-mark" ref={scrollMark} aria-hidden="true" />
           {route.kind === 'health' && <p className="intro-note intro-note-after">Сводка о состоянии служб.</p>}
-          {catalogActive && view === 'page' && canModerate(session) && <nav className="main-navigation section-navigation" aria-label="Раздел каталога">
+          {catalogActive && view === 'page' && canModerate(session) && <nav className="section-navigation" aria-label="Раздел каталога">
             <Link replace to="/catalog" aria-current={mergesActive || classificationActive ? undefined : 'page'}>Товары</Link>
             <Link replace to="/catalog/merges" aria-current={mergesActive ? 'page' : undefined}>Дубли</Link>
             <Link replace to="/catalog/classification" aria-current={classificationActive ? 'page' : undefined}>Категории</Link>
           </nav>}
-          {statsActive && view === 'page' && <nav className="main-navigation section-navigation" aria-label="Раздел статистики">
+          {statsActive && view === 'page' && <nav className="section-navigation" aria-label="Раздел статистики">
             {statsTabs.map((tab) => <Link key={tab.kind} replace to={statsTabHref(tab.kind, route)} aria-current={route.kind === tab.kind ? 'page' : undefined}>{tab.label}</Link>)}
           </nav>}
           {body}

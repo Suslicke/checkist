@@ -13,8 +13,8 @@ describe('phone view of the product card (text of the files, not rendering)', ()
   })
   it('gives «График цен» the full width of its card on a phone', () => {
     const bleed = /\.product-panel > \.product-chart-panel \{([^}]*)\}/.exec(narrow)?.[1] ?? ''
-    expect(bleed).toContain('max-width: none;'); expect(bleed).toContain('margin-inline: -20px;')
-    // The padding of the card on a phone is the one the panel lies over.
-    expect(narrow).toContain('.product-panel { padding: 20px; }')
+    expect(bleed).toContain('max-width: none;'); expect(bleed).toContain('margin-inline: calc(-1 * var(--ck-space-4));')
+    // The padding of the panel on a phone is the one the chart lies over.
+    expect(narrow).toContain('.product-panel { padding: var(--ck-space-4); }')
   })
 })

@@ -4,21 +4,30 @@ import type { LocalApiErrorReason } from '../../api/types'
 import { TrendsPage } from './index'
 import { CategoryBlock, MonthlyBlock, PricesBlock } from './trends-blocks'
 import { LimitsBlock, MonthToMonthBlock, SummaryStrip } from './trends-dashboard'
+import { monthOfDate, shiftMonth } from './trends-period'
+import { monthName } from './trends-state'
 import { categoryFixture, limitsFixture, monthlyFixture, pricesFixture, suggestedFixture, utilitiesFixture } from './trends-test-support'
 
 const noop = () => {}
 /** Markup as a person reads it: non-breaking spaces as ordinary ones. */
 const html = (node: React.ReactElement) => renderToStaticMarkup(node).replace(/[\u00a0\u202f]/g, ' ')
-const text = (markup: string) => markup.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+/** The words of the markup: a sum drawn by Money reads as one value, «179,73 €». */
+const text = (markup: string) => markup
+  .replace(/<span class="ck-money-(?:int|frac|cur|sign|approx)">([^<]*)<\/span>/g, '$1')
+  .replace(/<span class="ck-money[^"]*">([^<]*)<\/span>/g, '$1')
+  .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 const ok = <T,>(data: T) => ({ kind: 'ok' as const, data })
 const failure = (reason: LocalApiErrorReason) => ({ kind: 'error' as const, reason })
 const count = (markup: string, needle: string) => markup.split(needle).length - 1
 
 describe('«Динамика» screen (Vitest/SSR, not browser acceptance)', () => {
   it('opens with the window choice and every block loading', () => {
-    const markup = html(<TrendsPage query={{ from: '2024-11', to: '2026-10' }} />)
-    expect(markup).toMatch(/<a class="ck-chip" aria-current="true" href="\/stats\/trends\?from=2024-11&amp;to=2026-10">24 месяца<\/a>/)
-    expect(text(markup)).toContain('Период: ноябрь 2024 — октябрь 2026 , 24 месяца')
+    // The ready periods end at the month of the device until the server names its own: the last 24 of today.
+    const to = monthOfDate(new Date())
+    const from = shiftMonth(to, -23)
+    const markup = html(<TrendsPage query={{ from, to }} />)
+    expect(markup).toContain(`<a class="ck-chip" aria-current="true" href="/stats/trends?from=${from}&amp;to=${to}">24 месяца</a>`)
+    expect(text(markup)).toContain(`Период: ${monthName(from)} — ${monthName(to)} , 24 месяца`.replace(/[\u00a0\u202f]/g, ' '))
     for (const title of ['Траты по месяцам', 'Месяц к месяцу', 'Лимиты по месяцам', 'Категория во времени', 'Как менялись цены']) {
       expect(markup).toContain(`>${title}</h3>`)
     }
@@ -28,10 +37,13 @@ describe('«Динамика» screen (Vitest/SSR, not browser acceptance)', () 
 
   it('shows the summary strip: big numbers, arrows with signs and words, the price index', () => {
     const markup = html(<SummaryStrip monthly={ok(monthlyFixture())} prices={ok(pricesFixture())} />)
-    // The first currency carries the one hero sum of the screen; a change is an arrow and words in the tone of more or less.
-    expect(markup).toContain('<p class="trends-big ck-hero-figure">190,24 €</p>')
-    expect(markup).toContain('<p class="trends-big">7 836 ₸</p>')
-    expect(count(markup, 'ck-hero-figure')).toBe(1)
+    // The first currency carries the main number of the screen (Money, display), another a title-sized one; a change is
+    // an arrow, a sign and words — calm, in ink.
+    expect(markup).toContain('<p class="trends-big trends-big-main"><span class="ck-money ck-money--display">')
+    expect(markup).toContain('<p class="trends-big"><span class="ck-money ck-money--title">')
+    expect(count(markup, 'ck-money--display')).toBe(1)
+    expect(text(markup)).toContain('сентябрь 2026 · € 190,24 €')
+    expect(text(markup)).toContain('сентябрь 2026 · ₸ 7 836 ₸')
     expect(markup).toContain('<p class="trends-change trends-change-down"><span aria-hidden="true">▼</span> на 12,41 % меньше, чем в августе 2026</p>')
     expect(text(markup)).toContain('на 5,85 % больше, чем в среднем за период (179,73 €)')
     expect(markup).toContain('Потрачено за <time dateTime="2026-09-01">сентябрь 2026</time> · €')
@@ -66,9 +78,13 @@ describe('«Динамика» screen (Vitest/SSR, not browser acceptance)', () 
   it('shows the share of the limit per month and marks the months over the limit', () => {
     const markup = html(<LimitsBlock state={ok(limitsFixture())} onRetry={noop} />)
     expect(count(markup, 'class="trends-cell trends-cell-over"')).toBe(5)
-    expect(count(markup, '> · сверх</span>')).toBe(5)
+    expect(count(markup, '> · сверх лимита</span>')).toBe(5)
     expect(text(markup)).toContain('Сверх лимита: 2 из 6 мес.')
-    expect(markup).toContain('<span class="trends-cell-bar" aria-hidden="true"><span style="width:86%"></span></span>')
+    // The 2.0 LimitBar: from 80 % the over tone with the words «почти лимит», past 100 % «сверх лимита».
+    expect(markup).toContain('<span class="trends-cell-bar ck-bar is-near" aria-hidden="true"><span style="width:86%"></span></span>')
+    expect(count(markup, 'class="trends-cell-bar ck-bar is-over"')).toBe(5)
+    expect(count(markup, 'class="trends-cell trends-cell-near"')).toBe(count(markup, '> · почти лимит</span>'))
+    expect(count(markup, '> · почти лимит</span>')).toBeGreaterThan(0)
     // A month says what was spent against the limit of that month; the newest month comes first.
     expect(text(markup)).toContain('68,93 € из 80 €')
     expect(markup.indexOf('dateTime="2026-09-01"')).toBeLessThan(markup.indexOf('dateTime="2026-04-01"'))
@@ -80,7 +96,8 @@ describe('«Динамика» screen (Vitest/SSR, not browser acceptance)', () 
   it('shows utilities over time with the average and split by sub-category', () => {
     const markup = html(<CategoryBlock state={ok(utilitiesFixture())} query={{ category: 21 }} onRetry={noop} />)
     expect(markup).toContain('<option value="21" selected="">Жильё › Коммунальные услуги</option>')
-    expect(markup).toContain('<p class="trends-big">35 100 ₸</p>')
+    expect(markup).toContain('<p class="trends-big"><span class="ck-money ck-money--title">')
+    expect(text(markup)).toContain('Последний месяц 35 100 ₸')
     expect(text(markup)).toContain('Больше, чем в сентябре 2026 (30 800 ₸)')
     expect(text(markup)).toContain('Из чего складывается')
     expect(markup).toContain('aria-label="Жильё › Коммунальные услуги: подкатегории по месяцам, KZT"')

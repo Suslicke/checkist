@@ -8,7 +8,9 @@ import { getManualDefaults, getReceipts } from '../../api/receipts'
 import type { ReceiptListItem } from '../../api/receipts'
 import type { Category, LocalApiResult } from '../../api/types'
 import ChipScroller from '../../components/ChipScroller'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import Icon from '../../components/Icon'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import { categoryIcon } from '../../lib/category-icons'
@@ -20,7 +22,7 @@ import { evaluateAmount, groupDigits, hasOperator, ungrouped } from '../expense/
 import { sumText } from '../expense/expense-form'
 import {
   adviceSub, amountValue, bestOption, decimalOf, depositAmount, draftBody, draftErrors, draftOf, dueOf, dueText, isDone, largestOf, monthLabel, monthsRow, monthsText,
-  nextOption, optionView, pillOf, plannedFailure, plansText, railOf, rowMeta, segmentsOf,
+  nextOption, optionView, pillOf, plannedFailure, plansText, railOf, rowMeta, segmentsOf, verdictWords,
 } from './planned-state'
 import type { DraftErrors, Notice, PlannedDraft, Segment } from './planned-state'
 import './Planned.css'
@@ -38,7 +40,7 @@ export function Segments({ segments, label, small = false }: { segments: Segment
   </div>
 }
 
-/** «285 000 ₸ ещё ждём»: the hero of the month, its strip and the legend. */
+/** «285 000 ₸ ещё ждём»: the one figure of the screen, the strip of the month and the legend. */
 function Hero({ data }: { data: PlannedMonth }) {
   const { base } = data
   const current = data.month === data.today.slice(0, 7)
@@ -49,16 +51,16 @@ function Hero({ data }: { data: PlannedMonth }) {
     <h2 id="pl-hero-heading" className="pl-eyebrow">{monthLabel(data.month, data.today)}</h2>
     {base.count === 0
       ? <>
-        <p className="pl-hero-line"><span className="ck-hero-figure">{formatMoney('0.00', data.currency)}</span><span className="pl-hero-word">планов</span></p>
+        <p className="pl-hero-line"><Money value="0" currency={data.currency} size="hero" /><span className="pl-hero-word">планов</span></p>
         <p className="pl-hero-sub">Запланируйте покупку — сумма войдёт в «можно тратить в день», а советчик подскажет, как накопить.</p>
       </>
       : <>
-        <p className="pl-hero-line"><span className="ck-hero-figure">{formatMoney(base.left, data.currency)}</span><span className="pl-hero-word">ещё ждём</span></p>
+        <p className="pl-hero-line"><Money value={base.left} currency={data.currency} size="hero" /><span className="pl-hero-word">ещё ждём</span></p>
         <p className="pl-hero-sub">{sub.map((part, index) => <span key={part}>{index > 0 && ' · '}{part}</span>)}</p>
         <Segments segments={segmentsOf(base.segments)} label={`План ${inMonth(data.month)} по пунктам`} />
         <p className="pl-legend">
-          <span><i aria-hidden="true" />сделано <b className="ck-figures">{formatMoney(base.done, data.currency)}</b></span>
-          <span><i className="pl-legend-open" aria-hidden="true" />ждём <b className="ck-figures">{formatMoney(base.left, data.currency)}</b></span>
+          <span><i aria-hidden="true" />сделано <Money value={base.done} currency={data.currency} /></span>
+          <span><i className="pl-legend-open" aria-hidden="true" />ждём <Money value={base.left} currency={data.currency} /></span>
         </p>
       </>}
   </section>
@@ -70,14 +72,15 @@ function MonthCards({ data }: { data: PlannedMonth }) {
   return <ChipScroller label="Ближайшие месяцы" className="pl-months">
     {cards.map((card) => <Link key={card.month} className={`pl-month${card.now ? ' pl-month-now' : ''}`} to={monthHref(card.month)} aria-current={card.now ? 'page' : undefined}>
       <span className="pl-month-label">{card.label}</span>
-      <span className={`pl-month-sum ck-figures${card.empty ? ' pl-month-sum-empty' : ''}`}>{card.sum ?? 'пока пусто'}</span>
+      <span className={`pl-month-sum${card.empty ? ' pl-month-sum-empty' : ''}`}>{card.amount ? <Money value={card.amount} currency={data.currency} /> : 'пока пусто'}</span>
       <span className="pl-month-meta">{card.meta}</span>
       <span className="pl-month-bar" aria-hidden="true">{card.segments.map((segment) => <i key={segment.key} className={`pl-cat-${segment.tone}${segment.done ? ' pl-seg-done' : ''}`} style={{ flex: segment.flex }} />)}</span>
     </Link>)}
   </ChipScroller>
 }
 
-/** A plan of the list: the badge of its category, the rail, the words, the pill; the whole row opens its sheet. */
+/** A plan of the list: the tile of its category (a closed one — a check), the rail, the words, the pill; the whole row
+ * opens its sheet. */
 function PlanRow({ plan, largest, onOpen }: { plan: PlannedSpend; largest: bigint; onOpen: (plan: PlannedSpend) => void }) {
   const rail = railOf(plan, largest)
   const pill = pillOf(plan)
@@ -88,9 +91,9 @@ function PlanRow({ plan, largest, onOpen }: { plan: PlannedSpend; largest: bigin
       <span className="ck-row-main">
         <span className="pl-head">
           <span className="ck-row-title">{plan.name}</span>
-          <span className="ck-row-amount ck-figures">
-            {done && plan.receipt && <span className="pl-amount-plan">{formatMoney(plan.amount, plan.currency)}</span>}
-            {done && plan.receipt ? formatMoney(plan.receipt.total, plan.receipt.currency) : formatMoney(plan.amount, plan.currency)}
+          <span className="ck-row-amount">
+            {done && plan.receipt && pill && <span className="pl-amount-plan">план <Money value={plan.amount} currency={plan.currency} /></span>}
+            {done && plan.receipt ? <Money value={plan.receipt.total} currency={plan.receipt.currency} size="row" /> : <Money value={plan.amount} currency={plan.currency} size="row" />}
           </span>
         </span>
         <span className="pl-rail" aria-hidden="true">
@@ -101,7 +104,7 @@ function PlanRow({ plan, largest, onOpen }: { plan: PlannedSpend; largest: bigin
         </span>
         <span className="pl-meta">
           <span>{rowMeta(plan).join(' · ')}</span>
-          {pill && <span className={`pl-pill pl-pill-${pill.kind}`}>{pill.text}</span>}
+          {pill && <span className={`pl-pill pl-pill-${pill.kind}`}>{pill.kind.startsWith('ai') && <Icon name="insight" size={14} />}{pill.text}</span>}
         </span>
       </span>
     </button>
@@ -115,8 +118,8 @@ function PlanList({ plans, onOpen }: { plans: PlannedSpend[]; onOpen: (plan: Pla
 
 export function NoticeLine({ notice }: { notice: Notice | null }) {
   if (!notice) return null
-  return <p className="pl-notice" role="status">{notice.text}
-    {notice.receiptId ? <> <Link className="pl-inline-link" to={`/receipts/${notice.receiptId}`}>Открыть трату</Link></> : null}</p>
+  return <p className="pl-notice" role="status"><Icon name="check" size={18} className="ck-icon pl-notice-mark" /><span>{notice.text}
+    {notice.receiptId ? <> <Link className="pl-inline-link" to={`/receipts/${notice.receiptId}`}>Открыть трату</Link></> : null}</span></p>
 }
 
 export type PlannedViewProps = {
@@ -138,8 +141,8 @@ export function PlannedView({ data, busy = false, notice = null, onOpen = () => 
     <div className="planned-side">
       <Hero data={data} />
       <div className="pl-cta">
-        <button type="button" className="pl-add" aria-haspopup="dialog" onClick={onAdd}>＋ Запланировать</button>
-        <button type="button" className="ck-button-secondary pl-ask" aria-disabled={busy || undefined} onClick={busy ? undefined : onAsk}>✦ Спросить ИИ</button>
+        <button type="button" className="pl-add" aria-haspopup="dialog" onClick={onAdd}><Icon name="plus" size={20} />Запланировать</button>
+        <button type="button" className="ck-button-secondary pl-ask" aria-disabled={busy || undefined} onClick={busy ? undefined : onAsk}><Icon name="insight" size={18} className="ck-icon pl-ask-mark" />Спросить ИИ</button>
       </div>
       <MonthCards data={data} />
     </div>
@@ -148,7 +151,7 @@ export function PlannedView({ data, busy = false, notice = null, onOpen = () => 
       <section className="ck-panel pl-card" aria-labelledby="pl-month-heading">
         <div className="ck-panel-head">
           <h2 id="pl-month-heading">{monthTitle(data.month)}</h2>
-          <Link className="pl-card-link" to={monthHref(shiftMonth(data.month, -1))}>Прошлый месяц</Link>
+          <Link className="pl-card-link" to={monthHref(shiftMonth(data.month, -1))}><Icon name="back" size={16} />Прошлый месяц</Link>
         </div>
         {data.rows.length
           ? <PlanList plans={data.rows} onOpen={onOpen} />
@@ -157,8 +160,8 @@ export function PlannedView({ data, busy = false, notice = null, onOpen = () => 
       <section className="ck-panel pl-card" aria-labelledby="pl-undated-heading">
         <div className="ck-panel-head">
           <h2 id="pl-undated-heading">Без срока</h2>
-          {data.undated.length > 0 && <span className="pl-head-meta ck-figures">{undatedOther ? plansText(data.undated.length)
-            : `${formatMoney(decimalOf(undatedTotal), data.currency)} · ${plansText(data.undated.length)}`}</span>}
+          {data.undated.length > 0 && <span className="pl-head-meta">{undatedOther ? plansText(data.undated.length)
+            : <><Money value={decimalOf(undatedTotal)} currency={data.currency} /> · {plansText(data.undated.length)}</>}</span>}
         </div>
         {data.undated.length
           ? <PlanList plans={data.undated} onOpen={onOpen} />
@@ -266,7 +269,7 @@ export function PlannedForm({ plan, categories, currency, month, busy, failure =
     </div>
     {failure && <p className="pl-field-error" role="alert">{failure}</p>}
     <button type="submit" className="pl-save" aria-disabled={busy || undefined}>
-      {plan ? 'Сохранить' : 'Запланировать'}{value && ` · ${formatMoney(value, draft.currency.trim().toUpperCase() || currency)}`}
+      {plan ? 'Сохранить' : 'Запланировать'}{value && <> · <Money value={value} currency={draft.currency.trim().toUpperCase() || currency} /></>}
     </button>
   </form>
 }
@@ -298,11 +301,11 @@ function ReceiptPicker({ plan, month, busy, onPick, onCancel }: { plan: PlannedS
             <span className="ck-row-title">{title(row)}</span>
             <span className="ck-row-meta">{[dayAndMonth(row.purchased_on), row.category?.name].filter(Boolean).join(' · ')}</span>
           </span>
-          <span className="ck-row-amount ck-figures">{formatMoney(row.total, row.currency)}</span>
+          <span className="ck-row-amount"><Money value={row.total} currency={row.currency} size="row" /></span>
         </button>
       </li>)}</ul>
       : <p className="pl-note">Трат в этом месяце пока нет.</p>)}
-    <button type="button" className="ck-button-secondary pl-wide" onClick={onCancel}>Назад</button>
+    <button type="button" className="ck-button-ghost pl-wide" onClick={onCancel}>Назад</button>
   </section>
 }
 
@@ -335,7 +338,7 @@ function AdvicePanel({ plan, busy, failure, onDeposit, onCancel }: { plan: Plann
           {[1, 2, 3].map((level) => <b key={level} className={level <= view.risk ? 'pl-risk-on' : undefined} />)}</span>
         const body = <>
           <span className="pl-option-head"><span className="pl-option-name">{view.name}{risk}</span>
-            <span className="pl-option-sum ck-figures">{view.sum}<small>{view.under}</small></span></span>
+            <span className="pl-option-sum">{view.amount ? <Money value={view.amount} currency={advice.currency} size="title" /> : view.sum}<small>{view.under}</small></span></span>
           {view.bar && <span className="pl-option-bar" aria-hidden="true"><i className="pl-option-in" style={{ flex: view.bar.in }} /><i className="pl-option-gain" style={{ flex: view.bar.gain }} /></span>}
           {view.meta.length > 0 && <span className="pl-option-meta">{view.meta.map((item, index) => <span key={item}>{index === 0 && view.bar && <i className="pl-option-in" aria-hidden="true" />}{index === 1 && view.bar && <i className="pl-option-gain" aria-hidden="true" />}{item}</span>)}</span>}
         </>
@@ -350,7 +353,7 @@ function AdvicePanel({ plan, busy, failure, onDeposit, onCancel }: { plan: Plann
     <div className="pl-actions">
       {deposit && chosen && <button type="button" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDeposit(chosen)}>Открыть депозит на {deposit}</button>}
       {another && another !== chosen && <button type="button" className="ck-button-secondary" onClick={() => setChosen(another)}>Другой вариант</button>}
-      <button type="button" className="ck-button-secondary" onClick={onCancel}>Назад</button>
+      <button type="button" className="ck-button-ghost" onClick={onCancel}>Назад</button>
     </div>
     <p className="pl-foot">Ставки примерные, задаются на сервере. Депозит откроется целью семьи на недостающую сумму и привяжется к плану.</p>
   </section>
@@ -379,7 +382,7 @@ function MoveForm({ plan, month, busy, failure, onMove, onCancel }: { plan: Plan
     {failure && <p className="pl-field-error" role="alert">{failure}</p>}
     <div className="pl-actions">
       <button type="submit" aria-disabled={busy || undefined}>Перенести</button>
-      <button type="button" className="ck-button-secondary" onClick={onCancel}>Отмена</button>
+      <button type="button" className="ck-button-ghost" onClick={onCancel}>Отмена</button>
     </div>
   </form>
 }
@@ -405,31 +408,27 @@ export function PlanSheet({ plan, month, categories, busy, failure, onPatch, onD
   if (panel === 'edit') return <PlannedForm plan={plan} categories={categories} currency={plan.currency} month={month} busy={busy} failure={failure}
     onSubmit={(draft) => onPatch(draftBody(draft), `«${draft.name.trim()}» сохранён.`)} />
   return <div className="pl-sheet">
-    <p className="pl-sheet-sum ck-figures">{formatMoney(plan.amount, plan.currency)}</p>
+    <Money value={plan.amount} currency={plan.currency} size="display" className="pl-sheet-sum" />
     <p className="pl-note">{rowMeta(plan).join(' · ')}{plan.note && ` · ${plan.note}`}</p>
-    {plan.ai && <p className={`pl-verdict pl-verdict-${plan.ai.verdict}`}>
-      <b>{{ keep: 'ИИ: берите', wait: 'ИИ: подождите', drop: 'ИИ: отговаривает' }[plan.ai.verdict]}</b>{plan.ai.reason && ` — ${plan.ai.reason}`}</p>}
+    {plan.ai && <div className={`pl-verdict pl-verdict-${plan.ai.verdict}`}>
+      <b className="pl-verdict-who"><Icon name="insight" size={16} />{verdictWords[plan.ai.verdict]}</b>{plan.ai.reason && <p>{plan.ai.reason}</p>}</div>}
     {done && plan.receipt && <p className="pl-note">Закрыт тратой {formatMoney(plan.receipt.total, plan.receipt.currency)} {dayAndMonth(plan.receipt.purchased_on)}.
       {' '}<Link className="pl-inline-link" to={`/receipts/${plan.receipt.id}`}>Открыть трату</Link></p>}
     {failure && <p className="pl-field-error" role="alert">{failure}</p>}
-    {panel === 'delete'
-      ? <div className="pl-confirm">
-        <p>Удалить «{plan.name}»? Трата и цель, если они есть, останутся.</p>
-        <button type="button" className="ck-button-danger" aria-disabled={busy || undefined} onClick={busy ? undefined : onDelete}>Удалить</button>
-        <button type="button" className="ck-button-secondary" onClick={back}>Отмена</button>
-      </div>
-      : <div className="pl-sheet-actions">
-        {done
-          ? <button type="button" className="ck-button-secondary" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onPatch({ receipt_id: null }, `«${plan.name}» снова открыт.`)}>Это не она</button>
-          : <>
-            <button type="button" onClick={() => setPanel('pick')}>Это она</button>
-            <Link className="pl-link-button" to={`/receipts/new?planned=${plan.id}`}>Добавить трату</Link>
-            <button type="button" className="ck-button-secondary" onClick={() => setPanel('advice')}>Как накопить</button>
-            <button type="button" className="ck-button-secondary" onClick={() => setPanel('move')}>Перенести</button>
-          </>}
-        <button type="button" className="ck-button-secondary" onClick={() => setPanel('edit')}>Изменить</button>
-        <button type="button" className="ck-button-danger" onClick={() => setPanel('delete')}>Удалить</button>
-      </div>}
+    <div className="pl-sheet-actions">
+      {done
+        ? <button type="button" className="ck-button-secondary pl-wide" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onPatch({ receipt_id: null }, `«${plan.name}» снова открыт.`)}>Это не она</button>
+        : <>
+          <button type="button" className="pl-wide" onClick={() => setPanel('pick')}>Это она</button>
+          <Link className="action-link pl-link-button" to={`/receipts/new?planned=${plan.id}`}>Добавить трату</Link>
+          <button type="button" className="ck-button-secondary" onClick={() => setPanel('advice')}>Как накопить</button>
+          <button type="button" className="ck-button-secondary" onClick={() => setPanel('move')}>Перенести</button>
+        </>}
+      <button type="button" className="ck-button-secondary" onClick={() => setPanel('edit')}>Изменить</button>
+      <button type="button" className="ck-button-danger" onClick={() => setPanel('delete')}>Удалить</button>
+    </div>
+    <ConfirmDialog open={panel === 'delete'} danger title={`Удалить «${plan.name}»?`} message="Трата и цель, если они есть, останутся."
+      confirmLabel="Удалить план" onConfirm={() => { if (!busy) { setPanel('none'); onDelete() } }} onCancel={back} />
   </div>
 }
 

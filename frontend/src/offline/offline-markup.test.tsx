@@ -27,7 +27,9 @@ describe('offline banner', () => {
     const markup = renderToStaticMarkup(<OfflineBannerView status={{ online: false, served: false }} />)
     expect(markup).toContain('class="offline-banner"')
     expect(markup).toContain('role="status"')
-    expect(markup).toContain('<strong>Нет сети.</strong>')
+    expect(markup).toContain('<p><strong>Нет сети.</strong> ')
+    // The state with its picture: a cloud with a slash, hidden from a screen reader.
+    expect(markup).toMatch(/<svg class="offline-banner-icon"[^>]*aria-hidden="true"/)
     expect(markup).toContain('фото можно отправить только при сети')
     expect(markup).not.toContain('Показаны сохранённые данные')
   })
@@ -39,14 +41,23 @@ describe('offline banner', () => {
     expect(reachable).toContain('Показаны сохранённые данные.')
   })
 
-  it('uses only tokens of the warning state and font sizes of the scale', () => {
-    const css = readFileSync(new URL('./Offline.css', import.meta.url), 'utf8')
+  it('is calm in the names of 2.0: ink on the surface, the error colour only for a refusal, sizes of the 2.0 scale', () => {
+    const css = readFileSync(new URL('./Offline.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const tokens = readFileSync(new URL('../theme/tokens.css', import.meta.url), 'utf8')
+    const canonical = new Set([...tokens.slice(0, tokens.indexOf('LEGACY')).matchAll(/^\s*(--ck-[a-z0-9-]+):/gm)].map((match) => match[1]))
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i)
+    const used = [...new Set([...css.matchAll(/var\((--ck-[a-z0-9-]+)/g)].map((match) => match[1]))]
+    expect(used.filter((name) => !canonical.has(name))).toEqual([])
     const sizes = [...css.matchAll(/font-size\s*:\s*([^;]+);/g)].map((match) => match[1].trim())
     expect(sizes.length).toBeGreaterThan(0)
-    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl)\)$/)
-    expect(css).toContain('var(--ck-warning-bg)')
-    expect(css).toContain('var(--ck-warning-text)')
+    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading)\)$/)
+    const banner = /\.offline-banner \{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(banner).toContain('background: var(--ck-surface-2);')
+    expect(banner).toContain('color: var(--ck-ink);')
+    // iOS paints the page under its status bar: the strip starts under it.
+    expect(banner).toContain('padding: calc(env(safe-area-inset-top, 0px) + var(--ck-space-2))')
+    // The error colour: only a refusal of the server and the word of dropping a spend.
+    expect([...css.matchAll(/([^{}]+)\{[^}]*var\(--ck-error\)/g)].map((match) => match[1].trim())).toEqual(['.pending-spend-actions .pending-spend-delete', '.pending-spend-error'])
   })
 })
 
@@ -73,7 +84,7 @@ describe('the transport reports answers of the service worker', () => {
 
 describe('pending spends on «Чеки»', () => {
   const view = (items: ReturnType<typeof spend>[], extra: { syncing?: boolean; note?: string } = {}) => renderToStaticMarkup(
-    <PendingSpendsView state={{ items, syncing: extra.syncing ?? false, note: extra.note }} onSend={noop} onFix={noop} onDelete={noop} />)
+    <PendingSpendsView state={{ items, syncing: extra.syncing ?? false, note: extra.note }} onSend={noop} onFix={noop} onDelete={noop} today="2026-10-20" />)
 
   it('shows nothing without waiting spends', () => {
     expect(view([])).toBe('')
@@ -86,12 +97,16 @@ describe('pending spends on «Чеки»', () => {
     expect(markup).toContain(photosOnlineText)
     expect(markup).toContain('Кофейня')
     expect(markup).toContain('такси')
-    expect(markup).toContain('<time dateTime="2026-10-12">12.10.2026</time>')
-    expect(markup).toMatch(/>450.₸</)
-    expect(markup).toMatch(/>1.200,50.₸</)
+    // The day in words (docs/design-system README «Голос»).
+    expect(markup).toContain('<time dateTime="2026-10-12">12\u00a0октября</time>')
+    // The amounts are Money of 2.0, exact.
+    expect(markup).toContain('<span class="pending-spend-amount"><span class="ck-money ck-money--row"><span class="ck-money-int">450</span><span class="ck-money-cur">\u202f₸</span></span></span>')
+    expect(markup).toContain('<span class="ck-money-int">1\u202f200</span><span class="ck-money-frac">,50</span>')
     expect(markup.match(/>Исправить</g)).toHaveLength(2)
     expect(markup.match(/>Удалить</g)).toHaveLength(2)
-    expect(markup).toContain('>Отправить сейчас</button>')
+    expect(markup).toContain('<button type="button" class="ck-button-secondary pending-spends-send">Отправить сейчас</button>')
+    // Dropping a spend of the phone asks in the shared ConfirmDialog (PendingSpends), never with a browser dialog.
+    expect(readFileSync(new URL('./PendingSpends.tsx', import.meta.url), 'utf8')).not.toMatch(/\b(window\.)?confirm\(/)
   })
 
   it('shows the refusal of the server at its spend and the run in progress', () => {

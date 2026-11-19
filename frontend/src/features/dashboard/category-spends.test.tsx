@@ -9,7 +9,7 @@ import { CategorySpendsView } from './CategorySpendsPage'
 import { setListIcons } from '../../lib/list-icons'
 import { categorySpendsHref, partShare, showsLines, spendNote, spendSource, spendTitle, wholeReceipt } from './category-spends-state'
 
-const nb = (text: string) => text.replaceAll(' ', ' ')
+const nb = (text: string) => text.replaceAll(' ', '\u00a0')
 const item = (fields: Partial<CategorySpendItem> = {}): CategorySpendItem => ({
   receipt_id: 812, source: 'manual', purchased_on: '2026-10-09', store: { id: 44, name: 'Steam' },
   note: 'Steam purchase · Выписка Kaspi Gold', owner: 'andrey', owner_name: 'Андрей',
@@ -90,6 +90,7 @@ describe('the route of «Траты категории»', () => {
 describe('«Траты категории» markup (Vitest/SSR, not browser visual acceptance)', () => {
   const view = (data = fixture(), today = '2026-10') => renderToStaticMarkup(<CategorySpendsView data={data} today={today} />)
   const noIcons = (html: string) => html.replace(/<svg\b.*?<\/svg>/g, '')
+  const money = (int: string, frac = '') => `<span class="ck-money-int">${int.replaceAll(' ', '\u202f')}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f₸</span>`
   it('heads with the path, the month and its steps in the first card, and the hero total', () => {
     const html = noIcons(view())
     expect(html).toContain('<nav class="cat-crumbs" aria-label="Категории выше"><a href="/spends/category/5?month=2026-10">Развлечения</a></nav>')
@@ -102,8 +103,8 @@ describe('«Траты категории» markup (Vitest/SSR, not browser visu
     expect(html).toContain('<span class="ck-round dash-month-step dash-month-step-off" aria-hidden="true"></span>')
     expect(noIcons(view(fixture(), '2026-11'))).toContain('aria-label="Следующий месяц" href="/spends/category/51?month=2026-11"></a>')
     expect(html).toContain('<p class="dash-label">Потрачено</p>')
-    expect(html).toContain(`<p class="dash-total ck-hero-figure">${nb('24 500,40 ₸')}</p>`)
-    expect(html.match(/ck-hero-figure/g)).toHaveLength(1)
+    expect(html).toContain(`<p class="dash-total"><span class="ck-money ck-money--hero">${money('24 500', ',40')}</span></p>`)
+    expect(html.match(/ck-money--hero/g)).toHaveLength(1)
   })
   it('breaks the total down by sub-category, each a link one level deeper', () => {
     const html = view()
@@ -114,9 +115,9 @@ describe('«Траты категории» markup (Vitest/SSR, not browser visu
   it('lists each spend with its place, source, who added it and the part of this category', () => {
     const html = view()
     // By hand or by a receipt, as in «Траты»: a picture on the tint of the top-level category, the meta line says it.
-    expect(html).toMatch(/<a class="cat-spend-row" href="\/receipts\/812"><span class="cat-spend-badge dash-cat-5" data-icon="tag" aria-hidden="true"><svg[^>]*>.*?<\/svg><\/span><span class="cat-spend-main"><span class="cat-spend-title">Steam<\/span><span class="cat-spend-note">Steam purchase<\/span>/)
+    expect(html).toMatch(/<a class="ck-row cat-spend-row" href="\/receipts\/812"><span class="ck-row-badge ck-tone-5" data-icon="tag" aria-hidden="true"><svg[^>]*>.*?<\/svg><\/span><span class="ck-row-main"><span class="ck-row-title">Steam<\/span><span class="cat-spend-note">Steam purchase<\/span>/)
     // The picture of the category of the page (inherited by the server), or how each spend came in by the choice of the device.
-    const icons = (markup: string) => [...markup.matchAll(/class="cat-spend-badge[^"]*" data-icon="([a-z]+)"/g)].map((match) => match[1])
+    const icons = (markup: string) => [...markup.matchAll(/class="ck-row-badge[^"]*" data-icon="([a-z]+)"/g)].map((match) => match[1])
     const games = { ...fixture(), category: { ...fixture().category, icon: 'ticket' } }
     expect(new Set(icons(view(games)))).toEqual(new Set(['ticket']))
     setListIcons('source')
@@ -125,10 +126,11 @@ describe('«Траты категории» markup (Vitest/SSR, not browser visu
     } finally {
       setListIcons('category')
     }
-    expect(html).toContain(`<time dateTime="2026-10-09">${nb('9 октября')}</time> · Выписка Kaspi Gold · Андрей`)
-    expect(html).toContain(`<span class="ck-figures">${nb('500,40 ₸')}</span><span class="cat-spend-whole">из ${nb('12 500 ₸')} по чеку</span>`)
+    // The stamp names the source; the bank of a statement stands in the meta line.
+    expect(html).toContain(`<span class="ck-stamp">Выписка</span><span class="cat-spend-meta-text"><time dateTime="2026-10-09">${nb('9 октября')}</time> · Kaspi Gold · Андрей</span>`)
+    expect(html).toContain(`<span class="ck-money ck-money--row">${money('500', ',40')}</span><span class="cat-spend-whole">из ${nb('12 500 ₸')} по чеку</span>`)
     expect(html).toContain('<details class="cat-spend-lines"><summary>Позиции: 2</summary>')
-    expect(html).toContain(`<li class="ck-leader"><span class="cat-spend-line-name">Карты UNO<span class="cat-spend-line-category"> · Игры</span></span><span class="ck-figures">${nb('400 ₸')}</span></li>`)
+    expect(html).toContain(`<li class="ck-leader"><span class="cat-spend-line-name">Карты UNO<span class="cat-spend-line-category"> · Игры</span></span><span class="ck-money ck-money--inline">${money('400')}</span></li>`)
     // A spend of one line from a statement needs no list of lines.
     expect(html.match(/cat-spend-lines/g)).toHaveLength(1)
   })

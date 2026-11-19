@@ -61,7 +61,7 @@ describe('action bar guards (text of the rules, not rendering)', () => {
   it('is opaque and drawn with tokens', () => {
     const bar = rule('.ck-action-bar')
     expect(value(bar, 'background')).toBe('var(--ck-surface)')
-    expect(value(bar, 'border-top')).toBe('1px solid var(--ck-border)')
+    expect(value(bar, 'border-top')).toBe('1px solid var(--ck-line)')
     expect(value(bar, 'box-shadow')).toBe('0 var(--ck-safe-bottom) 0 var(--ck-surface)')
     expect(bar).not.toMatch(/opacity|transparent|color-mix|backdrop-filter/)
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|\b(?:rgb|hsl|hwb|lab|lch|oklab|oklch)a?\(/i)
@@ -69,7 +69,7 @@ describe('action bar guards (text of the rules, not rendering)', () => {
 
   it('reads only tokens that the theme defines', () => {
     const used = [...new Set([...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((match) => match[1]))].sort()
-    expect(used).toEqual(['--ck-action-bar-room', '--ck-border', '--ck-bottom-occupied', '--ck-safe-bottom', '--ck-surface', '--ck-top-bar-height', '--ck-z-action-bar'])
+    expect(used).toEqual(['--ck-action-bar-room', '--ck-bottom-occupied', '--ck-line', '--ck-safe-bottom', '--ck-surface', '--ck-top-bar-height', '--ck-z-action-bar'])
     for (const name of used) expect(token(name), name).toBeDefined()
   })
 

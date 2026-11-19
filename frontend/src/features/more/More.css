@@ -1,15 +1,22 @@
-/* «Ещё» as a screen (2026-10-13): the person on top, then panels of rows («Данные», «Настройки»; the money tiles moved
-   to «Деньги» of the bar, 2026-10-26). Bricks of tokens.css (.ck-panel, .ck-list, .ck-row); colours only by tokens. */
-.more-profile { flex-direction: row; align-items: center; gap: 14px; color: inherit; text-decoration: none; }
-.more-avatar { display: flex; flex: none; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: var(--ck-accent-bg); color: var(--ck-accent-text); font-size: var(--ck-text-lg); font-weight: 800; }
-.more-profile-name { overflow: hidden; font-size: var(--ck-text-lg); font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
-.more-chevron { flex: none; color: var(--ck-text-muted); }
-.more-section { gap: 4px; padding-block: 12px; }
-.more-title { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-.more-row { min-height: 56px; padding-block: 8px; }
-.more-badge { background: var(--ck-surface-raised); color: var(--ck-text-muted); }
-.more-toggles { display: flex; flex-direction: column; border-top: 1px solid var(--ck-divider); }
+/* «Ещё» as a screen (Чекист 2.0): the person on top, then panels of rows («Данные», «Настройки») and «Оформление»
+   (features/auth AppearanceSection). Bricks of tokens.css (.ck-panel, .ck-list, .ck-row); 2.0 tokens only. On iOS the
+   line between rows starts at the words (an inset grouped list), on Android and a computer it is the panel's width. */
+.more { max-width: 640px; }
+.more-profile { flex-direction: row; align-items: center; gap: var(--ck-space-4); color: var(--ck-ink); text-decoration: none; }
+.more-profile:active { background: color-mix(in srgb, var(--ck-ink) 4%, var(--ck-surface)); }
+.more-avatar { display: flex; flex: none; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--ck-cat-1-tint); color: var(--ck-cat-1); font-family: var(--ck-font-display); font-size: var(--ck-text-title); font-weight: 600; }
+.more-profile-name { overflow: hidden; font-family: var(--ck-font-display); font-size: var(--ck-text-heading); font-weight: 600; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.more-chevron { flex: none; color: var(--ck-ink-2); }
+.more-section { gap: 0; padding-block: var(--ck-space-1); }
+.more-title { margin: 0; padding-block: var(--ck-space-3) var(--ck-space-1); font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; line-height: 1.3; }
+.more-row { min-height: 56px; padding-block: var(--ck-space-2); border-radius: var(--ck-radius-field); }
+.more-row:active { background: color-mix(in srgb, var(--ck-ink) 6%, transparent); }
+.more-row .ck-row-title { font-weight: 500; }
+.more-badge { width: 36px; height: 36px; background: var(--ck-surface-2); color: var(--ck-ink); }
+:root[data-platform="ios"] .more-list > li + li { position: relative; border-top: 0; }
+:root[data-platform="ios"] .more-list > li + li::before { content: ""; position: absolute; top: 0; right: 0; left: 48px; border-top: 1px solid var(--ck-line); }
+.more-install { margin: 0 0 var(--ck-space-3); padding: var(--ck-space-3) var(--ck-space-4); border-radius: var(--ck-radius-field); background: var(--ck-surface-2); color: var(--ck-ink); font-size: var(--ck-text-label); line-height: 1.45; }
 @media (hover: hover) {
-  .more-profile:hover { background: var(--ck-surface-raised); }
-  .more-row:hover .ck-row-title { text-decoration: underline; }
+  .more-profile:hover { background: color-mix(in srgb, var(--ck-ink) 4%, var(--ck-surface)); }
+  .more-row:hover { background: color-mix(in srgb, var(--ck-ink) 4%, transparent); }
 }

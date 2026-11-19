@@ -2,18 +2,18 @@ import type { Money, MoneyMonth, MoneyReview } from '../../api/money'
 import type { ThreadSummary } from '../../api/chat'
 import type { LocalApiFailure } from '../../api/types'
 import type { IconName } from '../../components/Icon'
-import { formatCents, formatMoney } from '../../lib/money'
+import { formatMoney } from '../../lib/money'
 import { glue } from '../../lib/text'
 import { cents, dayAndMonth, dashboardErrorMessage, inMonth, plural, shiftMonth } from '../dashboard/dashboard-state'
 import { centsOf, percentText, shareOf } from '../dashboard/home-state'
 import { threadTitle } from '../chat/chat-state'
 
-/** The words and the shares of «Деньги» (2026-10-26): the server counts the money, this file turns it into sentences
+/** The words and the shares of «Деньги» (2026-10-26, Чекист 2.0 2026-11-20): the server counts the money, this file turns it into sentences
  * and widths. No network, no React. */
 
 const nominative = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
 const nominativeLower = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь']
-const dative = ['январю', 'февралю', 'марту', 'апрелю', 'маю', 'июню', 'июлю', 'августу', 'сентябрю', 'октябрю', 'ноябрю', 'декабрю']
+const shortMonths = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
 
 /** «Октябрь» of the eyebrow; «Октябрь 2025» when the year is not the year of `today`. */
 export function monthName(month: string, today?: string): string {
@@ -23,25 +23,42 @@ export function monthName(month: string, today?: string): string {
 /** «за октябрь». */
 export const forMonth = (month: string) => glue('за', nominativeLower[Number(month.slice(5, 7)) - 1])
 
-export type Summary = { income: string | null; spent: string; setAside: string }
+/** One line of the flow of the month under the strip: its key (the swatch of the strip), its words and its amount.
+ * `amount` null — not entered (the income), the words say so. */
+export type FlowRow = {
+  key: 'income' | 'spent' | 'payments' | 'plans' | 'aside'
+  label: string
+  amount: string | null
+  /** The income in its colour with «+»; the rest in ink. */
+  income?: boolean
+}
 
-/** The three sums of the card of the month; the income may be not entered. */
-export function summaryOf(data: Money): Summary {
-  return {
-    income: data.income === null ? null : formatMoney(data.income, data.currency),
-    spent: formatMoney(data.spent, data.currency), setAside: formatMoney(data.set_aside, data.currency),
-  }
+/** The lines of the card of the month: what came in, what went out, what is still ahead, what was put aside. */
+export function flowRows(data: Money): FlowRow[] {
+  return [
+    { key: 'income', label: 'Доход', amount: data.income, income: true },
+    { key: 'spent', label: 'Потрачено', amount: data.spent },
+    { key: 'payments', label: 'Платежи впереди', amount: data.flow.payments_ahead },
+    { key: 'plans', label: 'Планы впереди', amount: data.flow.plans_ahead },
+    { key: 'aside', label: 'Отложено в цели', amount: data.set_aside },
+  ]
 }
 
 export type FlowPart = { key: 'spent' | 'payments' | 'plans' | 'free'; flex: number }
 export type Flow = {
   parts: FlowPart[]
-  /** «потрачено · платежи впереди · планы · свободно 381 055 ₸»; the overspend in its own colour; nothing to count — the words only. */
-  caption: { words: string; free: string | null; over: boolean }
+  /** The main figure of the card: «Свободно» (the free sum), «Перерасход» (below zero, the sum without its minus, in the
+   * colour of an overspend with words) or «Потрачено» when there is nothing to count the free sum from. */
+  figure: { label: string; amount: string; over: boolean; note: string | null }
+  /** What a screen reader hears for the strip. */
+  label: string
 }
 
+/** The amount without its minus: «-2500.00» → «2500.00». */
+const unsigned = (value: string) => value.replace(/^-/, '')
+
 /** The strip of the month: what is spent, the payments and the plans ahead, what is free. Below zero there is no free
- * part and the words say «перерасход»; null (neither an income nor a budget) — the three parts and no free sum. */
+ * part and the figure says «Перерасход»; null (neither an income nor a budget) — the three parts and «Потрачено». */
 export function flowOf(data: Money): Flow {
   const { flow } = data
   const free = flow.free === null ? null : cents(flow.free)
@@ -52,91 +69,97 @@ export function flowOf(data: Money): Flow {
   ]
   if (free !== null && free > 0n) parts.push({ key: 'free', flex: Number(free) })
   const over = free !== null && free < 0n
+  const money = (value: string) => formatMoney(value, data.currency)
+  const words = [`потрачено ${money(flow.spent)}`, `платежи впереди ${money(flow.payments_ahead)}`, `планы впереди ${money(flow.plans_ahead)}`]
+  if (free !== null) words.push(over ? `перерасход ${money(unsigned(flow.free as string))}` : `свободно ${money(flow.free as string)}`)
   return {
     parts: parts.filter((part) => part.flex > 0),
-    caption: {
-      words: 'потрачено · платежи впереди · планы',
-      free: free === null ? null : over ? `перерасход ${formatCents(-free, data.currency)}` : `свободно ${formatCents(free, data.currency)}`,
-      over,
-    },
+    figure: free === null
+      ? { label: 'Потрачено', amount: flow.spent, over: false, note: 'Внесите доход месяца или задайте бюджет — посчитаю, сколько свободно.' }
+      : over
+        ? { label: 'Перерасход', amount: unsigned(flow.free as string), over: true, note: 'Траты, платежи и планы больше дохода месяца.' }
+        : { label: 'Свободно', amount: flow.free as string, over: false, note: null },
+    label: `Поток месяца: ${words.join(', ')}`,
   }
 }
 
+/** An amount of a tile: drawn by `Money`, the income in its colour with «+». */
+export type TileAmount = { value: string; currency: string; income?: boolean }
+
 export type HubTile = {
-  key: 'incomes' | 'payments' | 'plans' | 'goals' | 'stats' | 'review'
+  key: 'incomes' | 'payments' | 'plans' | 'goals'
   title: string
   icon: IconName
-  /** The colour of the picture: a category tone (1–6), `success` for the income, `ai` for the review. */
-  tone: 'success' | 'ai' | number
+  /** The tone of the picture: a category tone (1–6) or `in` for the income. */
+  tone: 'in' | number
   to: string
-  /** The big words of the tile; the statistics tile draws its columns instead. */
+  /** The figure of the tile: an amount, or words when there is none («Не внесён», «52 %», «Все оплачены»). */
+  amount: TileAmount | null
   value: string | null
   note: string
-  /** What a screen reader hears for the whole tile. */
-  label: string
+  /** The words of the note that need the colour of an overspend («просрочен на 3 дня»): drawn after the note. */
+  alert?: string
+  /** The share saved of all the goals, as the width of the bar under the figure. */
+  bar?: number
 }
 
-/** «Доходы»: the income of the month, or that it is not entered (the big words say so, the note names the month). */
+/** «Доходы»: the income of the month, or that it is not entered (the figure says so, the note names the month). */
 export function incomesTile(data: Money): HubTile {
   const entered = data.income !== null
   return {
-    key: 'incomes', title: 'Доходы', icon: 'income', tone: 'success', to: `/incomes?month=${data.month}`,
-    value: entered ? formatMoney(data.income as string, data.currency) : 'Не внесён',
-    note: forMonth(data.month),
-    label: entered ? `Доходы: ${formatMoney(data.income as string, data.currency)} ${forMonth(data.month)}` : `Доходы ${forMonth(data.month)} не внесены`,
+    key: 'incomes', title: 'Доходы', icon: 'income', tone: 'in', to: `/incomes?month=${data.month}`,
+    amount: entered ? { value: data.income as string, currency: data.currency, income: true } : null,
+    value: entered ? null : 'Не внесён', note: forMonth(data.month),
   }
 }
 
-/** «через 2 дня», «сегодня», «просрочен». */
+/** «через 2 дня», «сегодня», «просрочен на 3 дня». */
 export function dueWords(days: number): string {
   if (days === 0) return 'сегодня'
-  if (days < 0) return 'просрочен'
+  if (days < 0) return glue('просрочен на', String(-days), plural(-days, 'день', 'дня', 'дней'))
   return glue('через', String(days), plural(days, 'день', 'дня', 'дней'))
 }
 
-/** «Платежи»: what still waits, paid of all and the nearest one. */
+/** «Платежи»: what still waits, paid of all and the nearest one; an overdue one in the colour of an overspend. */
 export function paymentsTile(data: Money): HubTile {
   const { payments } = data
-  if (payments.total === 0) {
-    return { key: 'payments', title: 'Платежи', icon: 'repeat', tone: 2, to: '/recurring', value: 'Нет', note: 'добавить регулярный', label: 'Платежи: регулярных платежей нет' }
-  }
-  const note = [`${payments.paid} из ${payments.total} оплачено`, payments.next ? `${payments.next.name} ${dueWords(payments.next.days)}` : null].filter(Boolean).join(' · ')
-  const value = cents(payments.left) > 0n ? formatMoney(payments.left, data.currency) : 'Все оплачены'
-  return { key: 'payments', title: 'Платежи', icon: 'repeat', tone: 2, to: '/recurring', value, note, label: `Платежи: ${value}, ${note}` }
+  const base = { key: 'payments', title: 'Платежи', icon: 'repeat', tone: 2, to: '/recurring' } as const
+  if (payments.total === 0) return { ...base, amount: null, value: 'Нет', note: 'добавить регулярный' }
+  const count = `${payments.paid} из ${payments.total} оплачено`
+  const next = payments.next
+  const left = cents(payments.left) > 0n
+  const amount = left ? { value: payments.left, currency: data.currency } : null
+  if (next && next.days < 0) return { ...base, amount, value: left ? null : 'Все оплачены', note: count, alert: `${next.name} ${dueWords(next.days)}` }
+  return { ...base, amount, value: left ? null : 'Все оплачены', note: [count, next ? `${next.name} ${dueWords(next.days)}` : null].filter(Boolean).join(' · ') }
 }
 
 /** «Планы»: what still waits, «ждём · N без срока». */
 export function plansTile(data: Money): HubTile {
   const { plans } = data
-  const to = `/planned?month=${data.month}`
-  if (!plans || (plans.count === 0 && plans.undated_count === 0)) {
-    return { key: 'plans', title: 'Планы', icon: 'box', tone: 4, to, value: 'Нет', note: 'пока без планов', label: 'Планы: пока без планов' }
-  }
+  const base = { key: 'plans', title: 'Планы', icon: 'box', tone: 4, to: `/planned?month=${data.month}` } as const
+  if (!plans || (plans.count === 0 && plans.undated_count === 0)) return { ...base, amount: null, value: 'Нет', note: 'пока без планов' }
   const undated = plans.undated_count > 0 ? glue(String(plans.undated_count), 'без срока') : null
-  const note = ['ждём', undated].filter(Boolean).join(' · ')
-  const value = formatMoney(plans.left, data.currency)
-  return { key: 'plans', title: 'Планы', icon: 'box', tone: 4, to, value, note, label: `Планы: ${value}, ${note}` }
+  return { ...base, amount: { value: plans.left, currency: data.currency }, value: null, note: ['ждём', undated].filter(Boolean).join(' · ') }
 }
 
-/** «Цели»: the share saved and the two first goals with their shares. */
+/** «Цели»: the share saved with its bar and the two first goals with their shares. */
 export function goalsTile(data: Money): HubTile {
   const { goals } = data
-  if (!goals || goals.count === 0) {
-    return { key: 'goals', title: 'Цели', icon: 'goal', tone: 3, to: '/goals', value: 'Нет целей', note: 'завести', label: 'Цели: целей нет' }
-  }
-  const value = percentText(shareOf(goals.share))
+  const base = { key: 'goals', title: 'Цели', icon: 'goal', tone: 3, to: '/goals' } as const
+  if (!goals || goals.count === 0) return { ...base, amount: null, value: 'Нет целей', note: 'завести' }
+  const share = shareOf(goals.share)
   const top = goals.top.slice(0, 2).map((goal) => `«${goal.name}» ${percentText(shareOf(goal.share))}`)
   const note = top.length ? top.join(' · ') : `${glue(String(goals.count), plural(goals.count, 'цель', 'цели', 'целей'))} · ${formatMoney(goals.saved, goals.currency)}`
-  return { key: 'goals', title: 'Цели', icon: 'goal', tone: 3, to: '/goals', value, note, label: `Цели: накоплено ${value}, ${note}` }
+  return { ...base, amount: null, value: percentText(share), note, bar: Math.max(0, Math.min(100, share)) }
 }
 
-export type Column = { month: string; height: number; now: boolean }
+export type Column = { month: string; height: number; now: boolean; label: string; spent: string }
 
 /** The six mini columns of «Статистика»: per cent of the biggest month, the shown month marked. */
 export function columnsOf(months: MoneyMonth[], shown: string): Column[] {
   const largest = Math.max(0, ...months.map((item) => centsOf(item.spent)))
   return months.map((item) => ({
-    month: item.month, now: item.month === shown,
+    month: item.month, now: item.month === shown, label: shortMonths[Number(item.month.slice(5, 7)) - 1], spent: item.spent,
     height: largest > 0 ? Math.max(centsOf(item.spent) > 0 ? 4 : 2, Math.round((Math.max(0, centsOf(item.spent)) / largest) * 100)) : 2,
   }))
 }
@@ -154,40 +177,40 @@ export function statsNote(months: MoneyMonth[], shown: string, current: boolean)
   return `${name} ${current ? 'пока ' : ''}${word}`
 }
 
-/** «Статистика»: the columns of six months with the note under them. */
-export function statsTile(data: Money, to: string, current: boolean): HubTile & { columns: Column[] } {
-  const note = statsNote(data.months, data.month, current)
-  return { key: 'stats', title: 'Статистика', icon: 'stats', tone: 1, to, value: null, note, label: `Статистика: ${note}`, columns: columnsOf(data.months, data.month) }
+/** What a screen reader hears for the six columns: «Траты по месяцам: июнь 572 793,76 ₸, …». */
+export function columnsLabel(columns: Column[], currency: string): string {
+  return `Траты по месяцам: ${columns.map((column) => `${nominativeLower[Number(column.month.slice(5, 7)) - 1]} ${formatMoney(column.spent, currency)}`).join(', ')}`
 }
 
-/** «+12 % к августу · 3 совета» of the last review. */
-export function reviewNote(review: MoneyReview): string {
+/** «на 34 375,02 ₸ меньше, чем в сентябре · 2 совета» of the last review: `change_previous` is the difference of the
+ * spends of its month against the month before, an amount in the base currency (docs/api-contract.md «Деньги»). */
+export function reviewNote(review: MoneyReview, currency: string): string {
   const parts: string[] = []
   if (review.change_previous !== null) {
-    const number = Number(review.change_previous)
-    const text = Number.isFinite(number) ? `${number > 0 ? '+' : number < 0 ? '−' : ''}${percentText(Math.abs(Math.round(number)))}` : review.change_previous
-    parts.push(`${text} к ${dative[Number(review.month.slice(5, 7)) - 1 === 0 ? 11 : Number(review.month.slice(5, 7)) - 2]}`)
+    const change = cents(review.change_previous)
+    const before = inMonth(shiftMonth(review.month, -1))
+    parts.push(change === 0n ? `как ${before}`
+      : `на ${formatMoney(review.change_previous.replace(/^-/, ''), currency)} ${change < 0n ? 'меньше' : 'больше'}, чем ${before}`)
   }
   parts.push(glue(String(review.tips), plural(review.tips, 'совет', 'совета', 'советов')))
   return parts.join(' · ')
 }
 
-/** «Разбор»: the last review of the month before, or the invitation to ask for one (the month before as the big
- * words — «Запросить разбор» does not fit a tile of a phone). */
-export function reviewTile(data: Money): HubTile {
+export type ReviewRow = { to: string; title: string; note: string }
+
+/** «Разбор за октябрь»: the last review of the month before, or the invitation to ask for one. */
+export function reviewRow(data: Money): ReviewRow {
   const { review } = data
   if (!review) {
     const before = shiftMonth(data.month, -1)
-    return { key: 'review', title: 'Разбор', icon: 'insight', tone: 'ai', to: `/review?month=${before}`, value: monthName(before), note: 'запросить разбор', label: `Разбор ${inMonth(before)}: запросить` }
+    return { to: `/review?month=${before}`, title: `Разбор ${forMonth(before)}`, note: 'запросить — итоги месяца и советы' }
   }
-  const value = monthName(review.month)
-  const note = reviewNote(review)
-  return { key: 'review', title: 'Разбор', icon: 'insight', tone: 'ai', to: `/review?month=${review.month}`, value, note, label: `Разбор ${inMonth(review.month)}: ${note}` }
+  return { to: `/review?month=${review.month}`, title: `Разбор ${forMonth(review.month)}`, note: reviewNote(review, data.currency) }
 }
 
-/** The six tiles of the hub in the order of the mockup. `statsHref` — the remembered address of «Статистика». */
-export function hubTiles(data: Money, statsHref: string, current: boolean): (HubTile | (HubTile & { columns: Column[] }))[] {
-  return [incomesTile(data), paymentsTile(data), plansTile(data), goalsTile(data), statsTile(data, statsHref, current), reviewTile(data)]
+/** The four tiles of the hub: incomes, payments, plans, goals. */
+export function hubTiles(data: Money): HubTile[] {
+  return [incomesTile(data), paymentsTile(data), plansTile(data), goalsTile(data)]
 }
 
 /** The last thread of the chat for the card: its name and the start of the model's last answer. */

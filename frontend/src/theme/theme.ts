@@ -7,8 +7,9 @@ export const themeStorageKey = 'checkist.theme'
 export const defaultTheme: Theme = 'dark'
 /** The media query that tells the system preference; the inline script of index.html asks the same one. */
 export const lightSchemeQuery = '(prefers-color-scheme: light)'
-/** Page background of each theme for `<meta name="theme-color">`; the same values as `--ck-bg` in tokens.css. */
-export const themeColors: Record<Theme, string> = { dark: '#141110', light: '#f6efdc' }
+/** The paper of each theme for `<meta name="theme-color">` (the system bar of Android and of an installed app); the same
+ * values as `--ck-paper` in tokens.css and in the inline script of index.html. */
+export const themeColors: Record<Theme, string> = { dark: '#121012', light: '#f4f2f2' }
 
 /** A saved `light` or `dark` is the choice of the person; anything else (first visit, garbage, another type)
  * is no choice, and the theme of the system — `fallback` — applies. */
@@ -115,7 +116,9 @@ export function applyThemeToDocument(theme: Theme) {
   const root = document.documentElement
   if (theme === 'light') root.setAttribute('data-theme', 'light')
   else root.removeAttribute('data-theme')
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColors[theme])
+  // index.html has a pair, one per system theme: both take the colour of the theme the page shows, so the bar follows the
+  // choice of the person and not only the system.
+  document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute('content', themeColors[theme]))
 }
 
 let store: ThemeStore | undefined

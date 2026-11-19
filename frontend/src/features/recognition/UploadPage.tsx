@@ -15,6 +15,7 @@ import { clearQuickShot, onQuickShot, peekQuickShot } from './quick-shot'
 import { useQuickShot } from './QuickShot'
 import { useNarrow } from '../../lib/cards'
 import { useStickyOpen } from './mobile-state'
+import Icon from '../../components/Icon'
 import './Upload.css'
 
 /** `null` — the browser could not show the photo, so its pixel size stays unknown. */
@@ -43,6 +44,7 @@ function PdfPreview({ file, maxPages }: { file: File; maxPages?: number }) {
   }, [file])
   const over = maxPages !== undefined && typeof pages === 'number' && pages > maxPages
   return <div className="ck-rec-image ck-upload-pdf">
+    <span className="ck-upload-mark" aria-hidden="true"><Icon name="statement" size={24} /></span>
     <p><strong>{pages === undefined ? 'PDF' : pdfSummary(pages)}</strong></p>
     <p className="ck-rec-note">Сервер превратит {maxPages ? glue('до', maxPages, 'страниц') : 'страницы'} в одно изображение и распознает его как чек.</p>
     {over && <p className="ck-rec-warning">Похоже, в файле больше {glue(maxPages, 'страниц')}: сервер такой PDF не примет.</p>}
@@ -50,7 +52,7 @@ function PdfPreview({ file, maxPages }: { file: File; maxPages?: number }) {
 }
 /** Pictures of the three ways to pick a photo; the words of the buttons name them. */
 const icon = (paths: ReactNode) => <svg className="ck-upload-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths}</svg>
+  strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths}</svg>
 const cameraIcon = icon(<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></>)
 const galleryIcon = icon(<><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="m21 16-5-5-9 9" /></>)
 const fileIcon = icon(<><path d="M14 3H6v18h12V7z" /><path d="M14 3v4h4M9 13h6M9 17h6" /></>)
@@ -164,6 +166,7 @@ export default function UploadPage() {
   return <div className="ck-rec ck-upload">
     <form ref={formBlock} onSubmit={submit} className="ck-rec-panel ck-upload-card" aria-labelledby="recognition-file-title" aria-busy={sending}>
       <div className="ck-upload-head">
+        <span className="ck-upload-mark" aria-hidden="true"><Icon name="receipt" size={24} /></span>
         <h2 id="recognition-file-title" tabIndex={-1} data-request-focus-target>Фото чека</h2>
         <p className="ck-upload-lead">Одно фото — один или несколько чеков{limits?.max_pdf_pages !== undefined && <>; PDF — до {glue(limits.max_pdf_pages, 'страниц')}</>}.</p>
       </div>
@@ -184,7 +187,7 @@ export default function UploadPage() {
       <div className="ck-rec-actions ck-upload-pick" role="group" aria-label="Выбор фото">
         <button type="button" className={`ck-upload-camera ck-upload-big${file ? ' ck-upload-secondary' : ''}`} disabled={pickDisabled} aria-describedby={described} onClick={() => cameraInput.current?.click()}>{cameraIcon}{uploadLabels.camera}</button>
         <button type="button" className="ck-upload-gallery ck-upload-big ck-upload-secondary" disabled={pickDisabled} aria-describedby={described} onClick={gallery.open}>{galleryIcon}{uploadLabels.gallery}</button>
-        <button type="button" className="ck-upload-file-button ck-upload-big ck-upload-secondary" disabled={pickDisabled} aria-describedby={described} onClick={() => fileInput.current?.click()}>{fileIcon}{uploadLabels.pick}</button>
+        <button type="button" className={`ck-upload-file-button ck-upload-big ck-upload-secondary${file ? '' : ' ck-upload-first'}`} disabled={pickDisabled} aria-describedby={described} onClick={() => fileInput.current?.click()}>{fileIcon}{uploadLabels.pick}</button>
         <input ref={cameraInput} id="recognition-camera" className="ck-upload-input" type="file" accept="image/*" capture="environment" tabIndex={-1} aria-hidden="true" disabled={pickDisabled} onChange={(event) => pick(event, true)} />
         {gallery.field}
         <input ref={fileInput} id="recognition-file" className="ck-upload-input" type="file" accept={pickAccept} tabIndex={-1} aria-hidden="true" disabled={pickDisabled} onChange={(event) => pick(event, false)} />

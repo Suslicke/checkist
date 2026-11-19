@@ -1,4 +1,7 @@
 export { themeStorageKey, defaultTheme, lightSchemeQuery, themeColors, parseTheme, nextTheme, themeLabel, createThemeStore, applyThemeToDocument, useTheme } from './theme'
 export type { Theme, ThemeEnvironment, ThemeStore } from './theme'
+export { platform, usePlatform, haptic, parsePlatform, detectPlatform, platformStorageKey, defaultPlatform } from './platform'
+export type { Platform } from './platform'
 export { ThemeToggle } from './ThemeToggle'
 export type { ThemeToggleProps } from './ThemeToggle'
+export { privacyStorageKey, privacyAttribute, isPrivate, setPrivate, togglePrivacy, usePrivacy, subscribePrivacy, applyPrivacyToDocument } from './privacy'

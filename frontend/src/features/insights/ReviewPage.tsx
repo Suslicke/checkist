@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getReview, getReviewRequest, requestReview } from '../../api/insights'
 import type { Figure, Review, ReviewFigures, ReviewMonth } from '../../api/insights'
 import Icon from '../../components/Icon'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
 import { formatCents, formatMoney } from '../../lib/money'
 import { buildRoute, Link } from '../../navigation'
-import { cents, compareMonths, dashboardErrorMessage, deviceMonth, inMonth, monthTitle, plural, shiftMonth } from '../dashboard/dashboard-state'
+import { cents, compareMonths, dashboardErrorMessage, deviceMonth, inMonth, monthTitle, plural, progress, shiftMonth } from '../dashboard/dashboard-state'
 import { StartChat } from '../chat/StartChat'
 import { follow } from './follow'
 import {
@@ -18,7 +19,7 @@ export type ReviewStatus = { kind: 'idle' } | { kind: 'working'; refreshing: boo
 
 const madeAt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
 
-/** «▲ 73 893 ₸» beside an amount: more — the over tint, less — the success tint. */
+/** «▲ 73 893 ₸» beside an amount: more — the over tone, less — the income tone; the arrow and the words say it too. */
 export function DeltaBadge({ change, currency, label }: { change: string | null; currency: string; label: string }) {
   const value = delta(change, currency)
   if (!value || value.tone === 'same') return null
@@ -56,6 +57,22 @@ export type ReviewViewProps = {
   current?: string
 }
 
+/** A limit of the month: its bar, «почти лимит» from 80 %, «сверх на …» over it — in words, not in the colour only. */
+function LimitRow({ item, currency }: { item: ReviewFigures['limits'][number]; currency: string }) {
+  const bar = progress(item.spent, item.limit)
+  const near = !item.over && bar !== null && bar.percent >= 80
+  return <li className="ck-row ins-limit">
+    <span className="ck-row-main">
+      <span className="ck-row-title">{item.category}</span>
+      <span className="ck-row-meta ins-meta">Лимит {formatMoney(item.limit, currency)} · <span className={item.over || near ? 'ins-over' : undefined}>
+        {item.over ? `сверх на ${formatMoney(item.over, currency)}`
+          : `${near ? 'почти лимит, ' : ''}осталось ${formatCents(cents(item.limit) - cents(item.spent), currency)}`}</span></span>
+    </span>
+    <span className="ck-row-amount"><Money value={item.spent} currency={currency} size="row" /></span>
+    {bar && <span className={`ck-bar ins-bar${item.over ? ' is-over' : near ? ' is-near' : ''}`} aria-hidden="true"><span style={{ width: `${bar.percent}%` }} /></span>}
+  </li>
+}
+
 /** `/review` without loading: the markup tests render it directly. */
 export function ReviewView({ month, figures, review, status, onRefresh = () => {}, current = deviceMonth() }: ReviewViewProps) {
   const currency = figures.currency
@@ -72,23 +89,23 @@ export function ReviewView({ month, figures, review, status, onRefresh = () => {
             : <span className="ins-month-gap" aria-hidden="true" />}
         </div>
         <p className="ins-label">Потрачено {inMonth(month)}</p>
-        <p className="ins-total ck-hero-figure">{formatMoney(figures.spent, currency)}</p>
+        <p className="ins-total"><Money value={figures.spent} currency={currency} size="hero" /></p>
         {compare && <p className={`ins-compare ins-compare-${compare.tone}`}>{compare.text[0].toUpperCase() + compare.text.slice(1)}</p>}
-        {figures.average !== null && <p className="ins-compare">Среднее прошлых месяцев — <span className="ins-value">{formatMoney(figures.average, currency)}</span>{' '}
+        {figures.average !== null && <p className="ins-compare">Среднее прошлых месяцев — <Money value={figures.average} currency={currency} className="ins-value" />{' '}
           <DeltaBadge change={figures.change_average} currency={currency} label="К среднему" /></p>}
         {figures.without_rate.length > 0 && <p className="ins-note">Без курса и не в цифрах: {figures.without_rate.map((item) => formatMoney(item.total, item.currency)).join(', ')}.</p>}
       </section>
 
       <section className="ck-panel ins-ai" aria-labelledby="ins-ai-heading" aria-busy={working}>
         <div className="ck-panel-head">
-          <h2 id="ins-ai-heading">Что говорит ИИ</h2>
+          <h2 id="ins-ai-heading" className="ins-who"><span className="ins-mark" aria-hidden="true"><Icon name="insight" size={16} /></span>Что говорит ИИ</h2>
           {!empty && <button type="button" className="ck-button-secondary ins-refresh" disabled={working} onClick={onRefresh}>Обновить</button>}
         </div>
         {working && <p className="ins-status" role="status">{status.refreshing ? insightTexts.refreshing : insightTexts.working}</p>}
         {status.kind === 'message' && <p className="ins-status ins-status-failed" role="alert">{status.text}</p>}
         {review ? <AiText review={review} /> : !working && empty && <p className="ins-status">{insightTexts.empty}</p>}
         <div className="ins-links">
-          {!empty && <StartChat input={{ kind: 'month', month }} className="ins-link chat-start-link">Обсудить</StartChat>}
+          {!empty && <StartChat input={{ kind: 'month', month }} className="ck-button-secondary ins-discuss">Обсудить</StartChat>}
           <Link className="ins-link" to="/chat">Спросить о тратах</Link>
         </div>
       </section>
@@ -103,7 +120,7 @@ export function ReviewView({ month, figures, review, status, onRefresh = () => {
             <span className="ck-row-meta ins-meta">{compareMeta(item, month, currency)}</span>
           </span>
           <span className="ins-amount">
-            <span className="ck-row-amount ck-figures">{formatMoney(item.spent, currency)}</span>
+            <span className="ck-row-amount"><Money value={item.spent} currency={currency} size="row" /></span>
             <DeltaBadge change={item.change_previous} currency={currency} label={`${item.name} к прошлому месяцу`} />
           </span>
         </li>)}</ul>
@@ -111,14 +128,7 @@ export function ReviewView({ month, figures, review, status, onRefresh = () => {
 
       {figures.limits.length > 0 && <section className="ck-panel" aria-labelledby="ins-limit-heading">
         <div className="ck-panel-head"><h2 id="ins-limit-heading">Лимиты</h2><Link to="/budget/limits">Изменить</Link></div>
-        <ul className="ck-list">{figures.limits.map((item) => <li key={item.category} className="ck-row">
-          <span className="ck-row-main">
-            <span className="ck-row-title">{item.category}</span>
-            <span className="ck-row-meta ins-meta">Лимит {formatMoney(item.limit, currency)} · <span className={item.over ? 'ins-over' : undefined}>
-              {item.over ? `сверх на ${formatMoney(item.over, currency)}` : `осталось ${formatCents(cents(item.limit) - cents(item.spent), currency)}`}</span></span>
-          </span>
-          <span className="ck-row-amount ck-figures">{formatMoney(item.spent, currency)}</span>
-        </li>)}</ul>
+        <ul className="ck-list">{figures.limits.map((item) => <LimitRow key={item.category} item={item} currency={currency} />)}</ul>
       </section>}
 
       {figures.places.length > 0 && <section className="ck-panel" aria-labelledby="ins-place-heading">
@@ -128,7 +138,7 @@ export function ReviewView({ month, figures, review, status, onRefresh = () => {
             <span className="ck-row-title">{item.name}</span>
             <span className="ck-row-meta">{item.count} {plural(item.count, 'трата', 'траты', 'трат')}</span>
           </span>
-          <span className="ck-row-amount ck-figures">{formatMoney(item.spent, currency)}</span>
+          <span className="ck-row-amount"><Money value={item.spent} currency={currency} size="row" /></span>
         </li>)}</ul>
       </section>}
     </div>

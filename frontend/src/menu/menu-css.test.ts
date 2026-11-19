@@ -1,160 +1,319 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
+/* The shell of Чекист 2.0 (src/shell.css): the bars of a phone by platform, the header of a wide screen, the move between
+ * pages. Text of the rules, not rendering: the look is checked by a person on the stand (iOS and Android). */
 const source = new URL('../', import.meta.url)
 const raw = (path: string) => readFileSync(new URL(path, source), 'utf8')
-const app = raw('App.css').replace(/\/\*[\s\S]*?\*\//g, '')
+const strip = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '')
+const shell = strip(raw('shell.css'))
+const app = strip(raw('App.css'))
 const tokens = raw('theme/tokens.css')
 const html = raw('../index.html')
-const actionBar = raw('components/ActionBar.css').replace(/\/\*[\s\S]*?\*\//g, '')
+const actionBar = strip(raw('components/ActionBar.css'))
 
+/** The text inside the braces of the block that starts with `head`. */
+const block = (text: string, head: string) => {
+  const start = text.indexOf(head)
+  expect(start, head).toBeGreaterThan(-1)
+  let depth = 0
+  for (let index = start + head.length - 1; index < text.length; index += 1) {
+    if (text[index] === '{') depth += 1
+    if (text[index] === '}') depth -= 1
+    if (depth === 0) return text.slice(start + head.length, index)
+  }
+  return ''
+}
+/** Flat rules (selector, body) of a text without nested blocks. */
 const rules = (text: string) => [...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-  .flatMap((match) => match[1].split(',').map((selector) => ({ selector: selector.trim(), body: match[2].trim() })))
+  .flatMap((match) => match[1].split(/,(?![^(]*\))/).map((selector) => ({ selector: selector.trim(), body: match[2].trim() })))
 const rule = (selector: string, text: string) => rules(text).filter((item) => item.selector === selector).map((item) => item.body).join(' ')
-const px = (body: string, property: string) => Number(new RegExp(`(?:^|;\\s*)${property}:\\s*(-?[\\d.]+)(px|rem)`).exec(body)?.slice(1).reduce((n, unit) => String(Number(n) * (unit === 'rem' ? 16 : 1))))
 
 const phone = '@media (max-width: 540px) {'
-const query = '@media (max-width: 540px) and (min-width: 340px) and (min-height: 480px) {'
-const bar = app.slice(app.indexOf(query) + query.length).split('\n}')[0]
-/** Everything but the block of the bar. */
-const rest = app.replace(bar, '')
-const nav = rule('.brand-bar .main-navigation', bar)
+const barQuery = '@media (max-width: 540px) and (min-width: 340px) and (min-height: 480px) {'
+const wideQuery = '@media (min-width: 541px) {'
+const motionQuery = '@media (prefers-reduced-motion: no-preference) {'
+const bar = block(shell, barQuery)
+const narrow = block(shell, phone)
+const motion = block(shell, motionQuery)
+/** The rules outside of every block. */
+const base = shell.slice(0, shell.indexOf('@media'))
+const ios = ':root[data-platform="ios"]'
+const android = ':root:not([data-platform="ios"])'
 
-describe('bottom bar of the main menu on a phone (artifact design, text of the rules, not rendering)', () => {
-  it('lives in one block of its own, after the phone block that the other guards pin', () => {
-    expect(app.split(query)).toHaveLength(2)
-    expect(app.indexOf(phone)).toBeGreaterThan(0)
-    expect(app.indexOf(query)).toBeGreaterThan(app.indexOf(phone))
-    // One threshold of the phone; the other two conditions leave a tiny or a low window with the row in the header.
-    // A wide screen keeps the bar's items in the header row and the rest behind «Ещё» (a list under the button).
-    expect([...app.matchAll(/@media ([^{]+)\{/g)].map((match) => match[1].trim())).toEqual([
-      '(min-width: 541px)', '(max-width: 540px)', '(max-width: 540px) and (min-width: 340px) and (min-height: 480px)', '(forced-colors: active)',
-    ])
-    expect(nav).not.toBe('')
+describe('where the shell lives (text of the files)', () => {
+  it('has its own stylesheet; App.css keeps none of its rules', () => {
+    for (const selector of ['.brand-bar', '.main-navigation', '.main-add', '.section-navigation', '.intro', '.ck-round', '.ck-back', '.ck-close', '.ck-chat-link', '.skip-link']) {
+      expect(rules(app).some((item) => item.selector.includes(selector)), selector).toBe(false)
+      expect(rules(shell).some((item) => item.selector.includes(selector)), selector).toBe(true)
+    }
+    expect(rules(app).some((item) => /^footer\b/.test(item.selector))).toBe(false)
   })
 
-  it('takes the header strip away: the logo and the theme switch are not drawn, the strip has no box', () => {
+  it('holds the blocks of the phone, the wide header and the bars, in that order, and the layout tokens only there', () => {
+    const queries = [...shell.matchAll(/@media ([^{]+)\{/g)].map((match) => match[1].trim())
+    expect(queries.slice(0, 3)).toEqual(['(min-width: 541px)', '(max-width: 540px)', '(max-width: 540px) and (min-width: 340px) and (min-height: 480px)'])
+    expect(shell.replace(bar, '')).not.toMatch(/--ck-(bottom-nav|top-bar)-height:/)
+    expect(app).not.toMatch(/--ck-(bottom-nav|top-bar)-height:/)
+  })
+
+  it('writes no colour and reads only tokens that the theme defines', () => {
+    expect(shell).not.toMatch(/#[0-9a-f]{3,8}\b|\b(?:rgb|hsl|hwb|lab|lch|oklab|oklch)a?\(/i)
+    const defined = new Set([...tokens.matchAll(/^\s*(--ck-[a-z0-9-]+):/gm)].map((match) => match[1]))
+    const used = [...new Set([...shell.matchAll(/var\((--[a-z0-9-]+)/g)].map((match) => match[1]))]
+    expect(used.filter((name) => !defined.has(name))).toEqual([])
+    // Only the names of Чекист 2.0: none of the 1.x palette.
+    expect(shell).not.toMatch(/--ck-(bg|text|text-muted|text-(2xs|xs|sm|base|lg|xl|hero)|brand[-a-z]*|accent[-a-z]*|primary[-a-z]*|link[-a-z]*|border[-a-z]*|divider|header[-a-z]*|nav-bg|fab-shadow|popover-shadow|chip-selected[-a-z]*|surface-raised|on-primary|on-accent)\)/)
+  })
+
+  it('sizes every text by a token of the scale (the 11 px words of the iOS bar are a part of the caption)', () => {
+    const sizes = [...new Set([...shell.matchAll(/font-size:\s*([^;]+);/g)].map((match) => match[1].trim()))]
+    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-[a-z-]+\)$|^calc\(var\(--ck-text-caption\) \* 11 \/ 12\)$/)
+  })
+})
+
+describe('the bottom bar of a phone (text of the rules)', () => {
+  const nav = rule('.brand-bar .main-navigation', bar)
+
+  it('takes the header strip away: the logo and the actions are not drawn, the strip has no box', () => {
     expect(rule('.brand-bar', bar)).toBe('display: contents;')
     expect(rule('.brand-bar > .brand', bar)).toBe('display: none;')
     expect(rule('.brand-bar > .brand-actions', bar)).toBe('display: none;')
   })
 
-  it('pins the same nav of the header to the bottom of the window, on the surface of the bar, five equal columns', () => {
+  it('pins the same nav of the header to the bottom of the window, on its own layer, its columns equal', () => {
     expect(nav).toContain('position: fixed;')
-    expect(nav).toContain('inset: auto 0 0;')
     expect(nav).toContain('z-index: var(--ck-z-bottom-nav);')
     expect(nav).toContain('display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column;')
-    expect(nav).toContain('border-top: 1px solid var(--ck-border);')
-    expect(nav).toContain('background: var(--ck-nav-bg);')
-    // The list behind «Ещё» is drawn outside of the bar: the scroller of the header row would cut it.
     expect(nav).toContain('overflow: visible;')
-    expect(rest).not.toMatch(/position: fixed/)
-    // The ring of the bar is the ring of the page: the bar is not dark any more.
-    expect(rule('.brand-bar .main-navigation :focus-visible', bar)).toBe('outline-color: var(--ck-focus);')
+    expect(rule('.brand-bar .main-navigation :focus-visible', bar)).toContain('outline-color: var(--ck-focus);')
+    // Fixed only here: nothing else of the shell leaves the flow (the FAB of Android stands inside this nav).
+    expect(shell.replace(bar, '')).not.toMatch(/position: fixed/)
   })
 
-  it('tells the height of the bar to the pinned action bars through the contract of the layout tokens', () => {
-    expect(rule(':root', bar)).toBe('--ck-bottom-nav-height: 4rem; --ck-top-bar-height: 4rem;')
-    expect(rest).not.toContain('--ck-bottom-nav-height:')
-    // The pinned header row: at least its height, so whatever sticks under it can count from the token.
-    expect(rule('.intro', bar)).toContain('min-height: var(--ck-top-bar-height);')
-    expect(nav).toContain('min-height: calc(var(--ck-bottom-nav-height) + var(--ck-safe-bottom));')
-    expect(nav).toContain('padding-bottom: var(--ck-safe-bottom);')
-    expect(rule('.page', bar)).toMatch(/^padding: 0 \S+ env\(safe-area-inset-right, 0px\)\) var\(--ck-bottom-occupied\) /)
-    // The only scroll padding of the project is in ActionBar.css.
-    expect(app).not.toContain('scroll-padding')
+  it('tells the height of each bar to the action bars, the snackbar and the page through the layout tokens', () => {
+    // tokens.css comes after shell.css and sets the defaults on :root: every rule here weighs more than :root.
+    expect(rule(`${android}`, bar)).toBe('--ck-bottom-nav-height: var(--ck-navbar-android); --ck-top-bar-height: calc(var(--ck-topbar-android) + env(safe-area-inset-top, 0px));')
+    expect(rule(':root', bar)).toBe('')
+    // iOS: the capsule and the 8 px under it (its offset over the home indicator); the short top bar of 44 px.
+    expect(rule(`${ios}`, bar)).toBe('--ck-bottom-nav-height: calc(var(--ck-tabbar-ios) + var(--ck-space-2)); --ck-top-bar-height: calc(var(--ck-topbar-ios) + env(safe-area-inset-top, 0px));')
+    expect(rule(`${ios} .brand-bar .main-navigation`, bar)).toContain('bottom: calc(var(--ck-space-2) + var(--ck-safe-bottom)); left: max(10px, env(safe-area-inset-left, 0px)); height: var(--ck-tabbar-ios);')
+    expect(rule(`${android} .brand-bar .main-navigation`, bar)).toContain('min-height: calc(var(--ck-navbar-android) + var(--ck-safe-bottom));')
+    expect(rule(`${android} .brand-bar .main-navigation`, bar)).toContain('var(--ck-safe-bottom) max(')
+    // The page ends above the bar (and above the FAB on Android); the only scroll padding is in ActionBar.css.
+    expect(rule('body .page', bar)).toBe('padding: 0 max(var(--ck-space-4), env(safe-area-inset-right, 0px)) var(--ck-bottom-occupied) max(var(--ck-space-4), env(safe-area-inset-left, 0px));')
+    expect(rule(`${android}:not(.ck-focus-mode) body .page`, bar)).toBe('padding-bottom: calc(var(--ck-bottom-occupied) + var(--ck-fab-android) + var(--ck-space-4));')
+    expect(shell).not.toContain('scroll-padding')
+    expect(actionBar).toContain('bottom: var(--ck-bottom-occupied);')
   })
 
-  it('leaves a focus screen (a new spend) without the bar: nothing is occupied at the bottom, its save bar stands there', () => {
+  it('leaves a focus screen (a new spend) without the bar and «＋»: nothing is occupied at the bottom', () => {
     expect(rule(':root.ck-focus-mode', bar)).toBe('--ck-bottom-nav-height: 0px;')
     expect(rule('.ck-focus-mode .brand-bar .main-navigation', bar)).toBe('display: none;')
+    expect(rule('.ck-focus-mode footer', bar)).toBe('display: none;')
     expect(raw('App.tsx')).toContain("document.documentElement.classList.toggle('ck-focus-mode', focus)")
+    // The rule for the focus mode comes after the one of iOS: it wins there too.
+    expect(bar.indexOf(':root.ck-focus-mode {')).toBeGreaterThan(bar.indexOf(`${ios} {`))
   })
 
-  it('orders the layers: the lists of the header over the page, the skip link over everything', () => {
-    expect(rule('.brand-bar .main-group[data-open] .main-group-list', rest)).toContain('z-index: var(--ck-z-menu-sheet);')
-    expect(rule('.skip-link', rest)).toContain('z-index: var(--ck-z-skip-link);')
-    // «＋» opens the sheet of components/Sheet.css on its own layer above the menu; the header row lies under the bar.
-    expect(rules(app).filter((item) => item.selector.includes('main-add-list')).map((item) => item.body).join(' ')).not.toContain('z-index')
-    expect([...app.matchAll(/z-index: ([^;]+);/g)].map((match) => match[1]).sort()).toEqual(
-      ['var(--ck-z-bottom-nav)', 'var(--ck-z-menu-sheet)', 'var(--ck-z-skip-link)', 'var(--ck-z-top-bar)'])
+  it('draws the iOS capsule of glass with a solid fallback, and the round «＋» of the seal beside it, apart from the sections', () => {
+    const glass = rule(`${ios} .brand-bar .main-navigation::before`, bar)
+    expect(glass).toContain('background: var(--ck-material);')
+    expect(glass).toContain('border: 1px solid var(--ck-material-line);')
+    expect(glass).toContain('backdrop-filter: blur(20px) saturate(1.8);')
+    expect(glass).toContain('box-shadow: var(--ck-shadow-float);')
+    expect(glass).toContain('border-radius: var(--ck-radius-pill);')
+    expect(rule(`${ios} .brand-bar .main-navigation:has(> .main-add)::before`, bar)).toBe('right: calc(var(--ck-tabbar-ios) + var(--ck-space-2));')
+    const plus = rule(`${ios} .brand-bar .main-add-toggle`, bar)
+    expect(plus).toContain('width: var(--ck-tabbar-ios); height: var(--ck-tabbar-ios);')
+    expect(plus).toContain('border-radius: 50%;')
+    expect(rule('.brand-bar .main-add-toggle', bar)).toContain('background: var(--ck-seal); color: var(--ck-on-seal); box-shadow: var(--ck-shadow-float);')
+    const supports = block(shell, '@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {')
+    expect(rule(`${ios} .brand-bar .main-navigation::before`, supports)).toBe('background: var(--ck-surface);')
+    const transparency = block(shell, '@media (prefers-reduced-transparency: reduce) {')
+    expect(rule(`${ios} .brand-bar .main-navigation::before`, transparency)).toContain('background: var(--ck-surface);')
   })
 
-  it('reads only tokens that the theme defines and writes no colour', () => {
-    const defined = new Set([...tokens.matchAll(/^\s*(--ck-[a-z0-9-]+):/gm)].map((match) => match[1]))
-    const used = [...new Set([...bar.matchAll(/var\((--[a-z0-9-]+)/g)].map((match) => match[1]))]
-    expect(used).toEqual(expect.arrayContaining(['--ck-bottom-nav-height', '--ck-safe-bottom', '--ck-bottom-occupied', '--ck-z-bottom-nav', '--ck-nav-bg', '--ck-primary', '--ck-fab-shadow']))
-    expect(used.filter((name) => !defined.has(name))).toEqual([])
-    expect(bar).not.toMatch(/#[0-9a-f]{3,8}\b|\b(?:rgb|hsl)a?\(/i)
+  it('draws the Material 3 navigation bar of Android and the FAB over it, rising over an action bar and a snackbar', () => {
+    expect(rule(`${android} .brand-bar .main-navigation`, bar)).toContain('background: var(--ck-nav-android);')
+    const fab = rule(`${android} .brand-bar .main-add-toggle`, bar)
+    expect(fab).toBe('width: var(--ck-fab-android); height: var(--ck-fab-android); min-height: var(--ck-fab-android); border-radius: var(--ck-radius-fab);')
+    expect(rule(`${android} .brand-bar .main-add`, bar)).toContain('bottom: calc(var(--ck-bottom-occupied) + var(--ck-space-4));')
+    expect(rule(`${android}:has(main .ck-action-bar) .brand-bar .main-add`, bar)).toContain('var(--ck-action-bar-room)')
+    expect(rule(`${android}:has(.ck-snackbar) .brand-bar .main-add`, bar)).toContain('var(--ck-bottom-occupied)')
   })
 
-  it('reaches under the cut-out of a phone only together with the side insets', () => {
-    expect(html).toContain('<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />')
-    for (const selector of ['.intro', '.page', '.brand-bar .main-navigation']) {
-      expect(rule(selector, bar), selector).toContain('env(safe-area-inset-left, 0px)')
-      expect(rule(selector, bar), selector).toContain('env(safe-area-inset-right, 0px)')
-    }
-    // The 16 px margins of the artifact, never less.
-    expect(rule('.page', bar)).toBe('padding: 0 max(16px, env(safe-area-inset-right, 0px)) var(--ck-bottom-occupied) max(16px, env(safe-area-inset-left, 0px));')
-    // Outside of the block (a phone on its side, a wide window) the whole body steps aside; the block takes it over.
-    expect(rule('body', rest)).toContain('padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);')
-    expect(rule('body', bar)).toBe('padding-inline: 0;')
+  it('marks the current section, and «Ещё» with it, not by colour alone: a pad (iOS) or a pill (Android) and a heavier word', () => {
+    const iosCurrent = rule(`${ios} .brand-bar .main-navigation > a[aria-current]`, bar)
+    expect(iosCurrent).toContain('color: var(--ck-seal-ink); font-weight: 700;')
+    expect(iosCurrent).toContain('background: color-mix(')
+    expect(rule(`${ios} .brand-bar .main-more-toggle[data-current]`, bar)).toBe(iosCurrent)
+    expect(rule(`${ios} .brand-bar a.main-more-toggle[aria-current]`, bar)).toBe(iosCurrent)
+    expect(rule(`${android} .brand-bar .main-navigation > a[aria-current]`, bar)).toBe('color: var(--ck-ink); font-weight: 700;')
+    expect(rule(`${android} .brand-bar .main-navigation > a[aria-current] .ck-icon`, bar)).toBe('background: var(--ck-seal-soft); color: var(--ck-seal-ink);')
+    // The pill of Android: 56 × 32 around a 24 px picture.
+    expect(rule(`${android} .brand-bar .main-navigation > a .ck-icon`, bar)).toBe('box-sizing: content-box; width: 24px; height: 24px; padding: var(--ck-space-1) var(--ck-space-4); border-radius: var(--ck-radius-pill);')
+    // The dot of the header row does not belong to the bar.
+    expect(rule('.brand-bar .main-navigation > a[aria-current]::before', bar)).toBe('content: none;')
+    const forced = block(shell, '@media (forced-colors: active) {')
+    expect(rule('.main-more-toggle[data-current]', forced)).toContain('text-decoration: underline;')
+    expect(rule('.main-navigation a[aria-current]', forced)).toContain('text-decoration: underline;')
   })
 
-  it('leads «Ещё» to its screen (/more, 2026-10-13): the lists of the header row are never drawn in the bar', () => {
+  it('gives every section and «＋» a target of a tap at least', () => {
+    expect(rule('.brand-bar .main-navigation > a', bar)).toContain('min-height: var(--ck-tap);')
+    expect(rule(`${android} .brand-bar .main-navigation > a`, bar)).toContain('min-height: var(--ck-navbar-android);')
+    // The capsule is 62 px with 4 px around: 54 px of a section.
+    expect(rule(`${ios} .brand-bar .main-navigation`, bar)).toContain('padding: var(--ck-space-1);')
+  })
+
+  it('leads «Ещё» to its screen (/more): the lists of the header row are never drawn in the bar', () => {
     expect(rule('.brand-bar .main-more-list', bar)).toBe('display: none;')
     expect(rules(bar).some((item) => item.selector.includes('[data-open]'))).toBe(false)
-    expect(app).not.toMatch(/transition|animation|@keyframes/)
   })
 
-  it('draws no «Ещё», no pictures and no theme row wherever the menu is a row: the links behind it stand in the row', () => {
-    expect(rule('.main-more', rest)).toBe('display: contents;')
-    expect(rule('.main-more-list', rest)).toBe('display: contents;')
-    // A link: heavier than the general `.main-navigation a` that would draw it in the row.
-    expect(rule('.main-navigation .main-more-toggle', rest)).toBe('display: none;')
-    expect(rule('.main-navigation .ck-icon', rest)).toBe('display: none;')
+  it('draws no «Ещё», no pictures and no «＋» wherever the menu is a row: the links behind it stand in the row', () => {
+    expect(rule('.main-more', base)).toBe('display: contents;')
+    expect(rule('.main-more-list', base)).toBe('display: contents;')
+    expect(rule('.main-navigation .main-more-toggle', base)).toBe('display: none;')
+    expect(rule('.main-navigation .ck-icon', base)).toBe('display: none;')
+    expect(rule('.main-add', base)).toBe('display: none;')
     expect(rule('.brand-bar .main-more-toggle', bar)).toContain('display: flex; flex-direction: column;')
     expect(rule('.brand-bar .main-navigation .ck-icon', bar)).toContain('display: block;')
   })
 
-  it('marks the current section of the bar, and «Ещё» with it, by the colour of links and a heavier word', () => {
-    const mark = 'background: none; color: var(--ck-link); font-weight: 800;'
-    expect(rule('.brand-bar .main-navigation > a[aria-current]', bar)).toBe(mark)
-    expect(rule('.brand-bar .main-more-toggle[data-current]', bar)).toBe(mark)
-    expect(rule('.main-navigation a[aria-current]', rest)).toContain('font-weight: 600;')
-    // On its own screen «Ещё» is the current page: the same mark, without the dot of the header row.
-    expect(rule('.brand-bar .main-navigation a.main-more-toggle[aria-current]', bar)).toBe(mark)
-    expect(rules(bar).filter((item) => item.selector.includes('::before')).map((item) => item.selector))
-      .toEqual(['.brand-bar .main-navigation > a[aria-current]::before', '.brand-bar .main-navigation a.main-more-toggle[aria-current]::before'])
-    const forced = app.slice(app.indexOf('@media (forced-colors: active)'))
-    expect(rule('.main-more-toggle[data-current]', forced)).toContain('text-decoration: underline;')
-  })
-
-  it('raises a round «＋» of the main action over the bar, never over a button of a pinned action bar', () => {
-    expect(rule('.main-add', rest)).toBe('display: none;')
-    const toggle = rule('.brand-bar .main-add-toggle', bar)
-    expect(toggle).toContain('background: var(--ck-primary); color: var(--ck-on-primary); box-shadow: var(--ck-fab-shadow);')
-    expect(toggle).toContain('border-radius: 50%;')
-    const side = px(toggle, 'width')
-    expect(side).toBe(56)
-    // Centred in the bar with a negative top margin: its top rises above the edge of the bar by this much, less than
-    // the padding of a pinned action bar (ActionBar.css), so it covers no button of one.
-    const height = px(rule(':root', bar), '--ck-bottom-nav-height')
-    const lift = -px(toggle, 'margin')
-    const above = lift - (height - (side - lift)) / 2
-    const padding = Number(/padding-block: (\d+)px;/.exec(actionBar)?.[1])
-    expect(above).toBeGreaterThan(0)
-    expect(above).toBeLessThan(padding)
-    expect(rule('.brand-bar .main-add', bar)).toContain('align-items: center;')
-    // The actions of its sheet are big rows under the thumb.
-    expect(rule('.main-add-action', rest)).toContain('min-height: 72px;')
-  })
-
-  it('writes the words of the bar at the 12 px step of the scale only, and makes the sections of a part chips', () => {
-    expect([...new Set([...bar.matchAll(/font-size:\s*([^;]+);/g)].map((match) => match[1]))]).toEqual(['var(--ck-text-2xs)'])
-    expect(rule('.section-navigation a[aria-current]', rest)).toContain('background: var(--ck-chip-selected-bg); color: var(--ck-chip-selected-text);')
-    // Every rule of the bar about the menu is tied to the header: the menu of a section is a .main-navigation too.
-    const loose = rules(bar).map((item) => item.selector).filter((selector) => /main-(navigation|more|group)/.test(selector) && !/^(\.ck-focus-mode )?\.brand-bar /.test(selector))
+  it('ties every rule of the bar about the menu to the header: the sections of a part are another nav', () => {
+    const loose = rules(bar).map((item) => item.selector).filter((selector) => /main-(navigation|more|group|add)/.test(selector)
+      && !/^(:root(\[[^\]]*\]|:not\([^)]*\)|:has\([^)]*\)|\.[\w-]+)* )?(\.ck-focus-mode )?\.brand-bar /.test(selector))
     expect(loose).toEqual([])
+  })
+})
+
+describe('the top bar of a phone (text of the rules)', () => {
+  it('pins the header row to the top under the status bar, edge to edge, on the page and on its own layer', () => {
+    const intro = rule('.intro', bar)
+    expect(intro).toContain('position: sticky; top: 0; z-index: var(--ck-z-top-bar);')
+    expect(intro).toContain('min-height: var(--ck-top-bar-height);')
+    expect(intro).toContain('padding: env(safe-area-inset-top, 0px)')
+    expect(intro).toContain('env(safe-area-inset-left, 0px)')
+    expect(intro).toContain('env(safe-area-inset-right, 0px)')
+    expect(intro).toContain('background: var(--ck-paper);')
+    expect(html).toContain('<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />')
+    expect(html).toContain('<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />')
+  })
+
+  it('draws the large title at the root of an iOS section and the short bar over it that shows the title on glass under scroll', () => {
+    expect(rule(`${ios} .intro[data-nav="root"]`, bar)).toContain('position: static;')
+    const large = rule(`${ios} .intro[data-nav="root"] h1`, bar)
+    expect(large).toContain('font-family: var(--ck-font-display); font-size: var(--ck-text-title-large); font-weight: 700;')
+    const short = rule(`${ios} .ck-topbar[data-nav="root"]`, bar)
+    expect(short).toContain('position: sticky; top: 0; z-index: var(--ck-z-top-bar);')
+    expect(short).toContain('height: var(--ck-top-bar-height);')
+    expect(rule('.ck-topbar-title', bar)).toContain('opacity: 0;')
+    expect(rule('main[data-scrolled] > .ck-topbar .ck-topbar-title', bar)).toBe('opacity: 1;')
+    const glass = rule(`${ios} main[data-scrolled] > .ck-topbar`, bar)
+    expect(glass).toContain('background: var(--ck-material);')
+    expect(glass).toContain('backdrop-filter: blur(20px) saturate(1.8);')
+    expect(rule('.ck-topbar', base)).toBe('display: none;')
+  })
+
+  it('centres the short title of a nested iOS page and keeps the title of Android on the left, filled under scroll', () => {
+    const middle = rule(`${ios} .intro h1`, bar)
+    expect(middle).toContain('position: absolute;')
+    expect(middle).toContain('left: 50%;')
+    expect(middle).toContain('text-align: center;')
+    expect(middle).toContain('font-size: var(--ck-text-title);')
+    expect(rule(`${android} main[data-scrolled] > .intro`, bar)).toBe('background: var(--ck-nav-android);')
+    expect(rule('.intro h1', narrow)).toContain('font-size: var(--ck-text-heading);')
+  })
+
+  it('shows «назад» only on a phone: «‹ Траты» in the brand ink on iOS, «←» as a 48 px icon button on Android', () => {
+    expect(rule('.ck-back', base)).toBe('display: none;')
+    expect(rule('.ck-back', narrow)).toContain('display: inline-flex;')
+    expect(rule('.ck-back', narrow)).toContain('min-width: var(--ck-tap); min-height: var(--ck-tap);')
+    expect(rule(`${android} .ck-back`, narrow)).toContain('width: 48px; height: 48px;')
+    expect(rule(`${ios} .ck-back`, narrow)).toContain('color: var(--ck-seal-ink);')
+    expect(rule(`${ios} .ck-back-arrow`, narrow)).toBe('display: none;')
+    expect(rule('.ck-back-chevron', narrow)).toBe('display: none;')
+    expect(rule(`${ios} .ck-back-text`, narrow)).toContain('display: block;')
+  })
+
+  it('draws the round controls of a page and «✕» as targets of a tap', () => {
+    expect(rule('.ck-round', base)).toContain('width: var(--ck-tap); height: var(--ck-tap); min-height: var(--ck-tap);')
+    expect(rule('.ck-close', base)).toContain('width: var(--ck-tap); height: var(--ck-tap); min-height: var(--ck-tap); margin-left: auto;')
+    expect(rule('.intro-slot', base)).toBe('display: contents;')
+    expect(rule('.ck-chat-link', base)).toContain('width: var(--ck-tap); height: var(--ck-tap);')
+    expect(rule('.ck-chat-link', base)).toContain('background: var(--ck-gold-soft);')
+  })
+})
+
+describe('the header of a wide screen (text of the rules)', () => {
+  const wide = block(shell, wideQuery)
+
+  it('lies on the surface with a hairline under it, keeps the vertical of the page and the status bar of an iPad', () => {
+    const header = rule('.brand-bar', base)
+    expect(header).toContain('background: var(--ck-surface); color: var(--ck-ink);')
+    expect(header).toContain('border-bottom: 1px solid var(--ck-line);')
+    expect(header).toContain('padding: max(var(--ck-space-3), env(safe-area-inset-top, 0px)) max(36px, calc(50% - 564px)) var(--ck-space-3);')
+    expect(rule('.page', app)).toContain('max-width: 1200px; padding: 0 36px;')
+  })
+
+  it('marks the current item as a pill of the soft brand with a dot, and opens «Данные ▾» as a popover on the surface', () => {
+    expect(rule('.main-navigation a[aria-current]', base)).toBe('background: var(--ck-seal-soft); color: var(--ck-seal-ink); font-weight: 700;')
+    expect(rule('.main-navigation a[aria-current]::before', base)).toContain('border-radius: 50%; background: currentColor;')
+    const list = rule('.brand-bar .main-group[data-open] .main-group-list', wide)
+    expect(list).toContain('z-index: var(--ck-z-menu-sheet);')
+    expect(list).toContain('background: var(--ck-surface);')
+    expect(list).toContain('box-shadow: var(--ck-shadow-float);')
+    expect(rule('.brand-bar .main-group-toggle[data-current]::before', wide)).toContain('background: currentColor;')
+    expect(rule('.brand-bar .main-group-toggle', wide)).toContain('min-height: var(--ck-tap);')
+  })
+
+  it('orders the layers: the popovers over the page, the skip link over everything', () => {
+    expect(rule('.skip-link', base)).toContain('z-index: var(--ck-z-skip-link);')
+    expect([...new Set([...shell.matchAll(/z-index: ([^;]+);/g)].map((match) => match[1]))].sort())
+      // -1: the glass under the links of the iOS capsule; 1: the old page over the new one while iOS moves back.
+      .toEqual(['-1', '1', 'var(--ck-z-bottom-nav)', 'var(--ck-z-menu-sheet)', 'var(--ck-z-skip-link)', 'var(--ck-z-top-bar)'].sort())
+  })
+})
+
+describe('the sections of a part and the «＋» sheet (text of the rules)', () => {
+  it('draws the sections as the segments of the platform: a raised segment on iOS, a tinted one with a check on Android', () => {
+    expect(rule('.section-navigation a[aria-current]', base)).toBe('background: var(--ck-surface); color: var(--ck-ink); box-shadow: var(--ck-shadow-sm);')
+    expect(rule(`${android} .section-navigation a[aria-current]`, base)).toContain('background: color-mix(')
+    expect(rule(`${android} .section-navigation a[aria-current]::before`, base)).toContain('mask: url(')
+    expect(rule(`${android} .section-navigation a`, base)).toContain('min-height: 40px;')
+  })
+
+  it('puts «Снять чек» across the sheet in the seal and the other ways in as tonal tiles of two taps', () => {
+    expect(rule('.main-add-list', base)).toContain('grid-template-columns: repeat(2, minmax(0, 1fr));')
+    expect(rule('.main-add-primary', base)).toContain('grid-column: 1 / -1;')
+    expect(rule('.main-add-primary', base)).toContain('background: var(--ck-seal); color: var(--ck-on-seal);')
+    expect(rule('.main-add-action', base)).toContain('min-height: calc(2 * var(--ck-tap));')
+    expect(rule('.main-add-action', base)).toContain('background: var(--ck-surface-2); color: var(--ck-ink);')
+  })
+})
+
+describe('the move between pages (text of the rules)', () => {
+  it('moves only under no reduced motion: no animation, transition or keyframes outside of that block', () => {
+    expect(shell.replace(block(shell, motionQuery), '')).not.toMatch(/animation|transition|@keyframes/)
+    expect(motion).toContain(':root[data-nav-direction] .page { view-transition-name: ck-page; }')
+  })
+
+  it('slides the page on iOS for 350 ms (in from the right, the old one 30 % to the left; back the other way)', () => {
+    expect(rule(`${ios}[data-nav-direction="forward"]::view-transition-new(ck-page)`, motion)).toBe('animation-name: ck-nav-from-right;')
+    expect(rule(`${ios}[data-nav-direction="forward"]::view-transition-old(ck-page)`, motion)).toBe('animation-name: ck-nav-to-left;')
+    expect(rule(`${ios}[data-nav-direction="back"]::view-transition-old(ck-page)`, motion)).toContain('animation-name: ck-nav-to-right;')
+    expect(rule(`${ios}[data-nav-direction="back"]::view-transition-new(ck-page)`, motion)).toBe('animation-name: ck-nav-from-left;')
+    expect(rule(`${ios}[data-nav-direction]::view-transition-new(ck-page)`, motion)).toBe('animation-duration: 350ms;')
+    expect(motion).toMatch(/@keyframes ck-nav-to-left \{ to \{ transform: translateX\(-30%\); \} \}/)
+  })
+
+  it('moves the page along the X axis of Material 3 on Android for 300 ms: 30 px and a cross-fade', () => {
+    expect(rule(':root[data-nav-direction]::view-transition-new(ck-page)', motion)).toContain('animation-duration: 300ms;')
+    expect(rule(`${android}[data-nav-direction="forward"]::view-transition-new(ck-page)`, motion)).toBe('animation-name: ck-axis-in-right;')
+    expect(motion).toMatch(/@keyframes ck-axis-in-right \{ from \{ opacity: 0; transform: translateX\(30px\); \} \}/)
+    // The bars and the background do not move or blend: only the page does.
+    expect(rule(':root[data-nav-direction]::view-transition-old(root)', motion)).toBe('animation: none; opacity: 0;')
   })
 })

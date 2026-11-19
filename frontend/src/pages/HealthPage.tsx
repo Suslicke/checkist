@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getHealth } from '../api/health'
+import './Health.css'
 import type { CheckCode, HealthErrorReason, HealthResult, ServiceCheck } from '../api/health'
 
 type PageState = { kind: 'loading' } | HealthResult
@@ -22,7 +23,9 @@ const errorMessages: Record<HealthErrorReason, string> = {
   'inconsistent-response': 'Сервер вернул несогласованный ответ. Повторите попытку позже.',
 }
 
-function serviceStatus(state: PageState, check?: ServiceCheck) {
+type Tone = 'pending' | 'unknown' | 'error' | 'ok'
+
+function serviceStatus(state: PageState, check?: ServiceCheck): { tone: Tone; text: string } {
   if (state.kind === 'loading') return { tone: 'pending', text: 'Проверяем…' }
   if (!check) return { tone: 'unknown', text: 'Не удалось проверить' }
   if (check.status === 'error') return { tone: 'error', text: checkMessages[check.code] }
@@ -65,7 +68,7 @@ export default function HealthPage() {
       : state.kind === 'ok' ? 'Сервер и все три сервиса доступны.'
         : 'Запрашиваем текущее состояние сервера и сервисов.'
   const checks = state.kind === 'ok' || state.kind === 'degraded' ? state.checks : undefined
-  const apiStatus = {
+  const apiStatus: { tone: Tone; text: string } = {
     tone: loading ? 'pending' : state.kind === 'error' ? 'error' : 'ok',
     text: loading ? 'Проверяем…' : state.kind === 'error' ? 'Проверка не удалась' : 'Отвечает',
   }
@@ -76,46 +79,33 @@ export default function HealthPage() {
     { name: 'Celery', description: 'Обработка задач', ...serviceStatus(state, checks?.celery) },
   ]
 
+  // «Состояние сервисов» (Чекист 2.0): one panel — the summary in the soft tone of its state with the words, the four
+  // services as rows with their state in words and a dot of its tone (ok — income, degraded — over, error — error).
+  // The styles live in features/more/More.css: the page is a row of «Ещё» › «Настройки».
   return (
-    <>
-      <section className="health-panel" aria-labelledby="health-heading">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Состояние системы</p>
-            <h2 id="health-heading">Связь с сервисами</h2>
-          </div>
-          <button type="button" onClick={repeat} disabled={loading}>Повторить</button>
+    <section className="ck-panel ck-health" aria-labelledby="health-heading">
+      <div className="ck-panel-head ck-health-head">
+        <h2 id="health-heading">Связь с сервисами</h2>
+        <button type="button" className="ck-button-secondary ck-health-repeat" onClick={repeat} disabled={loading}>Повторить</button>
+      </div>
+
+      <div className={`ck-health-summary ck-health-${state.kind}`} role="status" aria-live="polite" aria-atomic="true">
+        <span className="ck-health-dot" aria-hidden="true" />
+        <div className="ck-health-summary-text">
+          <p className="ck-health-summary-title">{title}</p>
+          <p className="ck-health-summary-detail">{detail}</p>
         </div>
+      </div>
 
-        <div className={`health-summary summary-${state.kind}`} role="status" aria-live="polite" aria-atomic="true">
-          <span className="summary-dot" aria-hidden="true" />
-          <div>
-            <p className="summary-title">{title}</p>
-            <p className="summary-detail">{detail}</p>
+      <dl className="ck-health-services" aria-busy={loading}>
+        {services.map((service) => (
+          <div className="ck-health-service" key={service.name}>
+            <dt><span className="ck-health-name">{service.name}</span><span className="ck-health-description">{service.description}</span></dt>
+            <dd className={`ck-health-state ck-health-tone-${service.tone}`}><span className="ck-health-state-dot" aria-hidden="true" />{service.text}</dd>
           </div>
-        </div>
-
-        <dl className="services" aria-busy={loading}>
-          {services.map((service) => (
-            <div className="service" key={service.name}>
-              <dt><span className="service-name">{service.name}</span><span className="service-description">{service.description}</span></dt>
-              <dd className={`service-state tone-${service.tone}`}><span className="status-dot" aria-hidden="true" />{service.text}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="panel-note">Статусы обновляются при открытии страницы и по кнопке «Повторить».</p>
-      </section>
-
-      <section className="planned" aria-labelledby="planned-heading">
-        <p className="eyebrow">Следующие этапы</p>
-        <h2 id="planned-heading">Что планируется</h2>
-        <ul>
-          <li>Ручное исправление распознанных данных</li>
-          <li>Пользовательский вход и доступ к своим чекам</li>
-          <li>Дашборд со статистикой</li>
-        </ul>
-        <p>Эти функции пока не реализованы.</p>
-      </section>
-    </>
+        ))}
+      </dl>
+      <p className="ck-health-note">Статусы обновляются при открытии страницы и по кнопке «Повторить».</p>
+    </section>
   )
 }

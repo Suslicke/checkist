@@ -3,21 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#141110" />
+    <!-- The paper of each theme (--ck-paper, Чекист 2.0): the system bar of Android and of an installed app. Without the
+         script the browser picks the pair by the system theme; the script below gives both the theme the person chose. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f2f2" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121012" />
     <script>
-      // Before the first paint (see src/theme/theme.ts): a saved choice wins; without one the theme of the system.
-      // The dark theme is the default of the stylesheet; only the light one needs the attribute.
+      // Before the first paint (see src/theme/theme.ts and src/theme/platform.ts). Every read of the storage is guarded:
+      // a blocked storage leaves the defaults — the theme of the system, the platform of the device, no privacy.
       ;(function () {
+        var root = document.documentElement
+        var read = function (key) {
+          try {
+            return localStorage.getItem(key)
+          } catch (error) {
+            return null
+          }
+        }
+        // Theme: a saved choice wins; without one the theme of the system. The dark theme is the default of the
+        // stylesheet; only the light one needs the attribute.
         var saved = null
         try {
           saved = localStorage.getItem('checkist.theme')
         } catch (error) {}
+        var light = false
         try {
-          if (saved === 'light' || (saved !== 'dark' && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-            document.documentElement.setAttribute('data-theme', 'light')
-            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f6efdc')
-          }
+          light = saved === 'light' || (saved !== 'dark' && window.matchMedia('(prefers-color-scheme: light)').matches)
         } catch (error) {}
+        if (light) root.setAttribute('data-theme', 'light')
+        try {
+          var metas = document.querySelectorAll('meta[name="theme-color"]')
+          for (var index = 0; index < metas.length; index += 1) metas[index].setAttribute('content', light ? '#f4f2f2' : '#121012')
+        } catch (error) {}
+        // Platform (docs/design-system/platforms.md): the grammar of the bars, the sheets and the back button. A computer
+        // takes the Android one. `checkist.platform` = 'ios' | 'android' wins, for a check on another device.
+        var platform = 'android'
+        try {
+          var forced = read('checkist.platform')
+          var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+          platform = forced === 'ios' || forced === 'android' ? forced : ios ? 'ios' : 'android'
+          if (platform === 'ios' && 'switch' in HTMLInputElement.prototype) root.setAttribute('data-switch', 'native')
+        } catch (error) {}
+        root.setAttribute('data-platform', platform)
+        // Privacy: the sums are blurred from the first paint (src/theme/privacy.ts).
+        if (read('checkist.privacy') === '1') root.setAttribute('data-privacy', '')
       })()
     </script>
     <meta name="description" content="Чекист — семейный бюджет по фото чеков и тратам словами: распознавание, лимиты по категориям, цены в магазинах и статистика трат." />
@@ -30,13 +58,15 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Чекист" />
-    <!-- "default": the page starts below the status bar; the header has no top safe-area padding. -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <!-- Manrope (OFL 1.1) from Google Fonts: no Content-Security-Policy forbids it (deploy/Caddyfile, deploy/docker/Caddyfile);
-         display=swap shows system-ui until the font arrives. -->
+    <!-- "black-translucent": the page paints under the status bar of an installed app on iPhone; the top bar of the shell
+         (src/shell.css) keeps its content below it by env(safe-area-inset-top). -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Geologica (display), Onest (interface) and JetBrains Mono (the paper receipt), OFL 1.1, from Google Fonts: no
+         Content-Security-Policy forbids it (deploy/Caddyfile, deploy/docker/Caddyfile); display=swap shows system-ui until
+         the fonts arrive. One request, variable weights. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&amp;display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@400..800&amp;family=Onest:wght@400..800&amp;family=JetBrains+Mono:wght@400..600&amp;display=swap" />
     <title>Чекист</title>
   </head>
   <body>

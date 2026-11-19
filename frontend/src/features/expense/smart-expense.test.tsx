@@ -65,10 +65,10 @@ describe('the amount calculator (no eval)', () => {
       errors={{}} saving={false} onChange={noop} onSubmit={noop} />)
     expect(html).toContain('value="12\u00a0000+350"')
     expect(html).toContain('<div class="expense-calc-keys" role="group" aria-label="Посчитать сумму">')
-    expect(html).toContain('<button type="button" class="expense-calc-key" aria-label="Плюс">+</button>')
-    expect(html).toContain('<button type="button" class="expense-calc-key" aria-label="Разделить">÷</button>')
+    expect(html).toContain('<button type="button" class="ck-icon-button expense-calc-key" aria-label="Плюс">+</button>')
+    expect(html).toContain('<button type="button" class="ck-icon-button expense-calc-key" aria-label="Разделить">÷</button>')
     expect(html).toContain('<output class="expense-calc-result" for="expense-amount">= 12\u00a0350</output>')
-    expect(html).toContain('Сохранить · 12\u00a0350\u00a0₸')
+    expect(html).toContain('Сохранить · <span class="ck-money ck-money--inline"><span class="ck-money-int">12\u202f350</span><span class="ck-money-cur">\u202f₸</span></span>')
   })
 })
 
@@ -110,7 +110,9 @@ describe('past spends under «Скажите словами» (no model)', () =>
       suggestions={[claude]} frequent={[groceries]} today="2026-10-13" />)
     expect(typed).toContain('<ul class="ck-list expense-suggest" aria-label="Как в прошлый раз">')
     expect(typed).toContain('<span class="ck-row-title">CLAUDE.AI SUBSCRIPTION</span><span class="ck-row-meta">Связь и подписки · 12.09</span>')
-    expect(typed).toContain('<span class="ck-row-amount">225\u00a0$</span>')
+    // A 2.0 row: the tile of a repeat, the title and meta, the amount by <Money>.
+    expect(typed).toMatch(/<button type="button" class="ck-row expense-suggest-row"><span class="ck-row-badge" aria-hidden="true"><svg/)
+    expect(typed).toContain('<span class="ck-row-amount"><span class="ck-money ck-money--row"><span class="ck-money-int">225</span><span class="ck-money-cur">\u202f$</span></span></span>')
     expect(typed).not.toContain('Частые траты')
     const empty = renderToStaticMarkup(<TextHintView text="" view={{ kind: 'repeated' }} onText={noop} onSubmit={noop}
       suggestions={[claude]} frequent={[claude]} />)

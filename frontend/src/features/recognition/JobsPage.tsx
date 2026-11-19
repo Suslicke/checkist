@@ -10,6 +10,7 @@ import { numbered } from '../../lib/text'
 import { Link, navigate } from '../../navigation'
 import type { JobsPageProps } from '../../pages/types'
 import { useNarrow } from '../../lib/cards'
+import Icon from '../../components/Icon'
 import ActionButtons from './ActionButtons'
 import JobSummary from './JobSummary'
 import JobThumb from './JobThumb'
@@ -31,7 +32,7 @@ export default function JobsPage({ query }: JobsPageProps) {
   const narrow = useNarrow()
   const changeStatus = (event: ChangeEvent<HTMLSelectElement>) => navigate({ kind: 'jobs', query: { ...query, page: 1, status: (event.target.value || undefined) as typeof query.status } })
   return <div className="ck-rec">
-    <div className="ck-rec-actions ck-rec-nav"><Link className="action-link" to="/receipts/upload">Загрузить фото</Link><Link className="action-link" to="/receipts">К чекам</Link></div>
+    <div className="ck-rec-actions ck-rec-nav"><Link className="action-link ck-btn-primary" to="/receipts/upload"><Icon name="camera" size={18} />Загрузить фото</Link><Link className="action-link" to="/receipts">К чекам</Link></div>
     <div className="ck-rec-panel ck-rec-filters">
       <ResponsiveFilters count={jobsFilterCount(query)} title="Фильтры заданий">
         <label htmlFor="recognition-status-filter">Статус обработки</label>
@@ -57,7 +58,7 @@ export default function JobsPage({ query }: JobsPageProps) {
               <p><span className="ck-rec-pair">{numbered('Фото', job.photo_id)}</span>{job.retry_of !== null && <> · повтор <span className="ck-rec-pair">{numbered('задания', job.retry_of)}</span></>}</p>
             </>}
             <JobSummary job={job} announce compact={narrow} />
-            <ActionButtons job={job} state={actions.state} run={actions.run} onReview={() => navigate({ kind: 'job', jobId: job.id })} />
+            <ActionButtons job={job} state={actions.state} run={actions.run} primary={false} onReview={() => navigate({ kind: 'job', jobId: job.id })} />
           </li>)}</ul>}
         <Pagination page={data.page} pages={data.pages} buildPageHref={(nextPage) => ({ kind: 'jobs', query: { ...query, page: nextPage } })} label="Страницы заданий" />
       </>}

@@ -5,6 +5,8 @@ import { addContribution, createGoal, isGoal, isGoalDetail, reconcileGoal } from
 import type { Goal, GoalDetail } from '../../api/goals'
 import { clearRecognitionCsrf } from '../../api/local'
 import { publicFixture } from '../../api/recognition-test-support'
+import { MoneyView } from '../../components/Money'
+import type { MoneyProps } from '../../components/Money'
 import { headerAction } from '../../menu/back-target'
 import { buildRoute, parseRoute } from '../../navigation/routes'
 import { ContributionForm, GoalForm, InterestRecord, ReconcileForm } from './GoalForms'
@@ -16,8 +18,10 @@ import {
 } from './goals-state'
 
 const NBSP = String.fromCharCode(0xa0)
-const plain = (text: string) => text.replaceAll(NBSP, ' ')
+const plain = (text: string) => text.replaceAll(NBSP, ' ').replaceAll('\u202f', ' ')
 const html = (node: ReactElement) => plain(renderToStaticMarkup(node).replace(/<svg\b.*?<\/svg>/g, ''))
+/** The markup of an amount as `Money` draws it (components/Money.tsx), spaces made plain. */
+const money = (value: string, currency: string | null = 'KZT', props: Partial<MoneyProps> = {}) => html(<MoneyView value={value} currency={currency} hidden={false} {...props} />)
 const noop = () => {}
 const liza = { username: 'liza', display_name: 'Лиза' }
 const andrey = { username: 'andrey', display_name: 'Андрей' }
@@ -135,36 +139,43 @@ describe('goal screens', () => {
     const page = html(<GoalsView data={data} onAdd={noop} />)
     expect(page.indexOf('Общие семьи')).toBeLessThan(page.indexOf('Личные'))
     expect(page).toContain('<a class="ck-row goal-row" href="/goals/3">')
-    expect(page).toContain('<span style="width:42%"></span>')
-    expect(page).toContain('<span style="width:100%"></span>')
-    expect(page).toContain('goal-badge goal-badge-done')
+    // The ring: an arc of 42 % of the circle (r 17); a goal reached — the whole ring in gold, a milestone.
+    const raw = renderToStaticMarkup(<GoalsView data={data} onAdd={noop} />)
+    expect(raw).toContain(`<span class="goal-ring" style="width:40px;height:40px" aria-hidden="true">`)
+    expect(raw).toContain(`stroke-dasharray="${(2 * Math.PI * 17 * 42) / 100} ${2 * Math.PI * 17}"`)
+    expect(page).toContain('<a class="ck-row goal-row is-reached" href="/goals/4"><span class="goal-ring is-reached"')
+    expect(page).toContain(`<span class="ck-row-meta goal-row-sum">${money('252000.00', null)} из ${money('600000.00')}</span>`)
+    expect(page).toContain('<span class="ck-row-amount goal-percent">42 %</span>')
     expect(page).toContain('Новая цель')
     expect(html(<GoalsView data={{ ...data, results: [] }} onAdd={noop} />)).toContain('Целей пока нет')
   })
 
   it('shows one goal: the saved sum large, the bar, the forecast and the history', () => {
     const page = html(<GoalView goal={detail()} />)
-    expect(page.match(/ck-hero-figure/g)).toHaveLength(1)
-    expect(page).toContain('<span class="ck-hero-figure">252 000 ₸</span>')
+    expect(page.match(/ck-money--hero/g)).toHaveLength(1)
+    expect(page).toContain(`<p class="goal-hero-sum">${money('252000.00', 'KZT', { size: 'hero' })}</p>`)
     expect(page).toContain('role="img" aria-label="Накоплено 42 %"')
     expect(page).toContain('В среднем откладываете 40 000 ₸ в месяц — до цели ~9 месяцев.')
     expect(page).toContain('Чтобы успеть к 30 апр. 2027, нужно 49 714,29 ₸ в месяц.')
-    expect(page).toContain('+100 000 ₸')
-    expect(page).toContain('3 окт. 2026 · Лиза · Выписка Kaspi Gold')
+    // A contribution: who in the title, the day and where it came from under it, the amount in ink with «+».
+    expect(page).toContain(`<span class="ck-row-title">Лиза</span><span class="ck-row-meta">3 окт. 2026 · Выписка Kaspi Gold</span></span><span class="ck-row-amount">${money('100000.00', 'KZT', { size: 'row', sign: 'plus' })}</span>`)
     expect(page).toContain('Добавить взнос')
-    expect(html(<GoalView goal={detail({ contributions: [], reached: true })} />)).toContain('Цель достигнута.')
+    const reached = html(<GoalView goal={detail({ contributions: [], reached: true })} />)
+    expect(reached).toContain('<section class="ck-panel goal-hero is-reached" aria-label="Прогресс">')
+    expect(reached).toContain('<p class="goal-reached">Цель достигнута.</p>')
+    expect(reached).toContain('class="ck-bar goal-bar-big goal-bar-done"')
   })
 
   it('shows a deposit: the approximate sum, the interest, the growth chart and «Сверить с банком»', () => {
     const page = html(<GoalView goal={deposit()} />)
     expect(page).toContain('Общая · Депозит · 14,5 % годовых · капитализация ежемесячно')
-    expect(page).toContain('<span class="ck-hero-figure">≈ 371 484,60 ₸</span>')
-    expect(page).toContain('≈ заработано процентами <span class="ck-figures">1 484,60 ₸</span>')
+    expect(page).toContain(`<p class="goal-hero-sum"><span class="goal-hero-label">На депозите</span>${money('371484.60', 'KZT', { size: 'hero', approx: true })}</p>`)
+    expect(page).toContain(`≈ заработано процентами ${money('1484.60', 'KZT', { tone: 'in' })}`)
     expect(page).toContain('Рост депозита')
-    expect(page).toContain('<dd class="ck-figures">370 000 ₸</dd>')
+    expect(page).toContain(`<dd>${money('370000.00', 'KZT', { size: 'title' })}</dd>`)
     expect(page).toContain('Сверить с банком')
-    expect(page).toContain('Сверка с банком: +115,40 ₸')
-    expect(page).toContain('goal-interest')
+    // The interest of the bank: «Сверка с банком» with «%», its amount in the colour of the income.
+    expect(page).toContain(`<span class="ck-row-badge goal-interest" aria-hidden="true">%</span><span class="ck-row-main"><span class="ck-row-title">Сверка с банком</span><span class="ck-row-meta">13 окт. 2026</span></span><span class="ck-row-amount">${money('115.40', 'KZT', { size: 'row', sign: 'plus', tone: 'in' })}</span>`)
     expect(page).toContain('Если больше не вносить — через год будет 425 210,40 ₸.')
     expect(html(<GoalView goal={deposit({ series: [] })} />)).toContain('График появится после первого взноса.')
     expect(html(<GoalView goal={detail()} />)).not.toContain('Рост депозита')
@@ -185,7 +196,9 @@ describe('goal screens', () => {
     const form = (household: boolean) => html(<GoalForm goal={null} currency="KZT" household={household} busy={false} onSubmit={noop} />)
     expect(form(true)).toContain('Общая семьи')
     expect(form(false)).not.toContain('Общая семьи')
-    expect(html(<GoalForm goal={goal()} currency="KZT" household busy={false} onSubmit={noop} onDelete={noop} />)).toContain('Удалить цель')
+    // The deletion of a goal with its history asks in a ConfirmDialog (closed until the button).
+    const edit = html(<GoalForm goal={goal()} currency="KZT" household busy={false} onSubmit={noop} onDelete={noop} />)
+    expect(edit).toContain('<button type="button" class="ck-button-danger goal-delete">Удалить цель</button></form>')
     const gift = (people = [andrey, liza]) => html(<ContributionForm item={null} currency="USD" people={people} today="2026-10-13" user="andrey"
       busy={false} onSubmit={noop} />)
     expect(gift()).toContain('Сумма, $')

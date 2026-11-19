@@ -1,4 +1,5 @@
 import type { SpendingCurrency, SpendingGroupBy, SpendingItem } from '../../api/stats'
+import { categoryTone } from '../../lib/category-tone'
 import { chartNumber } from '../../lib/charts'
 import type { PieChartChild, PieChartItem } from '../../lib/charts'
 import { formatPercent, formatQuantity } from '../../lib/format'
@@ -77,11 +78,11 @@ export function tailChildren(block: SpendingCurrency, groupBy: SpendingGroupBy, 
   if (tail?.kind !== 'ok') return []
   const rows: PieChartChild[] = tail.items.map((item) => ({
     key: itemKey(item), label: itemLabel(item), href: itemHref(query, item), note: itemNote(item),
-    valueText: formatMoney(item.amount, block.currency), shareText: formatPercent(item.share_percent),
+    valueText: formatMoney(item.amount, block.currency), shareText: formatPercent(item.share_percent), amount: item.amount,
   }))
   if (tail.rest) rows.push({
     key: 'rest', label: `Ещё ${counted(tail.rest.count, ...otherNouns[groupBy])} с меньшими суммами, одной строкой`, note: restHints[groupBy],
-    valueText: formatMoney(tail.rest.amount, block.currency), shareText: formatPercent(tail.rest.share_percent),
+    valueText: formatMoney(tail.rest.amount, block.currency), shareText: formatPercent(tail.rest.share_percent), amount: tail.rest.amount,
   })
   return rows
 }
@@ -93,14 +94,16 @@ export function tailChildren(block: SpendingCurrency, groupBy: SpendingGroupBy, 
 export function pieItems(block: SpendingCurrency, groupBy: SpendingGroupBy, query: SpendingQuery, tail?: TailView): PieChartItem[] {
   const items: PieChartItem[] = block.items.map((item) => ({
     key: itemKey(item), label: itemLabel(item), value: chartNumber(item.amount) ?? 0,
-    valueText: formatMoney(item.amount, block.currency), shareText: formatPercent(item.share_percent),
+    valueText: formatMoney(item.amount, block.currency), shareText: formatPercent(item.share_percent), amount: item.amount,
     href: itemHref(query, item), note: itemNote(item),
     ...(item.id === null && { tone: 'muted' as const }),
+    // A category keeps its colour of «Главная» and «Трат»; products, places and generics take the series palette.
+    ...(item.kind === 'category' && item.id !== null && { categoryTone: categoryTone(item.id) }),
   }))
   if (block.other) {
     const row: PieChartItem = {
       key: 'other', label: otherLabel, value: chartNumber(block.other.amount) ?? 0, tone: 'other',
-      valueText: formatMoney(block.other.amount, block.currency), shareText: formatPercent(block.other.share_percent),
+      valueText: formatMoney(block.other.amount, block.currency), shareText: formatPercent(block.other.share_percent), amount: block.other.amount,
       note: tail ? `${counted(block.other.count, ...otherNouns[groupBy])} с меньшими суммами.`
         : `Ещё ${counted(block.other.count, ...otherNouns[groupBy])} с меньшими суммами, одной строкой.`,
       action: {

@@ -12,10 +12,13 @@ import {
 } from './insights-state'
 
 const NBSP = String.fromCharCode(0xa0)
-/** Words are compared with ordinary spaces: the screen keeps a number and its sign on one line with no-break ones. */
-const plain = (text: string) => text.replaceAll(NBSP, ' ')
+const THIN = String.fromCharCode(0x202f)
+/** Words are compared with ordinary spaces: the screen keeps a number and its sign on one line with no-break ones
+ * (U+00A0 in words, U+202F inside an amount of `Money`). */
+const plain = (text: string) => text.replaceAll(NBSP, ' ').replaceAll(THIN, ' ')
 const html = (node: ReactElement) => plain(renderToStaticMarkup(node).replace(/<svg\b.*?<\/svg>/g, ''))
-const words = (markup: string) => markup.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+/** The text of the markup; the parts of one amount of `Money` (the whole, the kopecks, the sign) read as one word. */
+const words = (markup: string) => markup.replace(/<\/span><span class="ck-money-(?:frac|cur)">/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
 const executor = { available: true, state: 'idle' as const, last_seen_at: null }
 const figure = { spent: '540679.83', previous: '469463.83', average: '446531.58', change_previous: '71216.00', change_average: '94148.25' }
@@ -113,7 +116,12 @@ describe('markup of the month review', () => {
     expect(markup).toContain('href="/review?month=2026-10"')
     expect(markup).toContain('<a class="ins-link" href="/chat">Спросить о тратах</a>')
     // «Обсудить» starts a thread of the month in «Чат с ИИ»; an empty month has nothing to discuss.
-    expect(markup).toContain('<button type="button" class="ins-link chat-start-link" data-chat-start="month">Обсудить</button>')
+    expect(markup).toContain('<button type="button" class="ck-button-secondary ins-discuss" data-chat-start="month">Обсудить</button>')
+    // The amounts are `Money` (Чекист 2.0): the one main number of the screen is the spent sum of the month.
+    expect(markup.match(/ck-money--hero/g)).toHaveLength(1)
+    expect(markup).toContain('<span class="ck-money-int">540 679</span><span class="ck-money-frac">,83</span>')
+    // The voice of the assistant has its gold mark.
+    expect(markup).toContain('<h2 id="ins-ai-heading" class="ins-who"><span class="ins-mark" aria-hidden="true">')
     expect(markup).not.toContain('ins-unverified')
   })
 
@@ -127,6 +135,12 @@ describe('markup of the month review', () => {
     const refused = html(<ReviewView month="2026-09" figures={figures()} review={null} status={{ kind: 'message', text: aiTexts.disabled }} />)
     expect(refused).toContain(`role="alert">${aiTexts.disabled}</p>`)
     expect(words(refused)).toContain('540 679,83 ₸')
+    // From 80 % of a limit the row says «почти лимит» and its bar takes the over tone; over the limit — «сверх на …».
+    const near = html(<ReviewView month="2026-09" figures={figures({ limits: [{ category: 'Транспорт', limit: '10000.00', spent: '8500.00', over: null },
+      { category: 'Кафе и рестораны', limit: '40000.00', spent: '49819.00', over: '9819.00' }] })} review={null} status={{ kind: 'idle' }} />)
+    expect(words(near)).toContain('Транспорт Лимит 10 000 ₸ · почти лимит, осталось 1 500 ₸ 8 500 ₸')
+    expect(near).toContain('<span class="ck-bar ins-bar is-near" aria-hidden="true"><span style="width:85%"></span></span>')
+    expect(near).toContain('<span class="ck-bar ins-bar is-over" aria-hidden="true"><span style="width:100%"></span></span>')
     const empty = html(<ReviewView month="2026-09" figures={figures({ spent: '0.00', previous: '0.00', categories: [], limits: [], places: [] })} review={null} status={{ kind: 'idle' }} />)
     expect(empty).toContain(insightTexts.empty)
     expect(empty).not.toContain('Обновить')

@@ -151,8 +151,10 @@ describe('rules of the skeletons (text of Skeleton.css, not rendering)', () => {
 
   it('takes the skeleton colour and the network bar from tokens.css in both themes', () => {
     const tokens = readFileSync(new URL('../theme/tokens.css', import.meta.url), 'utf8')
-    expect(tokens).toContain('--ck-skeleton: var(--ck-track);')
-    expect(tokens).toContain('--ck-network-track: color-mix(in srgb, var(--ck-primary) 25%, transparent);')
+    // Чекист 2.0: ink at 8 % on anything (tokens.json «skeleton»), in both theme blocks; the network bar on the seal.
+    expect(tokens).toContain('--ck-skeleton: rgba(243, 238, 239, 0.08);')
+    expect(tokens).toContain('--ck-skeleton: rgba(27, 21, 23, 0.08);')
+    expect(tokens).toContain('--ck-network-track: color-mix(in srgb, var(--ck-seal) 25%, transparent);')
     const layer = (name: string) => Number(new RegExp(`--ck-z-${name}: (\\d+);`).exec(tokens)?.[1])
     expect(layer('network-bar')).toBeGreaterThan(layer('sheet'))
     expect(layer('network-bar')).toBeLessThan(layer('skip-link'))

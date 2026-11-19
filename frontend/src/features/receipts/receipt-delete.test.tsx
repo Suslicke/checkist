@@ -7,7 +7,7 @@ import { clearRecognitionCsrf } from '../../api/local'
 import { publicFixture } from '../../api/recognition-test-support'
 import type { Page } from '../../api/types'
 import {
-  askDelete, clearReceiptsNotice, deletedNotice, deleteFailureMessage, getReceiptsNotice, setReceiptsNotice, toggleWithPhoto,
+  askDelete, clearReceiptsNotice, deletedNotice, deleteFailureMessage, deleteWords, getReceiptsNotice, setReceiptsNotice, toggleWithPhoto,
 } from './delete-receipt'
 import { ReceiptDeleteActions } from './ReceiptDeleteActions'
 import { ReceiptView } from './ReceiptPage'
@@ -33,8 +33,8 @@ const view = (header: Receipt): ReceiptViewProps => ({
 describe('deleting a photo receipt (Vitest/SSR, not browser visual acceptance)', () => {
   it('offers «Удалить чек» on a photo receipt and keeps «Изменить / Удалить» of a manual spend', () => {
     const photo = renderToStaticMarkup(<ReceiptView {...view(receipt)} />)
-    // The tile says «Удалить»; its name is the whole phrase.
-    expect(photo).toContain('<button type="button" class="receipt-secondary" aria-label="Удалить чек">Удалить</button>')
+    // The tile says «Удалить»; its name is the whole phrase; it opens the choice below it.
+    expect(photo).toContain('<button type="button" class="receipt-secondary" aria-label="Удалить чек" aria-expanded="false">Удалить</button>')
     // Единая форма траты (2026-10-13): чек с фото меняется той же формой.
     expect(photo).toContain('<a class="action-link receipt-primary" href="/receipts/71/edit">Изменить</a>')
     const manual = renderToStaticMarkup(<ReceiptView {...view({ ...receipt, source: 'manual', store: null })} />)
@@ -45,32 +45,49 @@ describe('deleting a photo receipt (Vitest/SSR, not browser visual acceptance)',
     expect(loading).not.toContain('Удалить чек')
   })
 
-  it('asks inline with «Удалить и фото» on by default, never with a browser dialog', () => {
+  it('offers «Удалить и фото» on by default under the actions, then confirms in the shared dialog, never a browser one', () => {
     const html = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={askDelete()} />)
-    expect(html).toContain('role="group" aria-labelledby="receipt-delete-71"')
-    expect(html).toContain('<p id="receipt-delete-71">Удалить этот чек? Строки чека удалятся, отменить удаление нельзя.</p>')
-    expect(html).toContain('<label class="receipt-delete-photo"><input type="checkbox"')
-    expect(html).toContain('<input type="checkbox" aria-describedby="receipt-delete-71-hint" checked=""/>Удалить и фото</label>')
+    expect(html).toContain('aria-expanded="true">Удалить</button>')
+    expect(html).toContain('<div class="receipt-delete-choice" role="group" aria-labelledby="receipt-delete-71">')
+    expect(html).toContain('<label class="ck-switch-row receipt-delete-photo"><span>Удалить и фото</span><input type="checkbox" role="switch" class="ck-switch" switch=""')
+    expect(html).toContain('aria-describedby="receipt-delete-71-hint" checked=""/></label>')
     expect(html).toContain('Без отметки они останутся в «Обработке».')
-    expect(html).toContain('class="expense-danger">Удалить чек</button>')
-    expect(html).toContain('>Отмена</button>')
+    expect(html).toContain('<button type="button" class="ck-button-danger">Удалить чек и фото</button><button type="button" class="ck-button-ghost">Отмена</button>')
+    // The dialog waits for the danger button.
+    expect(html).not.toContain('ck-confirm')
     expect(html).not.toContain('role="alert"')
     const unchecked = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={{ kind: 'confirm', withPhoto: false }} />)
     expect(unchecked).not.toContain('checked=""')
+    expect(unchecked).toContain('class="ck-button-danger">Удалить чек</button>')
     for (const file of ['./ReceiptDeleteActions.tsx', './delete-receipt.ts']) {
       expect(readFileSync(new URL(file, import.meta.url), 'utf8')).not.toMatch(/\b(confirm|alert)\(/)
     }
   })
 
-  it('locks the buttons and the checkbox while deleting and shows a refusal next to them', () => {
-    const deleting = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={{ kind: 'deleting', withPhoto: true }} />)
+  it('names the irreversible step in the dialog by the choice: what goes and that it cannot be undone', () => {
+    const photo = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={askDelete()} initialDialog />)
+    expect(photo).toContain('<dialog class="ck-confirm" data-platform="android" role="alertdialog" aria-modal="true"')
+    expect(photo).toContain('>Удалить чек и фото?</h2>')
+    expect(photo).toContain('фото, задания распознавания и вырезки удалятся. Отменить удаление нельзя.</p>')
+    expect(photo).toContain('<button type="button" class="ck-confirm-action ck-confirm-danger">Удалить чек и фото</button>')
+    const only = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={{ kind: 'confirm', withPhoto: false }} initialDialog />)
+    expect(only).toContain('>Удалить чек?</h2>')
+    expect(only).toContain('фото и его задание останутся в «Обработке»')
+    expect(deleteWords(true).action).toBe('Удалить чек и фото')
+    expect(deleteWords(false).action).toBe('Удалить чек')
+  })
+
+  it('locks the switch and the buttons while deleting and shows a refusal next to them', () => {
+    const deleting = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={{ kind: 'deleting', withPhoto: true }} initialDialog />)
     expect(deleting).toContain('disabled="">Удаляем…</button>')
     expect(deleting).toContain('disabled="">Отмена</button>')
-    expect(deleting).toContain('<input type="checkbox" disabled="" aria-describedby="receipt-delete-71-hint" checked=""/>')
+    expect(deleting).toContain('<input type="checkbox" role="switch" class="ck-switch" switch="" disabled="" aria-describedby="receipt-delete-71-hint" checked=""/>')
+    // A running deletion asks nothing more.
+    expect(deleting).not.toContain('ck-confirm')
     const failed = renderToStaticMarkup(<ReceiptDeleteActions receiptId={71} initial={{ kind: 'failed', withPhoto: true, message: 'Сбой.' }} />)
     expect(failed).toContain('<p class="expense-failure" role="alert">Сбой.</p>')
     expect(failed).toContain('checked=""')
-    expect(failed).toContain('>Удалить чек</button>')
+    expect(failed).toContain('>Удалить чек и фото</button>')
   })
 
   it('keeps the choice of the checkbox and words the refusals of the server', () => {

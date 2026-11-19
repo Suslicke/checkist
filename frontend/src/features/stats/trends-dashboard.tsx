@@ -1,6 +1,8 @@
 /** The dashboard part of «Динамика»: the summary strip, «Месяц к месяцу» and «Лимиты по месяцам». */
 import { useId, useMemo } from 'react'
+import type { ReactNode } from 'react'
 import type { TrendsLimits, TrendsMonthly, TrendsMonthlyCurrency, TrendsPrices } from '../../api/trends'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
 import { categoryTone } from '../../lib/category-tone'
 import { useNarrow } from '../../lib/cards'
@@ -28,10 +30,10 @@ export function Sparkline({ values }: { values: readonly number[] }) {
 // --- сводка сверху ---
 
 /**
- * A change in words, like the hero card of «Главная»: «▲ на 10,50 % больше, чем в сентябре 2026». More spent is the
- * over tone, less — the success tone; the arrow and the words say it too, never the colour alone.
+ * A change in words, like the main number of «Главная»: «▲ на 10,50 % больше, чем в сентябре 2026». Calm money (Чекист
+ * 2.0): more spent is not red and less is not green — the arrow, the sign and the words say it, in ink.
  */
-export function ChangeLine({ badge, label, extra }: { badge: ChangeBadge; label: string; extra?: string }) {
+export function ChangeLine({ badge, label, extra }: { badge: ChangeBadge; label: string; extra?: ReactNode }) {
   const words = badge.tone === 'same' ? `столько же, ${label.replace(/^чем/, 'сколько')}`
     : `на ${badge.magnitude} ${badge.tone === 'up' ? 'больше' : 'меньше'}, ${label}`
   return (
@@ -55,9 +57,12 @@ export function SummaryStrip({ monthly, prices }: { monthly: BlockState<TrendsMo
           <article key={`spent-${block.currency}`} className="trends-card">
             <p className="trends-card-label">Потрачено за <time dateTime={`${block.summary.month}-01`}>{card.monthTitle}</time>{spends.length > 1 && <> · {currencySymbol(block.currency)}</>}</p>
             {/* The one hero sum of the screen is the first currency; another one is large, not hero. */}
-            <p className={index === 0 ? 'trends-big ck-hero-figure' : 'trends-big'}>{card.spent}</p>
+            <p className={index === 0 ? 'trends-big trends-big-main' : 'trends-big'}>
+              <Money value={card.spentValue} currency={block.currency} size={index === 0 ? 'display' : 'title'} />
+            </p>
             {card.vsPrevious && <ChangeLine badge={card.vsPrevious.badge} label={card.vsPrevious.label} />}
-            {card.vsAverage && <ChangeLine badge={card.vsAverage.badge} label={card.vsAverage.label} extra={`(${card.average})`} />}
+            {card.vsAverage && <ChangeLine badge={card.vsAverage.badge} label={card.vsAverage.label}
+              extra={<>(<Money value={card.averageValue} currency={block.currency} />)</>} />}
           </article>
         )
       })}
@@ -91,7 +96,9 @@ function RowTrend({ row }: { row: MonthRow }) {
  * sparkline and the change on the second. A tap opens the row: every month of the window newest first with its
  * change, the sum, the average and the way to the category over time.
  */
-export function MonthRowCards({ rows, label }: { rows: readonly MonthRow[]; label: string }) {
+export function MonthRowCards({ rows, label, currency }: { rows: readonly MonthRow[]; label: string
+  /** The currency of the rows: with it the sum of the last month is drawn as `Money`. */
+  currency?: string }) {
   return (
     <ul className="trends-mm" aria-label={label}>
       {rows.map((row) => (
@@ -101,7 +108,7 @@ export function MonthRowCards({ rows, label }: { rows: readonly MonthRow[]; labe
               <span className="trends-mm-head">
                 {row.depth === 0 && <span className="trends-dot" aria-hidden="true" />}
                 <span className="trends-mm-name">{row.name}</span>
-                <span className="trends-mm-last trends-value">{row.last}</span>
+                <span className="trends-mm-last trends-value">{row.lastValue === null ? row.last : <Money value={row.lastValue} currency={currency} size="row" />}</span>
               </span>
               <span className="trends-mm-meta">
                 <RowTrend row={row} />
@@ -144,7 +151,7 @@ function MonthToMonthCurrency({ block, query, several }: { block: TrendsMonthlyC
       {rows.length === 0 ? <p className="stats-note">Трат по категориям за это время нет.</p> : narrow
         ? <>
           <p className="trends-mm-caption">Сумма за {headings.last}, изменение — к прошлому месяцу</p>
-          <MonthRowCards rows={rows} label={label} />
+          <MonthRowCards rows={rows} label={label} currency={block.currency} />
         </>
         : (
           <div className="trends-table-scroll" role="region" aria-label={label} tabIndex={0}>
@@ -194,20 +201,26 @@ export function MonthToMonthBlock({ state, query, onRetry }: { state: BlockState
 
 // --- «Лимиты по месяцам» ---
 
-/** One month with a limit: the month, the bar of the share used, the percent; the spent sum against the limit under it. */
-function LimitMonth({ cell }: { cell: LimitCell }) {
+/**
+ * One month with a limit: the month, the bar of the share used (ink; from 80 % the over tone with the words «почти
+ * лимит», past 100 % «сверх лимита»), the percent; the spent sum against the limit under it.
+ */
+function LimitMonth({ cell, currency }: { cell: LimitCell; currency: string }) {
+  const level = cell.over ? ' is-over' : cell.near ? ' is-near' : ''
   return (
-    <li className={`trends-cell${cell.over ? ' trends-cell-over' : ''}${cell.none ? ' trends-cell-none' : ''}`}
+    <li className={`trends-cell${cell.over ? ' trends-cell-over' : ''}${cell.near ? ' trends-cell-near' : ''}${cell.none ? ' trends-cell-none' : ''}`}
       title={`${cell.title}: ${cell.spent}${cell.none ? ', без лимита' : `, ${cell.percent} лимита ${cell.limit}`}${cell.change ? `; ${cell.change}` : ''}`}>
       <span className="trends-cell-month">
         <time dateTime={`${cell.month}-01`}>{cell.short}</time>
         {cell.change && <span className="trends-cell-change"><span aria-hidden="true"> ◆</span><span className="trends-visually-hidden">, {cell.change}</span></span>}
       </span>
-      <span className="trends-cell-bar" aria-hidden="true"><span style={{ width: `${cell.fill}%` }} /></span>
+      <span className={`trends-cell-bar ck-bar${level}`} aria-hidden="true"><span style={{ width: `${cell.fill}%` }} /></span>
       <span className="trends-cell-percent trends-value">{cell.over && <span aria-hidden="true">▲ </span>}{cell.percent}</span>
       <span className="trends-cell-sums">
-        <span className="trends-value">{cell.spent}</span>{!cell.none && <> из <span className="trends-value">{cell.limit}</span></>}
-        {cell.over && <span className="trends-cell-word"> · сверх</span>}
+        <span className="trends-value"><Money value={cell.spentValue} currency={currency} /></span>
+        {!cell.none && cell.limitValue !== null && <> из <span className="trends-value"><Money value={cell.limitValue} currency={currency} /></span></>}
+        {cell.over && <span className="trends-cell-word"> · сверх лимита</span>}
+        {cell.near && <span className="trends-cell-word"> · почти лимит</span>}
       </span>
     </li>
   )
@@ -234,10 +247,11 @@ export function LimitsBlock({ state, onRetry }: { state: BlockState<TrendsLimits
               <div className="trends-limit-head">
                 <span className="trends-dot" aria-hidden="true" />
                 <span className="trends-row-name">{row.name}</span>
-                <span className="trends-value trends-limit-amount">{row.amount === null ? 'лимит удалён' : `${row.amount} в месяц`}</span>
+                <span className="trends-value trends-limit-amount">{row.amountValue === null
+                  ? 'лимит удалён' : <><Money value={row.amountValue} currency={row.currency} /> в месяц</>}</span>
               </div>
               {limited.length > 0 && <ol className="trends-cells" aria-label={`${row.name}: доля лимита по месяцам`}>
-                {limited.map((cell) => <LimitMonth key={cell.month} cell={cell} />)}
+                {limited.map((cell) => <LimitMonth key={cell.month} cell={cell} currency={row.currency} />)}
               </ol>}
               <div className="trends-limit-foot">
                 <p className="trends-limit-note">
@@ -257,7 +271,7 @@ export function LimitsBlock({ state, onRetry }: { state: BlockState<TrendsLimits
   }
   return (
     <Panel title="Лимиты по месяцам" state={state} link={{ to: '/budget/limits', label: 'Изменить' }}
-      note="Сколько процентов лимита того месяца потрачено в каждом месяце; ◆ — в этом месяце лимит меняли. Больше 100 % — сверх лимита.">
+      note="Сколько процентов лимита того месяца потрачено в каждом месяце; ◆ — в этом месяце лимит меняли. От 80 % — почти лимит, больше 100 % — сверх лимита.">
       {body}
     </Panel>
   )

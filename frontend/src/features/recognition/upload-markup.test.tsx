@@ -49,9 +49,10 @@ describe('upload screen markup (SSR)', () => {
     const group = /<div class="ck-rec-actions ck-upload-pick" role="group" aria-label="Выбор фото">([\s\S]*?)<\/div>/.exec(html)?.[1] ?? ''
     expect(tags(group, 'button')).toHaveLength(3)
     const camera = big(group, 'Снять чек'); const gallery = big(group, 'Из галереи'); const file = big(group, 'Выбрать файл')
-    // Without a photo «Снять чек» is the main action, filled; the other two are outlines.
+    // Without a photo «Снять чек» is the main action, the seal; the other two are tonal. «Выбрать файл» is marked the
+    // first choice: under a mouse, where there is no camera, it is the seal (Upload.css, pointer: fine).
     expect(camera).toContain('class="ck-upload-camera ck-upload-big"'); expect(gallery).toContain('class="ck-upload-gallery ck-upload-big ck-upload-secondary"')
-    expect(file).toContain('class="ck-upload-file-button ck-upload-big ck-upload-secondary"')
+    expect(file).toContain('class="ck-upload-file-button ck-upload-big ck-upload-secondary ck-upload-first"')
     for (const item of [camera, gallery, file]) {
       expect(item).toContain('type="button"'); expect(item).toContain('aria-describedby="recognition-cloud-warning"'); expect(item).not.toContain('disabled')
     }

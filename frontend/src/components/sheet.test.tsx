@@ -78,7 +78,7 @@ describe('Sheet.css (text of the rules, not rendering)', () => {
 
   it('lies on its own layer, keeps the gesture strip and the side insets free', () => {
     expect(css).toContain('z-index: var(--ck-z-sheet);')
-    expect(css).toContain('calc(16px + var(--ck-safe-bottom))')
+    expect(css).toContain('calc(var(--ck-space-5) + var(--ck-safe-bottom))')
     expect(css).toContain('env(safe-area-inset-left, 0px)')
     expect(css).toContain('env(safe-area-inset-right, 0px)')
     expect(css).toContain('html.ck-sheet-open { overflow: hidden; }')
@@ -89,6 +89,31 @@ describe('Sheet.css (text of the rules, not rendering)', () => {
     const defined = new Set([...tokens.matchAll(/^\s*(--ck-[a-z0-9-]+):/gm)].map((match) => match[1]))
     const used = [...new Set([...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((match) => match[1]))]
     expect(used.filter((name) => !defined.has(name))).toEqual([])
-    for (const [, size] of css.matchAll(/font-size:\s*([^;]+);/g)) expect(size).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl|hero)\)$/)
+    for (const [, size] of css.matchAll(/font-size:\s*([^;]+);/g)) expect(size).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading)\)$/)
+  })
+
+  it('takes the look of the platform: the surface over the scrim, floating on iOS, Material 3 on Android (Чекист 2.0)', () => {
+    expect(css).toContain('.ck-sheet-backdrop { position: absolute; inset: 0; background: var(--ck-scrim); }')
+    expect(css).toContain('background: var(--ck-surface); color: var(--ck-ink); box-shadow: var(--ck-shadow-float);')
+    // Android and a computer: the full width, the top corners, the handle 32 × 4.
+    expect(css).toContain('border-radius: var(--ck-radius-sheet) var(--ck-radius-sheet) 0 0;')
+    expect(css).toMatch(/\.ck-sheet-handle \{[^}]*width: 32px; height: 4px;/)
+    // iOS: 8 px from the edges and above the home indicator, rounded all round, the handle 36 × 5, the title centred.
+    expect(css).toContain(':root[data-platform="ios"] .ck-sheet { width: calc(100% - 2 * var(--ck-space-2));')
+    expect(css).toMatch(/:root\[data-platform="ios"\] \.ck-sheet \{[^}]*margin-bottom: calc\(var\(--ck-space-2\) \+ var\(--ck-safe-bottom\)\);[^}]*border-radius: var\(--ck-radius-sheet\);/)
+    expect(css).toContain(':root[data-platform="ios"] .ck-sheet-handle { width: 36px; height: 5px;')
+    expect(css).toContain(':root[data-platform="ios"] .ck-sheet-title { text-align: center; }')
+    // The close button stays a target of a tap on both.
+    expect(css).toMatch(/\.ck-sheet-close \{[^}]*width: var\(--ck-tap\); height: var\(--ck-tap\);/)
+    // The arrival takes 360 ms, the spring of iOS.
+    expect(css).toContain('.ck-sheet { animation: ck-sheet-in var(--ck-dur-sheet) var(--ck-ease-out); }')
+    expect(css).toContain(':root[data-platform="ios"] .ck-sheet { animation-timing-function: var(--ck-ease-spring); }')
+  })
+
+  it('closes on the system «назад» of Android through a close watcher, not an entry of the history', () => {
+    const source = readFileSync(new URL('./Sheet.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('CloseWatcher')
+    expect(source).toContain('watcher.destroy()')
+    expect(source).not.toMatch(/pushState|history\./)
   })
 })

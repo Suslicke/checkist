@@ -3,7 +3,7 @@ import type { FormEvent, ReactNode } from 'react'
 import type { RecurringMonthPayment, RecurringPayInput } from '../../api/recurring'
 import Icon from '../../components/Icon'
 import MethodChips from '../../components/MethodChips'
-import { formatMoney } from '../../lib/money'
+import Money from '../../components/Money'
 import { lastMethod } from '../../lib/payment-methods'
 import { Link } from '../../navigation'
 import type { PaymentMethodValue } from '../../lib/payment-methods'
@@ -81,8 +81,8 @@ export function PayForm({ row, today, busy, failure = null, onSubmit, onCancel }
     </div>
     {error && <p className="rec-field-error" id={`${id}-error`} role="alert">{error.text}</p>}
     {failure && <p className="rec-field-error" role="alert">{failure}</p>}
-    <button type="submit" className="rec-save" aria-disabled={busy || undefined}>Сохранить · {formatMoney(value ?? row.amount, row.currency)}</button>
-    <button type="button" className="ck-button-secondary" onClick={onCancel}>Отмена</button>
+    <button type="submit" className="rec-save" aria-disabled={busy || undefined}>Сохранить · <Money value={value ?? row.amount} currency={row.currency} /></button>
+    <button type="button" className="ck-button-ghost rec-cancel" onClick={onCancel}>Отмена</button>
   </form>
 }
 
@@ -96,17 +96,16 @@ export function PaymentYear({ row, today }: { row: RecurringMonthPayment; today:
   return <section className="rec-year" aria-labelledby={`${id}-heading`}>
     <h3 id={`${id}-heading`}>История оплат</h3>
     <p className="rec-year-total">{total === null ? 'За год оплат не нашёл'
-      : <>За год оплачено <span className="ck-figures rec-sum-value">{formatMoney(total, row.currency)}</span></>}</p>
+      : <>За год оплачено <Money value={total} currency={row.currency} className="rec-sum-value" /></>}</p>
     {methods.length > 0 && <p className="rec-year-methods">{methods.map((item, index) => <Fragment key={item.payment_method}>
-      {index > 0 && ' · '}<span className="rec-year-method">{methodName(item.payment_method)} <span className="ck-figures">
-        {formatMoney(item.total, row.currency)}</span></span></Fragment>)}</p>}
+      {index > 0 && ' · '}<span className="rec-year-method">{methodName(item.payment_method)} <Money value={item.total} currency={row.currency} /></span></Fragment>)}</p>}
     <ul className="ck-list rec-year-list">{months.map((item) => {
       const body = <>
         <span className="ck-row-main">
           <span className="ck-row-title">{monthTitle(item.month)}</span>
           <span className={`ck-row-meta rec-meta-${item.state}`}>{yearMonthText(item, today)}</span>
         </span>
-        <span className="ck-row-amount ck-figures">{item.paid ? formatMoney(item.paid.total, row.currency) : '—'}</span>
+        <span className="ck-row-amount">{item.paid ? <Money value={item.paid.total} currency={row.currency} size="row" /> : '—'}</span>
       </>
       const receipt = item.paid?.receipt_id
       // The spend of a month opens on its page, whatever its source — as from «Траты» and «Главная»; «Изменить» is
@@ -131,7 +130,7 @@ export function PaySection({ row, month, today, busy, failure, onPay }: {
     {payable && (open
       ? <PayForm row={row} today={today} busy={busy} failure={failure} onSubmit={(values) => onPay(row, values)} onCancel={() => setOpen(false)} />
       : <>
-        <button type="button" className="rec-pay-main" onClick={() => setOpen(true)}>Оплатил</button>
+        <button type="button" className="rec-pay-main" onClick={() => setOpen(true)}><Icon name="check" size={20} />Оплатил</button>
         <p className="rec-note">{payExpected(row, today)}</p>
       </>)}
     <PaymentYear row={row} today={today} />

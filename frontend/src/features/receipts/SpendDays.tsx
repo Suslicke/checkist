@@ -3,18 +3,17 @@ import type { DragEvent, MouseEvent, PointerEvent } from 'react'
 import type { ReceiptListItem } from '../../api/receipts'
 import { Link } from '../../navigation'
 import type { ReceiptsQuery } from '../../navigation'
-import { categoryTone, groupByDay, isRowFlag, rowMeta, rowTitle, spendSource, withHidden, withOwner } from './spends'
-import type { OwnerChip, SpendSource } from './spends'
-import { money } from './state'
+import { categoryTone, groupByDay, isRowFlag, rowMeta, rowTitle, sourceMark, spendSource, stampWord, withHidden, withOwner } from './spends'
+import type { OwnerChip } from './spends'
 import { baseTwin } from '../../lib/money'
 import { methodLabels, methodShort } from '../../lib/payment-methods'
 import ChipScroller from '../../components/ChipScroller'
 import Icon from '../../components/Icon'
+import Money from '../../components/Money'
 import { useSpendIcon } from '../../lib/list-icons'
+import { haptic } from '../../theme/platform'
 import { SWIPE_REVEAL, swipeEnd } from './undo-delete'
 
-/** How a spend came in, for a screen reader: the badge is hidden from it and may show the category instead. */
-const sourceWords: Record<SpendSource, string> = { photo: ' (по чеку)', manual: ' (трата без чека)', statement: ' (из выписки)' }
 
 /** «≈ 8 979 ₸» under «20 $»: a spend in another currency keeps its own amount, the totals count this converted one. */
 export function BaseTwin({ receipt }: { receipt: Pick<ReceiptListItem, 'currency' | 'base_total' | 'base_currency'> }) {
@@ -34,6 +33,8 @@ function useSwipe(onDelete: (() => void) | undefined) {
   const [dragging, setDragging] = useState(false)
   const start = useRef<{ x: number; y: number; base: number; pointer: number; active: boolean } | null>(null)
   const moved = useRef(false)
+  // Past the line where letting go deletes: one short tap of the motor on Android (theme/platform.ts), once per crossing.
+  const armed = useRef(false)
   if (!onDelete) return { style: undefined, handlers: {}, open: false, dragging: false }
   const handlers = {
     onPointerDown(event: PointerEvent<HTMLAnchorElement>) {
@@ -54,13 +55,18 @@ function useSwipe(onDelete: (() => void) | undefined) {
         setDragging(true)
         event.currentTarget.setPointerCapture?.(event.pointerId)
       }
-      setOffset(Math.min(0, Math.max(-event.currentTarget.offsetWidth, from.base + dx)))
+      const next = Math.min(0, Math.max(-event.currentTarget.offsetWidth, from.base + dx))
+      const past = swipeEnd(next, event.currentTarget.offsetWidth) === 'delete'
+      if (past && !armed.current) haptic()
+      armed.current = past
+      setOffset(next)
     },
     onPointerUp(event: PointerEvent<HTMLAnchorElement>) {
       const from = start.current
       start.current = null
       if (!from?.active) return
       setDragging(false)
+      armed.current = false
       const end = swipeEnd(offset, event.currentTarget.offsetWidth)
       setOffset(end === 'open' ? -SWIPE_REVEAL : 0)
       if (end === 'delete') onDelete()
@@ -68,6 +74,7 @@ function useSwipe(onDelete: (() => void) | undefined) {
     onPointerCancel() {
       const from = start.current
       start.current = null
+      armed.current = false
       setDragging(false)
       if (from) setOffset(from.base)
     },
@@ -90,15 +97,20 @@ function SpendRow({ receipt, showOwner, onDelete }: { receipt: ReceiptListItem; 
   // Only a spend typed by hand is swiped away: a photo receipt is deleted on its page, with the photo and its checks.
   const deletable = onDelete && receipt.source === 'manual' ? onDelete : undefined
   const swipe = useSwipe(deletable && (() => deletable(receipt, false)))
+  // The stamp says where the spend came from; the words of the meta line do not repeat it.
+  const stamp = stampWord(receipt)
+  const said = sourceMark(receipt.source, receipt.note)
+  const meta = rowMeta(receipt, showOwner).filter((text) => text !== said)
   const row = <Link className="spends-row" to={`/receipts/${receipt.id}`} data-hidden={receipt.hidden ? '' : undefined}
     style={swipe.style} data-dragging={swipe.dragging ? '' : undefined} {...swipe.handlers}>
       <span className="spends-badge" data-tone={tone} data-icon={icon} aria-hidden="true"><Icon name={icon} size={20} /></span>
       <span className="spends-row-main">
-        <span className="spends-row-title">{rowTitle(receipt)}<span className="spends-hidden">{sourceWords[source]}</span></span>
-        <span className="spends-row-meta">{rowMeta(receipt, showOwner).map((text, index) => <span key={index} className={isRowFlag(text) ? 'spends-row-flag' : undefined}>
-          {index > 0 && ' · '}{text}</span>)}</span>
+        <span className="spends-row-title">{rowTitle(receipt)}</span>
+        <span className="spends-row-meta"><span className="ck-stamp spends-stamp" data-source={source}>{stamp}</span>
+          {meta.map((text, index) => <span key={index} className={isRowFlag(text) ? 'spends-row-flag' : undefined}>
+            {index > 0 && ' · '}{text}</span>)}</span>
       </span>
-      <span className="spends-row-amount ck-figures">{money(receipt.total, receipt.currency)}
+      <span className="spends-row-amount"><Money value={receipt.total} currency={receipt.currency} size="row" />
         <BaseTwin receipt={receipt} />
         {/* How it was paid, short and whole under the amount; the full name for a screen reader. */}
         {receipt.payment_method && <span className="spends-row-method"><span aria-hidden="true">{methodShort[receipt.payment_method]}</span>
@@ -108,7 +120,7 @@ function SpendRow({ receipt, showOwner, onDelete }: { receipt: ReceiptListItem; 
   // «Удалить» lies behind the row: a swipe shows it, the Tab key slides the row aside to it (Receipts.css).
   return <li className="spends-swipe" data-open={swipe.open ? '' : undefined}>
     {row}
-    <button type="button" className="spends-row-delete" onClick={(event) => deletable(receipt, event.detail === 0)}>
+    <button type="button" className="spends-row-delete" onClick={(event) => { haptic(); deletable(receipt, event.detail === 0) }}>
       <Icon name="trash" size={20} /><span>Удалить<span className="spends-hidden">: {rowTitle(receipt)}</span></span>
     </button>
   </li>
@@ -121,7 +133,7 @@ export function SpendDays({ receipts, today, showOwner, onDelete }: { receipts: 
     <div className="spends-day-head">
       <h3><time dateTime={day.day}>{day.label}</time></h3>
       <p className="spends-day-total">{day.totals.map((item, index) => <span key={item.currency}>
-        {index > 0 && ' · '}<span className="spends-day-sum ck-figures">{money(item.total, item.currency)}</span>
+        {index > 0 && ' · '}<span className="spends-day-sum"><Money value={item.total} currency={item.currency} /></span>
       </span>)}</p>
     </div>
     <ul className="spends-rows">{day.receipts.map((receipt) => <SpendRow key={receipt.id} receipt={receipt} showOwner={showOwner} onDelete={onDelete} />)}</ul>
@@ -134,7 +146,7 @@ export function HiddenChip({ query, head, onToggle }: { query: ReceiptsQuery; he
   if (!head) return null
   const on = query.hidden === 1
   return <div className="spends-chips spends-hidden-toggle">
-    <Link className="spends-chip" data-hidden-chip to={{ kind: 'receipts', query: withHidden(query, !on) }} aria-current={on ? 'true' : undefined}
+    <Link className="ck-chip" data-hidden-chip to={{ kind: 'receipts', query: withHidden(query, !on) }} aria-current={on ? 'true' : undefined}
       onClick={onToggle}>
       Показать скрытые
     </Link>
@@ -147,7 +159,7 @@ export function OwnerChips({ chips, query }: { chips: OwnerChip[]; query: Receip
   return <div className="spends-chips">
     <ChipScroller label="Кто добавил">
       <ul>{chips.map((chip) => <li key={chip.owner ?? ''}>
-        <Link className="spends-chip" to={{ kind: 'receipts', query: withOwner(query, chip.owner) }} aria-current={chip.current ? 'true' : undefined}>
+        <Link className="ck-chip" to={{ kind: 'receipts', query: withOwner(query, chip.owner) }} aria-current={chip.current ? 'true' : undefined}>
           {chip.label}
         </Link>
       </li>)}</ul>

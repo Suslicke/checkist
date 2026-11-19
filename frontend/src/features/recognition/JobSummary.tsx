@@ -26,7 +26,7 @@ export default function JobSummary({ job, announce = false, compact = false }: {
     {job.review_required && <p className="ck-rec-warning">Есть данные, требующие проверки. Посмотрите причины у вырезок.</p>}
   </>
   return <div className={`ck-rec-summary${compact ? ' ck-rec-summary-compact' : ''}`}>
-    <p className={`ck-rec-status ck-rec-status-${job.status}${compact ? ' ck-rec-pill' : ''}`} aria-live={announce ? 'polite' : undefined} aria-atomic={announce ? true : undefined}>{jobLabels[job.status]} · {stageText(job)}</p>
+    <p className={`ck-rec-status ck-rec-status-${job.status}${job.review_required && job.status !== 'failed' ? ' ck-rec-status-review' : ''}${compact ? ' ck-rec-pill' : ''}`} aria-live={announce ? 'polite' : undefined} aria-atomic={announce ? true : undefined}>{jobLabels[job.status]} · {stageText(job)}</p>
     {compact
       ? <>{created}{warnings}<details className="ck-rec-more"><summary>Счётчики и время</summary>{facts}{note}{times}</details></>
       : <>{facts}{note}{created}{times}{warnings}</>}

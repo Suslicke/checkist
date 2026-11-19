@@ -1,31 +1,45 @@
-/* The sheet from the bottom of the window (Sheet.tsx). Colours are theme tokens only; the layer is --ck-z-sheet,
-   above the bottom navigation and its menu. The only motion is its arrival, and only for a person who has not
-   asked the system for less motion. */
+/* The sheet from the bottom of the window (Sheet.tsx), Чекист 2.0 (docs/design-system/components/Sheet). The surface over
+   the scrim, the floating shadow, the corners of a sheet; the layer is --ck-z-sheet, above the bottom navigation and its
+   menu. iOS — a floating sheet 8 px from the edges and above the home indicator, rounded all round, the handle 36 × 5,
+   the title in the middle and «✕» in a circle on the right. Android and a computer — Material 3: the full width, the
+   top corners only, the handle 32 × 4, the title on the left and a quiet «✕». Colours are theme tokens only. The only
+   motion is its arrival (360 ms), and only for a person who has not asked the system for less motion. */
 .ck-sheet-layer { position: fixed; inset: 0; z-index: var(--ck-z-sheet); display: flex; flex-direction: column; justify-content: flex-end; }
-/* The colour of a shadow of the theme: a dark veil in the dark theme, a light dim in the light one. */
-.ck-sheet-backdrop { position: absolute; inset: 0; background: var(--ck-popover-shadow); }
+.ck-sheet-backdrop { position: absolute; inset: 0; background: var(--ck-scrim); }
 .ck-sheet {
   position: relative; display: flex; flex-direction: column; width: 100%; max-width: 640px; max-height: calc(100% - 48px); margin-inline: auto;
-  padding: 8px max(20px, env(safe-area-inset-right, 0px)) calc(16px + var(--ck-safe-bottom)) max(20px, env(safe-area-inset-left, 0px));
-  border: 1px solid var(--ck-border); border-bottom: 0; border-radius: var(--ck-radius) var(--ck-radius) 0 0;
-  background: var(--ck-nav-bg); color: var(--ck-text); box-shadow: 0 -8px 24px var(--ck-popover-shadow);
+  padding: 6px max(var(--ck-space-4), env(safe-area-inset-right, 0px)) calc(var(--ck-space-5) + var(--ck-safe-bottom)) max(var(--ck-space-4), env(safe-area-inset-left, 0px));
+  border-radius: var(--ck-radius-sheet) var(--ck-radius-sheet) 0 0;
+  background: var(--ck-surface); color: var(--ck-ink); box-shadow: var(--ck-shadow-float);
 }
-/* A picture of the handle: the sheet is closed by the button, Esc or the backdrop, never dragged. */
-.ck-sheet-handle { flex: none; align-self: center; width: 36px; height: 4px; margin-bottom: 8px; border-radius: var(--ck-radius-pill); background: var(--ck-border-field); }
-.ck-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 4px; }
-.ck-sheet-title { min-width: 0; font-size: var(--ck-text-xl); font-weight: 800; }
-/* The round «✕» of the artifact: a thin frame on the card, like «назад» of the header row. */
-.ck-sheet-close { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid var(--ck-border); border-radius: 50%; background: var(--ck-surface); color: var(--ck-text); }
-.ck-sheet-close:hover:not(:disabled) { border-color: var(--ck-border-field); background: var(--ck-surface-raised); color: var(--ck-text); }
-.ck-sheet-close:active:not(:disabled) { border-color: var(--ck-border-field); background: var(--ck-surface-raised); color: var(--ck-text); }
+/* A picture of the handle: the sheet is closed by the button, Esc or the scrim, never dragged. */
+.ck-sheet-handle { flex: none; align-self: center; width: 32px; height: 4px; margin: 6px 0 var(--ck-space-3); border-radius: var(--ck-radius-pill); background: var(--ck-ink-2); opacity: 0.45; }
+.ck-sheet-head { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--ck-space-3); padding-bottom: var(--ck-space-3); }
+.ck-sheet-title { min-width: 0; margin: 0; font-family: var(--ck-font-display); font-size: var(--ck-text-heading); font-weight: 600; line-height: 1.25; text-wrap: balance; }
+/* «✕»: a quiet icon button of a tap; on iOS a small circle of surface-2 inside it. */
+.ck-sheet-close { display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--ck-tap); height: var(--ck-tap); min-height: var(--ck-tap); margin: 0 calc(-1 * var(--ck-space-2)) 0 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ck-ink-2); }
+.ck-sheet-close:hover:not(:disabled) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); color: var(--ck-ink); }
+.ck-sheet-close:active:not(:disabled) { background: color-mix(in oklab, var(--ck-ink) 10%, transparent); color: var(--ck-ink); }
 /* A long form scrolls inside the sheet; the scroll does not run on into the page. */
 .ck-sheet-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 /* The page behind an open sheet stays where it is. */
 html.ck-sheet-open { overflow: hidden; }
 
+:root[data-platform="ios"] .ck-sheet { width: calc(100% - 2 * var(--ck-space-2)); max-height: calc(100% - 48px - var(--ck-safe-bottom)); margin-bottom: calc(var(--ck-space-2) + var(--ck-safe-bottom)); padding-bottom: var(--ck-space-5); border-radius: var(--ck-radius-sheet); }
+:root[data-platform="ios"] .ck-sheet-handle { width: 36px; height: 5px; margin-top: 4px; }
+:root[data-platform="ios"] .ck-sheet-head { justify-content: center; min-height: 32px; padding-inline: var(--ck-tap); }
+:root[data-platform="ios"] .ck-sheet-title { text-align: center; }
+:root[data-platform="ios"] .ck-sheet-close { position: absolute; top: 0; right: calc(-1 * var(--ck-space-2)); bottom: var(--ck-space-3); margin: auto 0; padding: 7px; background: var(--ck-surface-2); background-clip: content-box; color: var(--ck-ink); }
+:root[data-platform="ios"] .ck-sheet-close:hover:not(:disabled), :root[data-platform="ios"] .ck-sheet-close:active:not(:disabled) { background: color-mix(in oklab, var(--ck-ink) 10%, var(--ck-surface-2)); background-clip: content-box; }
+
 @media (prefers-reduced-motion: no-preference) {
-  .ck-sheet { animation: ck-sheet-in 200ms ease-out; }
-  .ck-sheet-backdrop { animation: ck-sheet-fade 200ms ease-out; }
+  .ck-sheet { animation: ck-sheet-in var(--ck-dur-sheet) var(--ck-ease-out); }
+  :root[data-platform="ios"] .ck-sheet { animation-timing-function: var(--ck-ease-spring); }
+  .ck-sheet-backdrop { animation: ck-sheet-fade var(--ck-dur-state) var(--ck-ease-out); }
   @keyframes ck-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
   @keyframes ck-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+}
+
+@media (forced-colors: active) {
+  .ck-sheet { border: 1px solid CanvasText; }
 }

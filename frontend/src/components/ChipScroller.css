@@ -1,11 +1,11 @@
 /* One row of chips with a sideways scroll (ChipScroller.tsx). The fades are a mask, not a colour: they work on
-   a card and on the page, in both themes. Each edge fades only while chips hide behind it. */
+   a panel and on the paper, in both themes. Each edge fades only while chips hide behind it. */
 .ck-chip-scroller { --ck-chip-fade-start: 0px; --ck-chip-fade-end: 0px; min-width: 0; max-width: 100%; }
 .ck-chip-scroller[data-fade-start] { --ck-chip-fade-start: var(--ck-fade-size); }
 .ck-chip-scroller[data-fade-end] { --ck-chip-fade-end: var(--ck-fade-size); }
-/* The padding leaves room for the focus ring of a chip inside the scroller. */
+/* The padding leaves room for the focus ring of a chip and for its touch target (the ::before below) inside the scroller. */
 .ck-chip-scroller-track {
-  display: flex; flex-wrap: nowrap; gap: 8px; padding: 6px 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  display: flex; flex-wrap: nowrap; gap: var(--ck-space-2); padding: 8px 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
   -webkit-mask-image: linear-gradient(to right, transparent, black var(--ck-chip-fade-start), black calc(100% - var(--ck-chip-fade-end)), transparent);
   mask-image: linear-gradient(to right, transparent, black var(--ck-chip-fade-start), black calc(100% - var(--ck-chip-fade-end)), transparent);
 }
@@ -14,8 +14,26 @@
 .ck-chip-scroller-track:focus-visible { outline-offset: -3px; }
 .ck-chip-scroller-track > * { flex: none; }
 
-/* The chip of the project, for a row that has none of its own: a pill of 44 px, the selected one inverted.
-   The selected state is `aria-pressed="true"` for a button and `aria-current` for a link. */
-.ck-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 16px; border: 1px solid var(--ck-border-field); border-radius: var(--ck-radius-pill); background: var(--ck-surface); color: var(--ck-text); font-weight: 600; text-decoration: none; white-space: nowrap; }
-.ck-chip:hover:not(:disabled) { border-color: var(--ck-text-muted); background: var(--ck-surface-raised); color: var(--ck-text); }
-.ck-chip[aria-pressed="true"], .ck-chip[aria-current]:not([aria-current="false"]), .ck-chip[aria-pressed="true"]:hover:not(:disabled) { border-color: var(--ck-chip-selected-bg); background: var(--ck-chip-selected-bg); color: var(--ck-chip-selected-text); }
+/* The chip of Чекист 2.0 (docs/design-system/components/Chips): a filter, never an action. Android and a computer — a
+   32 px chip with 8 px corners and an ink-2 outline, a check mark on the selected one; iOS — a 34 px capsule with a line
+   frame. Selected — filled with ink, the text paper: the choice is ink, the action is seal. The selected state is
+   `aria-pressed="true"` for a button, `aria-current` for a link, `aria-checked="true"` for a radio role.
+   Here and not in App.css on purpose: this sheet comes before the screens, so a screen class of the same weight still
+   sets its own chip. The chip is low; its touch target is --ck-tap tall: the ::before reaches above and below it. */
+.ck-chip { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 14px; border: 1px solid var(--ck-ink-2); border-radius: 8px; background: var(--ck-surface); color: var(--ck-ink); font-family: var(--ck-font-ui); font-size: var(--ck-text-label); font-weight: 500; line-height: 1.2; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.ck-chip::before { content: ""; position: absolute; inset: min(0px, calc((100% - var(--ck-tap)) / 2)) 0; }
+:where(:root[data-platform="ios"]) .ck-chip { min-height: 34px; border-color: var(--ck-line); border-radius: var(--ck-radius-pill); }
+.ck-chip[aria-pressed="true"], .ck-chip[aria-current]:not([aria-current="false"]), .ck-chip[aria-checked="true"] { border-color: var(--ck-ink); background: var(--ck-ink); color: var(--ck-paper); }
+/* The check mark of a selected chip of Android: a mask filled with the text colour, before the words. */
+:where(:root:not([data-platform="ios"])) .ck-chip[aria-pressed="true"]::after, :where(:root:not([data-platform="ios"])) .ck-chip[aria-current]:not([aria-current="false"])::after, :where(:root:not([data-platform="ios"])) .ck-chip[aria-checked="true"]::after {
+  content: ""; order: -1; flex: none; width: 16px; height: 16px; margin-left: -6px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center / 16px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center / 16px no-repeat;
+}
+/* Hover — a state layer of 8 % ink, as weak as the chip: a selected chip keeps its fill. */
+@media (hover: hover) {
+  .ck-chip:where(:hover:not(:disabled):not([aria-pressed="true"]):not([aria-current="page"]):not([aria-current="true"]):not([aria-checked="true"])) { background: color-mix(in srgb, var(--ck-ink) 8%, var(--ck-surface)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ck-chip { transition: background-color var(--ck-dur-state) var(--ck-ease-out), color var(--ck-dur-state) var(--ck-ease-out), border-color var(--ck-dur-state) var(--ck-ease-out); }
+}

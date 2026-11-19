@@ -16,6 +16,8 @@ import { rememberConfirmed } from './review-actions'
 import type { ConfirmedCrops } from './review-actions'
 import { useReviewFocus } from './useReviewActions'
 import { cropToggleLabel } from './mobile-state'
+import { markFreshReceipt } from './fresh-receipt'
+import Icon from '../../components/Icon'
 import type { ReviewControl } from './useReviewActions'
 
 /** A phone: the crop that is being checked stays pinned at the top of its card while the form scrolls under it.
@@ -36,8 +38,9 @@ export function CropPin({ children }: { children: ReactNode }) {
 
 const noReview: ReviewControl = { state: { kind: 'idle' }, run: async () => undefined }
 
-function ImageCard({ item, confirmed, finished, busy, review, remember, result }: {
+function ImageCard({ item, confirmed, finished, busy, review, remember, result, watched }: {
   item: ReceiptImage; confirmed: ReceiptImageDetail | undefined; finished: boolean; busy: boolean; review: ReviewControl; remember: () => void; result: RefObject<HTMLParagraphElement | null>
+  watched: boolean
 }) {
   const action = review.state
   const addressed = action.kind !== 'idle' && action.imageId === item.id
@@ -50,6 +53,9 @@ function ImageCard({ item, confirmed, finished, busy, review, remember, result }
   const card = useRef<HTMLLIElement>(null)
   const narrow = useNarrow()
   const lastStatus = useRef(shown.status)
+  // A crop that turned into a saved receipt while this page watched it: the receipt prints once when opened from here.
+  const [firstReceipt] = useState(shown.receipt_id)
+  const fresh = (watched || firstReceipt === null) && shown.receipt_id !== null && shown.status === 'imported'
   // A reread after a refusal may replace the form by the saved state: focus that was inside the form goes to the message of the card.
   useEffect(() => {
     const left = lastStatus.current === 'needs_review' && shown.status !== 'needs_review'
@@ -69,7 +75,7 @@ function ImageCard({ item, confirmed, finished, busy, review, remember, result }
     {shown.status === 'needs_review'
       ? <>
         {/* The one spend form (2026-10-14): place, date and lines beside a small photo; this form keeps every field. */}
-        {finished && <Link className="action-link ck-rec-check" to={{ kind: 'expense-new', crop: shown.id }}>Проверить и сохранить</Link>}
+        {finished && <Link className="action-link ck-rec-check" to={{ kind: 'expense-new', crop: shown.id }}><Icon name="pencil" size={18} />Проверить и сохранить</Link>}
         {finished
           ? <details className="ck-rec-more ck-rec-all-fields">
             <summary>Все поля распознавания</summary>
@@ -78,13 +84,16 @@ function ImageCard({ item, confirmed, finished, busy, review, remember, result }
           : <ReviewResult image={shown} finished={finished} busy={busy} review={review} remember={remember} />}
       </>
       : <RecognitionIssues issues={shown.issues} status={shown.status} />}
-    {shown.receipt_id !== null && <Link className="action-link" to={{ kind: 'receipt', receiptId: shown.receipt_id }}>Открыть {numbered('чек', shown.receipt_id)}</Link>}
+    {shown.receipt_id !== null && <Link className="action-link ck-rec-open" to={{ kind: 'receipt', receiptId: shown.receipt_id }}
+      onClick={fresh ? () => { if (shown.receipt_id !== null) markFreshReceipt(shown.receipt_id) } : undefined}>Открыть {numbered('чек', shown.receipt_id)}</Link>}
     {shown.receipt_deleted && <p>Ранее сохранённый чек удалён.</p>}
   </li>
 }
 
-export default function ReceiptImages({ images, finished = false, busy = false, review = noReview }: {
+export default function ReceiptImages({ images, finished = false, busy = false, review = noReview, watched = false }: {
   images: ReceiptImage[]; finished?: boolean
+  /** The job was still running when its page opened: a receipt it saves is new to the person (the slip prints once). */
+  watched?: boolean
   /** Another action of the job screen is in flight: only one mutation at a time. */
   busy?: boolean; review?: ReviewControl
 }) {
@@ -94,5 +103,5 @@ export default function ReceiptImages({ images, finished = false, busy = false, 
   if (confirmed !== saved) setSaved(confirmed)
   if (images.length === 0) return <RequestState kind="empty" message={finished ? 'Обработка закончена без вырезок чеков. Посмотрите статус и причины задания.' : 'Вырезок пока нет. Они появятся после поиска чеков на фото.'} />
   return <ol className="ck-rec-list">{[...images].sort((a, b) => a.position - b.position).map((item) =>
-    <ImageCard key={item.id} item={item} confirmed={confirmed.get(item.id)} finished={finished} busy={busy} review={review} remember={focus.remember} result={focus.result} />)}</ol>
+    <ImageCard key={item.id} item={item} confirmed={confirmed.get(item.id)} finished={finished} busy={busy} review={review} remember={focus.remember} result={focus.result} watched={watched} />)}</ol>
 }

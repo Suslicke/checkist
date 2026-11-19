@@ -1,144 +1,167 @@
-/* «Регулярные платежи»: блок «Осталось оплатить» на «Главной» и экран /recurring в языке артефакта — карточки .ck-panel,
-   строки .ck-list / .ck-row, главное действие залито --ck-primary (обычная кнопка App.css), второе — .ck-button-secondary.
-   Цвета — только токены, размеры текста — шкала --ck-text-*; телефон (≤ 540 px) — одна колонка без прокрутки вбок. */
-.rec-card { gap: 12px; }
-.rec-card h2 { margin: 0; font-size: var(--ck-text-lg); font-weight: 800; }
-.ck-panel-head > .rec-card-link { display: inline-flex; align-items: center; min-height: 44px; margin-block: -12px; color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; white-space: nowrap; }
-.rec-card-link:hover { text-decoration: underline; text-underline-offset: 3px; }
-.rec-note { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
-.rec-head-meta { flex: none; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; white-space: nowrap; }
-.rec-sum { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; }
-.rec-sum-value { color: var(--ck-text); font-weight: 800; white-space: nowrap; }
-.rec-list > li:first-child { border-top: 1px solid var(--ck-divider); }
+/* «Регулярные платежи» (Чекист 2.0, 2026-11-20): /recurring and the blocks of «Главная» (RecurringDue). Panels .ck-panel,
+   rows .ck-list / .ck-row; the day of the due date in the tile of a row — a paid one a check in the colour of the income,
+   an overdue one in the colour of an overspend with words «просрочен на 3 дня»; the one seal of the screen is «Добавить
+   платёж» (of a sheet — «Оплатил»), the rest tonal or words. Colours only by 2.0 tokens, text sizes only by the 2.0 scale;
+   a phone (≤ 540 px) — one column without a scroll to the side. */
+.rec-card { gap: var(--ck-space-3); }
+.rec-card h2 { margin: 0; }
+.ck-panel-head > .rec-card-link { display: inline-flex; flex: none; align-items: center; min-height: var(--ck-tap); margin-block: calc((var(--ck-tap) - 1.4em) / -2); color: var(--ck-seal-ink); font-size: var(--ck-text-label); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.rec-note { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); line-height: 1.45; }
+.rec-head-meta { flex: none; color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; white-space: nowrap; }
+.rec-sum { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; line-height: 1.5; }
+.rec-sum-value { color: var(--ck-ink); font-weight: 600; }
+.rec-list > li:first-child { border-top: 1px solid var(--ck-line); }
 .rec-row { min-height: 60px; }
 
-/* The day of the due date in the badge: paid — the success tint, overdue — the error tint, open — neutral. */
-.rec-day { background: var(--ck-neutral-bg); color: var(--ck-text); font-size: var(--ck-text-base); font-variant-numeric: tabular-nums; }
-.rec-day-paid { background: var(--ck-success-bg); color: var(--ck-success-text); }
-.rec-day-overdue { background: var(--ck-error-bg); color: var(--ck-error-text); }
-.rec-day-before, .rec-day-inactive { background: var(--ck-disabled-bg); color: var(--ck-disabled-text); }
-.rec-day-suggested { background: var(--ck-accent-bg); color: var(--ck-accent-text); }
-.rec-meta-overdue { color: var(--ck-error-text); font-weight: 700; }
-.rec-meta-paid { color: var(--ck-success-text); }
-.rec-change { color: var(--ck-over-text); font-weight: 700; }
+/* The day of the due date in the tile: paid — a check in income, overdue — over, open — the tonal tile, not started or
+   switched off — a dashed outline. The words of the row say the same. */
+.rec-day { background: var(--ck-surface-2); color: var(--ck-ink); font-family: var(--ck-font-display); font-size: var(--ck-text-body); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rec-day-paid { background: var(--ck-income-soft); color: var(--ck-income); }
+.rec-day-overdue { background: var(--ck-over-soft); color: var(--ck-over); }
+.rec-day-skipped, .rec-day-elsewhere { color: var(--ck-ink-2); }
+.rec-day-before, .rec-day-inactive { background: transparent; box-shadow: inset 0 0 0 1px var(--ck-line-strong); color: var(--ck-ink-2); }
+.rec-day-suggested { background: var(--ck-gold-soft); color: var(--ck-gold-ink); }
+.rec-meta-overdue { color: var(--ck-over); font-weight: 600; }
+.rec-state { white-space: nowrap; }
+.rec-meta-paid { color: var(--ck-income); font-weight: 500; }
+.rec-change { color: var(--ck-over); font-weight: 600; white-space: normal; }
 
-.rec-all-paid { margin: 0; color: var(--ck-success-text); font-size: var(--ck-text-sm); font-weight: 700; }
-/* «Оплачено 3 из 5»: folded under the open ones, a 44 px line to tap. */
-.rec-closed > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; cursor: pointer; list-style: none; }
+.rec-all-paid { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--ck-income); font-size: var(--ck-text-body); font-weight: 600; }
+/* «Оплачено 3 из 5»: folded under the open ones, a line a tap high. */
+.rec-closed > summary { display: flex; align-items: center; gap: var(--ck-space-2); min-height: var(--ck-tap); color: var(--ck-seal-ink); font-size: var(--ck-text-label); font-weight: 600; cursor: pointer; list-style: none; }
 .rec-closed > summary::-webkit-details-marker { display: none; }
 /* A chevron that turns down when the list is open: the state is in the element itself (`open`) for a screen reader. */
 .rec-closed > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); }
 .rec-closed[open] > summary::before { transform: rotate(45deg); }
-.rec-closed > summary:hover { color: var(--ck-link-hover); }
-.rec-more { margin: 0; padding-top: 12px; border-top: 1px solid var(--ck-divider); }
-.rec-hint { display: block; padding-block: 16px; }
-.rec-hint-link, .rec-inline-link { color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; }
-.rec-hint-link:hover, .rec-inline-link:hover { text-decoration: underline; text-underline-offset: 3px; }
-.rec-notice { margin: 0; padding: 12px 16px; border-radius: var(--ck-radius-sm); background: var(--ck-info-bg); color: var(--ck-info-text); font-size: var(--ck-text-sm); font-weight: 600; }
+.rec-more { margin: 0; padding-top: var(--ck-space-3); border-top: 1px solid var(--ck-line); }
+.rec-hint { display: block; padding-block: var(--ck-space-4); }
+.rec-hint-link, .rec-inline-link { color: var(--ck-seal-ink); font-size: var(--ck-text-label); font-weight: 600; text-decoration: none; white-space: nowrap; }
+@media (hover: hover) {
+  .rec-card-link:hover, .rec-hint-link:hover, .rec-inline-link:hover, .rec-closed > summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+}
+/* What an answer did: a quiet line with a check, never a colour alone. */
+.rec-notice { display: flex; align-items: flex-start; gap: var(--ck-space-2); margin: 0; padding: var(--ck-space-3) 14px; border-radius: var(--ck-radius-field); background: var(--ck-surface-2); color: var(--ck-ink); font-size: var(--ck-text-label); font-weight: 500; line-height: 1.45; }
+.rec-notice-mark { flex: none; margin-top: 1px; color: var(--ck-income); }
 
-/* The question about the month before: the name and its due date, the main answer filled, two quiet ones under it. */
-.rec-ask { border: 2px solid var(--ck-warning-border); }
-.rec-ask-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-.rec-ask-item { display: grid; gap: 10px; padding-block: 14px; border-top: 1px solid var(--ck-divider); }
-.rec-ask-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; min-width: 0; }
-.rec-ask-name { min-width: 0; font-size: var(--ck-text-base); font-weight: 800; overflow-wrap: anywhere; }
-.rec-ask-meta { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 600; white-space: nowrap; }
-.rec-ask-add { width: 100%; min-height: 48px; }
-.rec-ask-add .ck-figures { white-space: nowrap; }
-.rec-ask-other { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.rec-ask-other button { min-height: 44px; padding-inline: 8px; font-size: var(--ck-text-sm); }
+/* The question about the month before: the name and its due date, the main answer tonal, two words under it. */
+.rec-ask-head-row { align-items: center; justify-content: flex-start; }
+.rec-ask-mark { width: 32px; height: 32px; border-radius: 10px; --ck-tone: var(--ck-over); }
+.rec-ask-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.rec-ask-item { display: grid; gap: var(--ck-space-2); padding-top: var(--ck-space-3); border-top: 1px solid var(--ck-line); }
+.rec-ask-item + .rec-ask-item { margin-top: var(--ck-space-3); }
+.rec-ask-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px var(--ck-space-3); min-width: 0; }
+.rec-ask-name { min-width: 0; font-size: var(--ck-text-body); font-weight: 600; overflow-wrap: anywhere; }
+.rec-ask-meta { color: var(--ck-ink-2); font-size: var(--ck-text-caption); font-weight: 500; white-space: nowrap; }
+.rec-ask-add { width: 100%; }
+.rec-ask-other { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ck-space-2); }
+.rec-ask-other button { padding-inline: var(--ck-space-2); font-size: var(--ck-text-label); }
 
-/* The page: what «оплачен» means, then the cards. */
-.rec-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; max-width: 760px; }
-.rec-intro { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
-/* A payment of the list is one button: the row opens its form. */
-.rec-row-button { width: 100%; margin: 0; padding: 12px 0; border: 0; border-radius: 0; background: transparent; color: var(--ck-text); font-weight: inherit; text-align: left; }
-.rec-row-button:hover, .rec-row-button:active { border: 0; background: transparent; color: var(--ck-text); }
-.rec-row-button:hover .ck-row-title { text-decoration: underline; }
+/* The page: what «оплачен» means, then the panels. */
+.rec-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ck-space-3); min-width: 0; max-width: 760px; }
+.rec-intro { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); line-height: 1.45; }
+/* A payment of the list is one button: the row opens its sheet. */
+.rec-row-button { width: 100%; margin: 0; padding: var(--ck-space-3) 0; border: 0; border-radius: 0; background: transparent; color: var(--ck-ink); font-weight: inherit; text-align: left; }
+.rec-row-button:where(:active:not(:disabled)) { border: 0; background: transparent; color: var(--ck-ink); }
 .rec-row-button .ck-row-meta { white-space: normal; }
+@media (hover: hover) {
+  .rec-row-button:hover { border: 0; background: transparent; color: var(--ck-ink); }
+  .rec-row-button:hover .ck-row-title { text-decoration: underline; text-underline-offset: 3px; }
+}
+
+/* The figure of the month: what is still to pay, the bar of what is paid, the mandatory sum of the month. */
+.rec-figure { display: grid; gap: var(--ck-space-1); justify-items: start; min-width: 0; }
+.rec-figure-label { color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; }
+.rec-figure-bar { justify-self: stretch; margin-block: var(--ck-space-2) var(--ck-space-1); }
+.rec-figure-bar > span { background: var(--ck-income); }
 
 /* Six months as dots: a gap («не оплачен») is seen at a glance; the words are in the label of the strip. */
 .rec-history { display: inline-flex; gap: 4px; margin-top: 4px; }
-.rec-dot { width: 10px; height: 10px; border: 1.5px solid var(--ck-border-field); border-radius: 50%; background: transparent; }
-.rec-dot-paid { border-color: var(--ck-success-text); background: var(--ck-success-text); }
-.rec-dot-overdue { border-color: var(--ck-error-text); background: var(--ck-error-bg); }
-.rec-dot-skipped, .rec-dot-elsewhere { border-color: var(--ck-neutral-border); background: var(--ck-neutral-bg); }
-.rec-dot-before, .rec-dot-inactive { border-style: dashed; border-color: var(--ck-divider); }
+.rec-dot { width: 8px; height: 8px; border: 1.5px solid var(--ck-line-strong); border-radius: 50%; background: transparent; }
+.rec-dot-paid { border-color: var(--ck-income); background: var(--ck-income); }
+.rec-dot-overdue { border-color: var(--ck-over); background: var(--ck-over-soft); }
+.rec-dot-skipped, .rec-dot-elsewhere { border-color: var(--ck-ink-2); background: var(--ck-surface-2); }
+.rec-dot-before, .rec-dot-inactive { border-style: dashed; border-color: var(--ck-line-strong); }
 
-.rec-suggestion { display: grid; gap: 4px; padding-bottom: 12px; }
+.rec-suggestion { display: grid; gap: var(--ck-space-1); }
 .rec-suggestion .ck-row-meta { white-space: normal; }
-.rec-suggestion-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.rec-suggestion-actions button { min-height: 44px; padding-inline: 8px; font-size: var(--ck-text-sm); }
-.rec-add { width: 100%; min-height: 48px; }
+/* «Добавить» and «Не надо» under the words of the row: small pills, a tap high by their ::before. */
+.rec-suggestion { padding-bottom: var(--ck-space-3); }
+.rec-suggestion > .rec-row { padding-bottom: var(--ck-space-1); }
+.rec-suggestion-actions { display: flex; gap: var(--ck-space-2); padding-left: 52px; }
+.rec-suggestion-actions button { position: relative; min-height: 36px; padding: 0 var(--ck-space-4); border-radius: var(--ck-radius-pill); font-size: var(--ck-text-label); }
+.rec-suggestion-actions button::before { content: ""; position: absolute; inset: min(0px, calc((100% - var(--ck-tap)) / 2)) 0; }
+/* The quiet answers are words in ink: they decline, they do not lead. */
+.rec-suggestion-actions .ck-button-ghost { color: var(--ck-ink-2); }
+.rec-ask-other .ck-button-ghost { color: var(--ck-ink); }
+.rec-add { display: inline-flex; align-items: center; justify-content: center; gap: var(--ck-space-2); width: 100%; min-height: 52px; border-radius: 16px; font-size: var(--ck-text-field); }
 
-/* The form in the sheet: rows of 56 px — the words on the left, the field on the right — like «Семья». */
-.rec-form { display: grid; gap: 16px; padding-bottom: 4px; }
-.rec-fields { display: grid; border-top: 1px solid var(--ck-divider); }
-.rec-field-wrap { border-bottom: 1px solid var(--ck-divider); }
-.rec-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 56px; cursor: text; }
-.rec-field > span { flex: none; font-size: var(--ck-text-sm); font-weight: 600; }
-.rec-field input, .rec-field select { flex: 1; width: 100%; min-width: 0; min-height: 48px; padding: 0 2px; border: 0; border-radius: var(--ck-radius-sm); background: transparent; color: var(--ck-text); font-size: var(--ck-text-base); text-align: right; text-align-last: right; }
-.rec-field input::placeholder { color: var(--ck-text-muted); opacity: 1; }
-.rec-field input[aria-invalid="true"], .rec-field select[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--ck-error-border); }
+/* The sheet: rows a tap high — the words on the left, the field on the right — like «Семья». */
+.rec-form { display: grid; gap: var(--ck-space-3); padding-bottom: var(--ck-space-1); }
+.rec-fields { display: grid; padding: 0 14px; border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface); }
+.rec-field-wrap + .rec-field-wrap { border-top: 1px solid var(--ck-line); }
+.rec-field { display: flex; align-items: center; justify-content: space-between; gap: var(--ck-space-3); min-width: 0; min-height: 52px; cursor: text; }
+.rec-field > span { flex: none; color: var(--ck-ink); font-size: var(--ck-text-body); font-weight: 500; }
+.rec-field input, .rec-field select { flex: 1; width: 100%; min-width: 0; min-height: var(--ck-tap); padding: 0 2px; border: 0; border-radius: var(--ck-radius-field); background: transparent; color: var(--ck-ink); font-size: var(--ck-text-field); text-align: right; text-align-last: right; }
+.rec-field input::placeholder { color: var(--ck-ink-2); opacity: 1; }
+.rec-field input[aria-invalid="true"], .rec-field select[aria-invalid="true"] { box-shadow: inset 0 -2px 0 var(--ck-error); }
 .rec-field-check { cursor: pointer; }
-.rec-field-check input { flex: none; width: 24px; min-height: 24px; height: 24px; accent-color: var(--ck-primary); }
-.rec-field-error { margin: 0 0 10px; color: var(--ck-error-text); font-size: var(--ck-text-xs); font-weight: 600; }
-.rec-save { width: 100%; min-height: 52px; }
-.rec-confirm { display: grid; gap: 10px; }
-.rec-confirm p { margin: 0; font-size: var(--ck-text-sm); }
-.rec-form button[aria-disabled="true"], .rec-card button[aria-disabled="true"] { border-color: var(--ck-disabled-border); background: var(--ck-disabled-bg); color: var(--ck-disabled-text); cursor: default; }
+.rec-field-check input { flex: none; width: 24px; min-height: 24px; height: 24px; accent-color: var(--ck-income); }
+.rec-field-error { margin: 0 0 var(--ck-space-2); color: var(--ck-error); font-size: var(--ck-text-caption); font-weight: 600; }
+.rec-form > .rec-field-error { margin: 0; }
+.rec-save, .rec-delete, .rec-cancel { width: 100%; }
+.rec-save { min-height: 52px; border-radius: 16px; font-size: var(--ck-text-field); }
+.rec-form button[aria-disabled="true"], .rec-card button[aria-disabled="true"] { border-color: var(--ck-surface-2); background: var(--ck-surface-2); color: var(--ck-ink-2); cursor: default; }
 
 @media (forced-colors: active) {
   .rec-dot, .rec-day { border: 1px solid CanvasText; }
   .rec-dot-paid { background: CanvasText; }
 }
 
-/* «Оплатил» (feature/payment-method): the main action of the sheet of a payment and a small one under the amount of an open
-   payment on «Главная»; the small form — rows like the form of a payment, the keys of the calculator of a spend
+/* «Оплатил» (feature/payment-method): the main action of the sheet of a payment and a small tonal one under the amount of an
+   open payment on «Главная»; the small form — rows like the form of a payment, the keys of the calculator of a spend
    (Expense.css), the chips of the way of payment. Then «История оплат»: the year by ways of payment and a row a month. */
 .rec-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .rec-row-end { display: flex; flex: none; flex-direction: column; align-items: flex-end; gap: 6px; }
 /* The row with «Оплатил» is tall anyway: its state wraps instead of ending in «…» on a narrow phone. */
 .rec-row:has(.rec-row-end) .ck-row-meta { white-space: normal; }
-.rec-pay-open { min-height: 44px; padding: 0 14px; border-radius: var(--ck-radius-pill); font-size: var(--ck-text-sm); white-space: nowrap; }
-.rec-pay { display: grid; gap: 12px; margin-bottom: 20px; }
-.rec-pay-main { width: 100%; min-height: 52px; font-size: var(--ck-text-base); }
-.rec-pay-form { gap: 14px; }
-.rec-pay-calc { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; }
-.rec-pay-method { display: grid; gap: 10px; }
-.rec-pay-label { font-size: var(--ck-text-sm); font-weight: 600; }
+.rec-pay-open { position: relative; min-height: 36px; padding: 0 14px; border-radius: var(--ck-radius-pill); font-size: var(--ck-text-label); white-space: nowrap; }
+.rec-pay-open::before { content: ""; position: absolute; inset: min(0px, calc((100% - var(--ck-tap)) / 2)) 0; }
+.rec-pay { display: grid; gap: var(--ck-space-3); margin-bottom: var(--ck-space-5); }
+.rec-pay-main { display: inline-flex; align-items: center; justify-content: center; gap: var(--ck-space-2); width: 100%; min-height: 52px; border-radius: 16px; font-size: var(--ck-text-field); }
+.rec-pay-form { gap: var(--ck-space-3); }
+.rec-pay-calc { display: flex; align-items: center; gap: var(--ck-space-3); padding-bottom: var(--ck-space-3); }
+/* The keys of the calculator are tools, not the main action: tonal, whatever Expense.css draws for the form of a spend. */
+.rec-pay-calc .expense-calc-key { border-color: transparent; background: var(--ck-surface-2); color: var(--ck-ink); }
+.rec-pay-method { display: grid; gap: var(--ck-space-2); }
+.rec-pay-label { color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; }
 @media (pointer: fine) {
   .rec-pay-calc:not(:has(.expense-calc-result)) { display: none; }
 }
-.rec-year { display: grid; gap: 8px; min-width: 0; }
-.rec-year h3, .rec-pay-heading { margin: 0; font-size: var(--ck-text-base); font-weight: 800; }
-.rec-pay-heading { margin-top: 8px; }
-.rec-year-total, .rec-year-methods { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; }
+.rec-year { display: grid; gap: var(--ck-space-2); min-width: 0; }
+.rec-year h3, .rec-pay-heading { margin: 0; font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; }
+.rec-pay-heading { margin-top: var(--ck-space-2); }
+.rec-year-total, .rec-year-methods { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; line-height: 1.5; }
 .rec-year-method { white-space: nowrap; }
-.rec-year-method .ck-figures { color: var(--ck-text); font-weight: 800; }
-.rec-year-list > li:first-child { border-top: 1px solid var(--ck-divider); }
-.rec-year-row { min-height: 52px; padding-block: 8px; }
-/* A paid month is a link to its spend: the arrow says so, a press shows it. */
-.rec-year-go { flex: none; color: var(--ck-text-muted); }
-.rec-year-link:where(:hover) .ck-row-title { text-decoration: underline; }
+.rec-year-method .ck-money { color: var(--ck-ink); font-weight: 600; }
+.rec-year-list > li:first-child { border-top: 1px solid var(--ck-line); }
+.rec-year-row { min-height: 52px; padding-block: var(--ck-space-2); }
+/* A paid month is a link to its spend: the arrow says so. */
+.rec-year-go { flex: none; color: var(--ck-ink-2); }
+@media (hover: hover) {
+  .rec-year-link:hover .ck-row-title { text-decoration: underline; text-underline-offset: 3px; }
+}
 
-/* The dashboard of the month (2026-10-23): a tile per root category and the payments grouped under it; the colour of a
-   category is the same as on «Главная» and «Траты» (--ck-cat-N by categoryTone), the chart — lib/charts StackedColumns. */
-.rec-cat-1 { --rec-cat: var(--ck-cat-1); --rec-cat-tint: var(--ck-cat-1-tint); }
-.rec-cat-2 { --rec-cat: var(--ck-cat-2); --rec-cat-tint: var(--ck-cat-2-tint); }
-.rec-cat-3 { --rec-cat: var(--ck-cat-3); --rec-cat-tint: var(--ck-cat-3-tint); }
-.rec-cat-4 { --rec-cat: var(--ck-cat-4); --rec-cat-tint: var(--ck-cat-4-tint); }
-.rec-cat-5 { --rec-cat: var(--ck-cat-5); --rec-cat-tint: var(--ck-cat-5-tint); }
-.rec-cat-6 { --rec-cat: var(--ck-cat-6); --rec-cat-tint: var(--ck-cat-6-tint); }
-.rec-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.rec-tile > a { display: grid; gap: 4px; min-height: 44px; padding: 12px; border-radius: var(--ck-radius-md); background: var(--rec-cat-tint, var(--ck-neutral-bg)); color: var(--ck-text); text-decoration: none; }
-.rec-tile-head { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--rec-cat, var(--ck-text-muted)); font-size: var(--ck-text-sm); font-weight: 700; }
-.rec-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rec-tile-sum { font-size: var(--ck-text-lg); font-weight: 800; white-space: nowrap; }
-.rec-tile-meta { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 600; }
-.rec-group { display: grid; gap: 0; min-width: 0; }
+/* The month by root category (2026-10-23): a tile per root category and the payments grouped under it; the tone of a
+   category is the one of «Главная» and «Траты» (.ck-tone-N by categoryTone), the chart — lib/charts StackedColumns. */
+.rec-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: var(--ck-space-2); margin: var(--ck-space-1) 0 0; padding: 0; list-style: none; }
+.rec-tile > a { display: grid; gap: var(--ck-space-1); min-height: var(--ck-tap); padding: var(--ck-space-3); border-radius: var(--ck-radius-field); background: var(--ck-surface-2); color: var(--ck-ink); text-decoration: none; }
+.rec-tile-head { display: flex; align-items: center; gap: var(--ck-space-2); min-width: 0; margin-bottom: 2px; }
+.rec-tile-icon { width: 28px; height: 28px; border-radius: 8px; background: color-mix(in srgb, var(--ck-tone, var(--ck-ink-2)) 18%, var(--ck-surface-2)); }
+.rec-tile-name { overflow: hidden; color: var(--ck-ink); font-size: var(--ck-text-label); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.rec-tile-meta { display: flex; align-items: center; gap: 4px; color: var(--ck-ink-2); font-size: var(--ck-text-caption); font-weight: 500; white-space: nowrap; }
+.rec-tile.is-done .rec-tile-meta { color: var(--ck-income); font-weight: 600; }
+.rec-group { display: grid; min-width: 0; }
 .rec-group > .rec-list { min-width: 0; }
-.rec-group-head { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 12px 0 4px; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 700; }
-.rec-group-head > .rec-group-sum { flex: none; }
-.rec-group-sum { margin-left: auto; color: var(--ck-text); font-weight: 800; white-space: nowrap; }
-.rec-tile-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--rec-cat, var(--ck-text-muted)); }
+.rec-group-head { display: flex; align-items: center; gap: var(--ck-space-2); min-width: 0; margin: var(--ck-space-3) 0 var(--ck-space-1); color: var(--ck-ink-2); font-family: var(--ck-font-ui); font-size: var(--ck-text-label); font-weight: 600; }
+.rec-group-sum { flex: none; margin-left: auto; color: var(--ck-ink); font-size: var(--ck-text-label); font-weight: 600; }
+.rec-tile-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ck-tone, var(--ck-ink-2)); }

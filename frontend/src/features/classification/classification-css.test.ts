@@ -10,13 +10,13 @@ const rule = (selector: string) => rules(css).filter((item) => item.selector ===
 const colored = (body: string) => /(^|[;\s])color\s*:/.test(body)
 
 describe('classification stylesheet guards (text of the rules, not rendering)', () => {
-  it('draws the current filter link as the accent pair of the theme, apart from the other links', () => {
-    // Accent text on the accent background is a contrast pair in both themes (tokens.css).
-    const current = rule('.ck-class-filter a[aria-current]')
-    expect(current).toMatch(/(^|[;\s])color: var\(--ck-accent-text\);/)
-    expect(current).toMatch(/(^|[;\s])background: var\(--ck-accent-bg\);/)
-    const other = rule('.ck-class-filter a')
-    expect(other).toMatch(/(^|[;\s])color: var\(--ck-link\);/)
+  it('draws the current filter link as a selected chip (ink, paper text), apart from the other links', () => {
+    // A choice is ink in 2.0: the selected chip is filled with ink, its text is paper — a contrast pair in both themes.
+    const current = rule('.ck-class-filter ul a[aria-current]')
+    expect(current).toMatch(/(^|[;\s])color: var\(--ck-paper\);/)
+    expect(current).toMatch(/(^|[;\s])background: var\(--ck-ink\);/)
+    const other = rule('.ck-class-filter ul a')
+    expect(other).toMatch(/(^|[;\s])color: var\(--ck-ink\);/)
     expect(other).toMatch(/(^|[;\s])background: var\(--ck-surface\);/)
   })
   it('takes every colour from the theme tokens', () => {
@@ -28,7 +28,7 @@ describe('classification stylesheet guards (text of the rules, not rendering)', 
     const general = rules(css).flatMap((item) => item.selector.split(',').map((selector) => ({ selector: selector.trim(), body: item.body })))
       .filter((item) => /^\.ck-class\s+a(?![\w-])/.test(item.selector) && colored(item.body))
     expect(general.map((item) => item.selector)).toEqual(['.ck-class a:not(.action-link):not([aria-current])'])
-    expect(general[0].body).toMatch(/(^|[;\s])color: var\(--ck-link\);/)
+    expect(general[0].body).toMatch(/(^|[;\s])color: var\(--ck-seal-ink\);/)
   })
   it('keeps marks and dates whole', () => {
     // The screen breaks free text anywhere; a mark wraps between its words only and a short pill not at all.
@@ -38,13 +38,20 @@ describe('classification stylesheet guards (text of the rules, not rendering)', 
     // Dates stay whole by the rule of the shell for <time>: no rule of this screen may undo it.
     expect(rules(css).filter((item) => /white-space\s*:\s*(normal|pre-wrap|pre-line)/.test(item.body)).map((item) => item.selector)).toEqual([])
   })
+  it('gives the gold of the assistant to what the model suggested and does, never to an action', () => {
+    expect(rule('.ck-class-group')).toContain('box-shadow: inset 3px 0 0 var(--ck-gold);')
+    expect(rule('.ck-class-run')).toContain('color: var(--ck-gold-ink);')
+    const gold = rules(css).filter((item) => /--ck-gold/.test(item.body)).map((item) => item.selector)
+    expect(gold.filter((selector) => /secondary|actions|button/.test(selector))).toEqual([])
+  })
   it('takes every size of the text from the scale of the theme', () => {
     const sizes = [...css.matchAll(/font-size\s*:\s*([^;]+);/g)].map((match) => match[1].trim())
     expect(sizes.length).toBeGreaterThan(5)
-    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl)\)$/)
+    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading)\)$/)
   })
-  it('draws the blocks as cards of the artifact and never lets a child widen the screen', () => {
-    expect(rule('.ck-class-panel')).toContain('background: var(--ck-surface); box-shadow: var(--ck-card-shadow);')
+  it('draws the blocks as panels of 2.0 and never lets a child widen the screen', () => {
+    expect(rule('.ck-class-panel')).toContain('border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface);')
+    expect(rule('.ck-class-panel')).not.toContain('box-shadow')
     expect(rule('.ck-class > *')).toBe('min-width: 0;')
     expect(rule('.ck-class-state')).toContain('border-radius: var(--ck-radius-pill);')
   })

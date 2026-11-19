@@ -4,7 +4,7 @@ import {
   collapsedHint, EXPANDED_STORAGE_KEY, hasOverspendBelow, isExpanded, readExpanded, subListId, withChoice, writeExpanded,
 } from './limit-collapse-state'
 
-const nb = (text: string) => text.replaceAll(' ', ' ')
+const nb = (text: string) => text.replaceAll(' ', '\u00a0')
 const sub = (category_id: number, name: string, spent: string, limit: string | null, children: DashboardSubCategory[] = []): DashboardSubCategory =>
   ({ category_id, name, spent, limit, limit_id: limit === null ? null : category_id, children })
 const top = (children: DashboardSubCategory[], category_id: number | null = 10): DashboardCategory =>

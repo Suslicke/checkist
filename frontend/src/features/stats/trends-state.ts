@@ -92,6 +92,8 @@ export const closeMonthHref = (query: TrendsQuery) => trendsHref({ ...query, mon
 
 export interface BreakdownRow {
   key: string; label: string; tone: number; amount: string; href?: string
+  /** The wire decimal of `amount`, for `Money`. */
+  value: Decimal
   /** Width of the thin bar, 0–100: the largest part of the month is full; a part that is not positive has none. */
   bar: number
 }
@@ -99,6 +101,8 @@ export interface MonthBreakdown {
   month: string
   title: string
   total: string
+  /** The wire decimal of `total`, for `Money`. */
+  totalValue: Decimal
   rows: BreakdownRow[]
   /** The same month on «Траты» with the drill-down into products. */
   spendingHref: string
@@ -119,13 +123,13 @@ export function monthBreakdown(block: TrendsMonthlyCurrency, month: string | und
     return largest > 0 && number > 0 ? Math.max(2, Math.round((number / largest) * 100)) : 0
   }
   const rows: BreakdownRow[] = entry.categories.map((part) => ({
-    key: String(part.id), label: names.get(part.id) ?? '', tone: categoryTone(part.id), amount: amount(part.amount),
+    key: String(part.id), label: names.get(part.id) ?? '', tone: categoryTone(part.id), amount: amount(part.amount), value: part.amount,
     href: spendingHref({ ...period, category: part.id }), bar: bar(part.amount),
   }))
   if (decimalNumber(entry.uncategorized) !== 0) {
-    rows.push({ key: uncategorizedKey, label: uncategorizedLabel, tone: 0, amount: amount(entry.uncategorized), bar: bar(entry.uncategorized) })
+    rows.push({ key: uncategorizedKey, label: uncategorizedLabel, tone: 0, amount: amount(entry.uncategorized), value: entry.uncategorized, bar: bar(entry.uncategorized) })
   }
-  return { month: entry.month, title: monthName(entry.month), total: amount(entry.total), rows, spendingHref: spendingHref(period) }
+  return { month: entry.month, title: monthName(entry.month), total: amount(entry.total), totalValue: entry.total, rows, spendingHref: spendingHref(period) }
 }
 
 /** «В среднем 45 000,00 KZT в месяц», the total of the window — for the head of a currency block. */
@@ -151,7 +155,11 @@ export function categoryChart(block: TrendsCategoryCurrency): LineChartSeries[] 
   ]
 }
 
-export interface CategoryChange { last: string; previous: string; text: string; tone: 'more' | 'less' | 'same' }
+export interface CategoryChange {
+  last: string; previous: string; text: string; tone: 'more' | 'less' | 'same'
+  /** The wire decimal of `last`, for `Money`. */
+  lastValue: Decimal
+}
 /** The last month against the one before it: «на 3 000,00 KZT больше, чем в августе 2026». Strings only, no arithmetic on money. */
 export function lastMonthChange(block: TrendsCategoryCurrency): CategoryChange | null {
   const [previous, last] = block.months.slice(-2)
@@ -161,7 +169,7 @@ export function lastMonthChange(block: TrendsCategoryCurrency): CategoryChange |
   const tone = b > a ? 'more' : b < a ? 'less' : 'same'
   const text = tone === 'same' ? `Столько же, сколько ${inMonth(previous.month)}`
     : `${tone === 'more' ? 'Больше' : 'Меньше'}, чем ${inMonth(previous.month)} (${money(previous.amount, block.currency)})`
-  return { last: money(last.amount, block.currency), previous: money(previous.amount, block.currency), text, tone }
+  return { last: money(last.amount, block.currency), previous: money(previous.amount, block.currency), text, tone, lastValue: last.amount }
 }
 
 /** What the person is looking at: the chosen category, or the suggestion of the server. */
@@ -236,6 +244,9 @@ export interface SpendSummaryCard {
   vsPrevious: { badge: ChangeBadge; label: string } | null
   vsAverage: { badge: ChangeBadge; label: string } | null
   average: string
+  /** The wire decimals of `spent` and `average`, for `Money`. */
+  spentValue: Decimal
+  averageValue: Decimal
 }
 export function spendSummary(block: TrendsMonthlyCurrency): SpendSummaryCard {
   const { summary } = block
@@ -246,6 +257,7 @@ export function spendSummary(block: TrendsMonthlyCurrency): SpendSummaryCard {
     vsPrevious: vsPrevious && summary.previous_month ? { badge: vsPrevious, label: `чем ${inMonth(summary.previous_month)}` } : null,
     vsAverage: vsAverage ? { badge: vsAverage, label: 'чем в среднем за период' } : null,
     average: money(block.average, block.currency),
+    spentValue: summary.spent, averageValue: block.average,
   }
 }
 
@@ -265,6 +277,8 @@ export interface MonthRow {
   depth: number
   previous: string
   last: string
+  /** The wire decimal of `last`, for `Money`; `null` without months. */
+  lastValue: Decimal | null
   badge: ChangeBadge | null
   /** Every month of the window, oldest first. */
   months: MonthCell[]
@@ -286,6 +300,7 @@ export function monthRows(block: TrendsMonthlyCurrency, query: TrendsQuery): Mon
     return {
       key: String(row.id), id: row.id, name: row.name, depth: row.depth,
       previous: money(row.amounts.at(-2) ?? null, block.currency), last: money(row.amounts.at(-1) ?? null, block.currency),
+      lastValue: row.amounts.at(-1) ?? null,
       badge: changeBadge(row.change_percent),
       months: row.amounts.map((amount, index) => ({
         month: months[index], title: monthName(months[index]), amount: money(amount, block.currency),
@@ -328,12 +343,19 @@ export function partsChart(block: TrendsCategoryCurrency, name: string, months: 
  * month, in words («лимит изменён: 120 000 → 150 000»). */
 export interface LimitCell {
   month: string; title: string; short: string; percent: string; spent: string; limit: string; none: boolean; over: boolean; fill: number
+  /** 80 % of the month's limit or more, not over it: the words «почти лимит» beside the over tone. */
+  near: boolean
+  /** The wire decimals of `spent` and of the month's limit (`null` without one), for `Money`. */
+  spentValue: Decimal
+  limitValue: Decimal | null
   change?: string
 }
 /** `amount` — the limit now, `null` when it was deleted since. `changes` — «Август: лимит изменён: …» for every
  * month of the window where it changed: a phone has no tooltip. */
 export interface LimitRow {
   key: string; name: string; currency: string; amount: string | null; cells: LimitCell[]; overCount: number; limitedCount: number
+  /** The wire decimal of `amount`, for `Money`. */
+  amountValue: Decimal | null
   changes: string[]
   /** The colour of the top-level category (`--ck-cat-N`), the same as its columns; 0 — the category is gone. */
   tone: number
@@ -357,7 +379,8 @@ export function limitRows(limits: readonly TrendsLimit[]): LimitRow[] {
       return {
         month: entry.month, title: monthName(entry.month), short: monthName(entry.month, true),
         percent: none ? 'без лимита' : formatPercent(entry.percent), spent: money(entry.spent, limit.currency),
-        limit: none ? 'без лимита' : money(monthLimit, limit.currency), none, over: value > 100,
+        limit: none ? 'без лимита' : money(monthLimit, limit.currency), none, over: value > 100, near: !none && value >= 80 && value <= 100,
+        spentValue: entry.spent, limitValue: none ? null : monthLimit,
         fill: Math.max(0, Math.min(100, Math.round(value))), ...(entry.change ? { change: limitChangeText(entry.change) } : {}),
       }
     })
@@ -365,7 +388,7 @@ export function limitRows(limits: readonly TrendsLimit[]): LimitRow[] {
     return {
       key: limit.id === null ? `deleted:${category?.id ?? 0}:${limit.currency}` : String(limit.id),
       name: category ? optionLabel(category.path.map((node) => node.name)) : 'Категория удалена',
-      currency: limit.currency, amount: limit.amount === null ? null : money(limit.amount, limit.currency), cells,
+      currency: limit.currency, amount: limit.amount === null ? null : money(limit.amount, limit.currency), amountValue: limit.amount, cells,
       overCount: cells.filter((cell) => cell.over).length, limitedCount: cells.filter((cell) => !cell.none).length,
       changes: cells.flatMap((cell) => (cell.change ? [`${cell.title}: ${cell.change}`] : [])),
       tone: categoryTone(category?.path[0]?.id ?? category?.id),

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { attentionFixture, dashboardFixture, homeFixture } from '../../api/budget-test-support'
 import type { Dashboard } from '../../api/budget'
 import {
-  attentionBadge, attentionMeta, attentionMoreText, attentionRows, budgetShare, daysInMonth, firstDayText, goalsTile, hasPulse, heroFoot, legendOf, limitLine, paymentsTile, percentText,
-  plansTile, pulseCaption, recentView, shareOf, tilesOf, todayIn, yesterdayOf,
+  attentionAmount, attentionBadge, attentionMeta, attentionMoreText, attentionRows, budgetShare, daysInMonth, firstDayText, goalsTile, hasPulse, legendOf, limitLine, limitState, paymentsTile,
+  percentText, plansTile, pulseCaption, recentView, shareOf, tilesOf, todayIn, yesterdayOf,
 } from './home-state'
+import { phraseText } from './home-hero'
 
 const nb = (text: string) => text.replaceAll(' ', '\u00a0')
 const plain = (text: string) => text.replace(/[\u00a0\u202f]/g, ' ')
@@ -58,37 +59,12 @@ describe('the pulse captions and the foot of the hero', () => {
     expect(hasPulse(homeFixture())).toBe(true)
     expect(hasPulse({ ...homeFixture(), by_day: [] })).toBe(false)
   })
-  it('puts the budget, the days and «в день» on the foot of the current month', () => {
-    const data = homeFixture()
-    const foot = heroFoot(data, data.currencies[0], true)
-    expect(foot.left.map(plain)).toEqual(['из 900 000 ₸', 'ещё 6 дней'])
-    expect(foot.leftOver).toBe(false)
-    expect(foot.right && { ...foot.right, amount: plain(foot.right.amount), title: plain(foot.right.title ?? '') }).toEqual({
-      label: 'в день', amount: '97 925 ₸', over: false, title: 'Бюджет месяца 900 000 ₸ минус траты и 1 платёж к оплате (25 000 ₸), поровну на 6 дней',
-    })
-    // Overspent: «Перерасход» at the right in the overspend colour, and the budget line says by how much.
-    const over = heroFoot({ ...data, budget: { amount: '200000.00', currency: 'KZT', spent: '287450.00' }, allowance: { ...data.allowance!, per_day: null, overspent: '87450.00' } }, data.currencies[0], true)
-    expect(over.left.map(plain)).toEqual(['Сверх бюджета на 87 450 ₸', 'ещё 6 дней'])
-    expect(over.leftOver).toBe(true)
-    expect(over.right?.label).toBe('Перерасход')
-    expect(over.right?.over).toBe(true)
-  })
-  it('says the days and the average day without a budget, and nothing of a past month but the budget', () => {
-    const data = { ...homeFixture(), budget: null, allowance: null }
-    const foot = heroFoot(data, data.currencies[0], true)
-    expect(foot.left.map(plain)).toEqual(['ещё 6 дней'])
-    expect(foot.right && { label: foot.right.label, amount: plain(foot.right.amount), title: foot.right.title }).toEqual({ label: 'средний день', amount: '2 610 ₸', title: null })
-    const past = heroFoot(homeFixture(), homeFixture().currencies[0], false)
-    expect(past.left.map(plain)).toEqual(['из 900 000 ₸'])
-    expect(past.right).toBeNull()
-    // Nothing at all: an older server, no budget, a past month.
-    expect(heroFoot({ ...dashboardFixture(), days_left: 0 }, dashboardFixture().currencies[0], false)).toEqual({ left: [], leftOver: false, right: null })
-  })
+  // The line under the main number (the budget, the days, «в день») is home-hero.ts: home-hero.test.ts.
 })
 
 describe('«Требует внимания»', () => {
   it('gives each kind its picture and colour, and a plain one to a kind it does not know', () => {
-    expect(attentionBadge('payment_due')).toEqual({ icon: 'repeat', tone: 'warn' })
+    expect(attentionBadge('payment_due')).toEqual({ icon: 'repeat', tone: 'plain' })
     const row = attentionFixture()[0]
     expect(attentionMeta(row).replace(/\u00a0/g, ' ')).toBe('220 000 ₸ · Срок 5 ноября')
     expect(attentionMeta({ ...row, kind: 'limit_near', meta: 'Осталось до лимита', amount: '11500.00' }).replace(/\u00a0/g, ' ')).toBe('Осталось до лимита · 11 500 ₸')
@@ -96,11 +72,12 @@ describe('«Требует внимания»', () => {
     expect(attentionMeta({ ...row, amount: null, currency: null })).toBe('Срок 5 ноября')
     expect(attentionMeta({ kind: 'plans_question', title: 'x', meta: 'Старый сервер', href: '/recurring' })).toBe('Старый сервер')
     expect(attentionBadge('payment_overdue')).toEqual({ icon: 'repeat', tone: 'over' })
-    expect(attentionBadge('income_missing')).toEqual({ icon: 'income', tone: 'success' })
-    expect(attentionBadge('limit_near')).toEqual({ icon: 'stats', tone: 'warn' })
+    expect(attentionBadge('income_missing')).toEqual({ icon: 'income', tone: 'income' })
+    // From 80 % of a limit — the over tone (the words of the row say so); gold only for the verdict of the assistant.
+    expect(attentionBadge('limit_near')).toEqual({ icon: 'stats', tone: 'over' })
     expect(attentionBadge('limit_over')).toEqual({ icon: 'stats', tone: 'over' })
     expect(attentionBadge('plan_verdict')).toEqual({ icon: 'insight', tone: 'ai' })
-    expect(attentionBadge('plans_question')).toEqual({ icon: 'insight', tone: 'ai' })
+    expect(attentionBadge('plans_question')).toEqual({ icon: 'repeat', tone: 'plain' })
     expect(attentionBadge('something_new')).toEqual({ icon: 'more', tone: 'plain' })
     expect(attentionMoreText(2)).toBe(nb('ещё 2'))
     expect(attentionMoreText(0)).toBeNull()
@@ -108,35 +85,47 @@ describe('«Требует внимания»', () => {
     expect(attentionRows(dashboardFixture())).toEqual([])
     expect(attentionRows(homeFixture())).toHaveLength(3)
   })
+  it('puts the sum of a row at the right, with the words of a limit under it', () => {
+    const row = attentionFixture()[0]
+    expect(attentionAmount(row)).toEqual({ money: '220000.00', currency: 'KZT', caption: null, over: false })
+    expect(attentionAmount({ ...row, kind: 'limit_over', amount: '5700.00' })).toEqual({ money: '5700.00', currency: 'KZT', caption: 'сверх лимита', over: true })
+    expect(attentionAmount({ ...row, kind: 'limit_near', amount: '6400.00' })).toEqual({ money: '6400.00', currency: 'KZT', caption: 'до лимита', over: false })
+    expect(attentionAmount({ ...row, amount: null, currency: null })).toBeNull()
+  })
 })
 
 describe('the tiles «Платежи · Планы · Цели»', () => {
   it('says paid of all and what waits, a part of the bar per payment', () => {
     const tile = paymentsTile(homeFixture().tiles!.payments)
-    expect(tile.value).toBe('2 из 5')
-    expect(plain(tile.note)).toBe('ждут 356 445 ₸')
+    expect(tile.value).toEqual(['2 из 5'])
+    expect(plain(phraseText(tile.note))).toBe('ждут 356 445 ₸')
+    expect(tile.note).toEqual(['ждут ', { money: '356445.00', currency: 'KZT' }])
     expect(tile.bar.map((part) => part.on)).toEqual([true, true, false, false, false])
     expect(tile.to).toBe('/recurring')
-    expect(paymentsTile({ paid: 3, total: 3, left: '0.00', currency: 'KZT', segments: [] }).note).toBe('все оплачены')
-    expect(paymentsTile(null)).toMatchObject({ value: 'Нет', note: 'добавить', bar: [] })
+    expect(paymentsTile({ paid: 3, total: 3, left: '0.00', currency: 'KZT', segments: [] }).note).toEqual(['все оплачены'])
+    expect(paymentsTile(null)).toMatchObject({ value: ['Нет'], note: ['добавить'], bar: [] })
   })
-  it('says what the plans still wait for, done of all, the plans as parts in their colours', () => {
+  it('says what the plans still wait for, done of all, the plans as parts by their sums', () => {
     const tile = plansTile(homeFixture().tiles!.plans, 'KZT', '2026-10')
-    expect(plain(tile.value)).toBe('185 000 ₸')
-    expect(tile.note).toBe('ждём · 1 из 3')
+    expect(plain(phraseText(tile.value))).toBe('185 000 ₸')
+    expect(tile.note).toEqual(['ждём · 1 из 3'])
     expect(tile.to).toBe('/planned?month=2026-10')
-    expect(tile.bar.map((part) => [part.flex, part.on, part.tone])).toEqual([[6500000, false, 6], [9200000, true, 4], [12000000, false, 3]])
-    expect(plansTile(null, 'KZT', '2026-10')).toMatchObject({ value: 'Нет', note: 'без планов', bar: [] })
+    expect(tile.bar.map((part) => [part.flex, part.on])).toEqual([[6500000, false], [9200000, true], [12000000, false]])
+    expect(plansTile(null, 'KZT', '2026-10')).toMatchObject({ value: ['Нет'], note: ['без планов'], bar: [] })
   })
   it('says the share of the goals and the bar of it', () => {
     const tile = goalsTile(homeFixture().tiles!.goals)
-    expect(tile.value).toBe(nb('62 %'))
-    expect(plain(tile.note)).toBe('3 цели · 305 000 ₸')
-    expect(tile.bar).toEqual([{ key: 'saved', flex: 62, on: true, tone: 3 }, { key: 'left', flex: 38, on: false, tone: 0 }])
+    expect(tile.value).toEqual([nb('62 %')])
+    expect(plain(phraseText(tile.note))).toBe('3 цели · 305 000 ₸')
+    expect(tile.bar).toEqual([{ key: 'saved', flex: 62, on: true }, { key: 'left', flex: 38, on: false }])
+    expect(tile.reached).toBe(false)
+    // Every goal saved up: the one milestone of the screen, said in words.
+    const reached = goalsTile({ ...homeFixture().tiles!.goals!, share: 100 })
+    expect(reached).toMatchObject({ reached: true, note: ['все цели достигнуты'] })
     expect(shareOf('62.49')).toBe(62)
     expect(shareOf(120)).toBe(100)
     expect(shareOf('x')).toBe(0)
-    expect(goalsTile(null).value).toBe('Нет целей')
+    expect(goalsTile(null).value).toEqual(['Нет целей'])
   })
   it('has no tiles from an older server', () => {
     expect(tilesOf(dashboardFixture(), 'KZT')).toBeNull()
@@ -161,5 +150,14 @@ describe('«Сегодня и вчера» and the limit line', () => {
     expect(limitLine('54300.00', '50000.00', 'KZT')).toEqual({ text: expect.stringContaining('109'), over: true })
     expect(plain(limitLine('21500.50', null, 'KZT').text)).toBe('21 500,50 ₸')
     expect(limitLine('1.00', '0.00', 'KZT').over).toBe(false)
+  })
+  it('says the state of a limit in words from 80 %, never by the colour alone', () => {
+    expect(limitState('92300.00', '120000.00')).toEqual({ percent: 77, state: 'calm', words: '' })
+    expect(limitState('63600.00', '70000.00')).toEqual({ percent: 91, state: 'near', words: 'почти лимит' })
+    expect(limitState('80000.00', '100000.00')).toEqual({ percent: 80, state: 'near', words: 'почти лимит' })
+    expect(limitState('20700.00', '15000.00')).toEqual({ percent: 138, state: 'over', words: 'сверх лимита' })
+    expect(limitState('70000.00', '70000.00')).toEqual({ percent: 100, state: 'near', words: 'лимит исчерпан' })
+    expect(limitState('100.00', null)).toBeNull()
+    expect(limitState('100.00', '0.00')).toBeNull()
   })
 })

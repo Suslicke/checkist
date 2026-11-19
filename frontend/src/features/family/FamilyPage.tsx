@@ -6,18 +6,22 @@ import {
 } from '../../api/family'
 import type { Family, FamilyAi, FamilyAiModel, FamilyInvite, FamilyMember } from '../../api/family'
 import type { LocalApiResult } from '../../api/types'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import Icon from '../../components/Icon'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import { loadSession } from '../../session'
 import { initials } from '../../lib/people'
 import { aiUsageText, familyFailure, familyTexts, inviteUrl, memberMeta, visibleFromMonths, visibleFromText } from './family-state'
 import type { FamilyAction } from './family-state'
+import { nativeSwitch } from '../auth/switch'
 import '../auth/Auth.css'
 import './Family.css'
 
 /** Something shown once: a new password, an invite address, the address of a new family (for the server owner). */
 export type FamilySecret = { kind: 'password'; username: string; value: string } | { kind: 'invite' | 'family-invite'; value: string }
-/** A question in the sheet before an action that changes the family for another person. */
+/** A question before an action that cannot be undone from here (ConfirmDialog): removing a person, giving the role
+ * of the head away, leaving the family. */
 export type FamilyConfirm = { kind: 'remove' | 'head'; member: FamilyMember } | { kind: 'leave' }
 
 export type FamilyViewProps = {
@@ -57,11 +61,11 @@ const secretTexts = (secret: FamilySecret) => {
 
 function Secret({ secret, onCopy }: { secret: FamilySecret; onCopy: (value: string) => void }) {
   const { label, note } = secretTexts(secret)
-  return <section className="ck-auth-panel family-secret" role="status" data-family-secret={secret.kind}>
+  return <section className="ck-auth-slip ck-tape family-secret" role="status" data-family-secret={secret.kind}>
     <p className="family-secret-label">{label}</p>
     <p className="family-secret-value"><code>{secret.value}</code></p>
-    <p className="family-note">{note}</p>
-    <button type="button" className="ck-auth-primary" onClick={() => onCopy(secret.value)}>Скопировать</button>
+    <p className="family-secret-note">{note}</p>
+    <button type="button" className="ck-auth-slip-button" onClick={() => onCopy(secret.value)}>Скопировать</button>
   </section>
 }
 
@@ -73,7 +77,7 @@ function InviteRow({ invite, label, onRevoke }: { invite: FamilyInvite; label: s
       <span>{label}</span>
       <span className="family-member-meta">до <time dateTime={invite.expires_at}>{new Date(invite.expires_at).toLocaleDateString('ru-RU')}</time></span>
     </span>
-    <button type="button" className="ck-auth-danger" onClick={() => onRevoke(invite.id)}>Отозвать</button>
+    <button type="button" className="ck-auth-danger family-revoke" onClick={() => onRevoke(invite.id)}>Отозвать</button>
   </li>
 }
 
@@ -84,17 +88,17 @@ function AiPanel({ ai, head, busy, onAi }: { ai: FamilyAi; head: boolean; busy: 
   const share = limit === null ? null : limit > 0 ? Math.min(100, Math.round((ai.used_today / limit) * 100)) : 100
   return <section className="ck-auth-panel family-ai" aria-labelledby="family-ai-heading" data-family-ai={ai.enabled ? 'on' : 'off'}>
     <div className="family-ai-head">
-      <h2 id="family-ai-heading">Распознавание и подсказки ИИ</h2>
+      <h2 id="family-ai-heading"><span className="family-ai-mark" aria-hidden="true"><Icon name="insight" size={18} /></span>Распознавание и подсказки ИИ</h2>
       {head
-        ? <button type="button" role="switch" className="family-switch" aria-checked={ai.enabled} aria-labelledby="family-ai-heading"
-          aria-describedby="family-ai-note" aria-disabled={busy || undefined} data-family-ai-switch
-          onClick={busy ? undefined : () => onAi?.(!ai.enabled)}><span className="family-switch-thumb" /></button>
+        ? <input type="checkbox" role="switch" className="ck-switch family-switch" {...nativeSwitch} checked={ai.enabled}
+          aria-labelledby="family-ai-heading" aria-describedby="family-ai-note" aria-disabled={busy || undefined} data-family-ai-switch
+          onChange={() => { if (!busy) onAi?.(!ai.enabled) }} />
         : <span className={`family-ai-state${ai.enabled ? ' family-ai-on' : ''}`}>{ai.enabled ? 'Включено' : 'Выключено'}</span>}
     </div>
-    <p id="family-ai-note" className="family-note family-sub">{familyTexts.aiNote}{head ? '' : ` ${familyTexts.aiHeadOnly}`}</p>
+    <p id="family-ai-note" className="family-note">{familyTexts.aiNote}{head ? '' : ` ${familyTexts.aiHeadOnly}`}</p>
     <div className="family-ai-usage">
       <p data-family-ai-usage>{aiUsageText(ai)}</p>
-      {share !== null && <div className="ck-bar" aria-hidden="true"><span style={{ width: `${share}%` }} /></div>}
+      {share !== null && <div className={`ck-bar${share >= 100 ? ' is-over' : share >= 80 ? ' is-near' : ''}`} aria-hidden="true"><span style={{ width: `${share}%` }} /></div>}
     </div>
   </section>
 }
@@ -109,8 +113,8 @@ function AiModelPanel({ choice, busy, onAiModel }: { choice: FamilyAiModel; busy
   const pick = (model: string, effort: string) => { if (!busy) onAiModel?.(model, effort) }
   return <section className="ck-auth-panel" aria-labelledby="family-model-heading" data-family-ai-model>
     <h2 id="family-model-heading">Модель ИИ</h2>
-    <p className="family-note family-sub">{familyTexts.aiModelNote}</p>
-    {choice.provider !== 'claude_cli' && <p className="family-note family-sub" role="status">{familyTexts.aiModelCodex}</p>}
+    <p className="family-note">{familyTexts.aiModelNote}</p>
+    {choice.provider !== 'claude_cli' && <p className="family-note family-warning" role="status">{familyTexts.aiModelCodex}</p>}
     <div className="family-fields">
       <label className="family-field" htmlFor="family-ai-model"><span>Модель</span>
         <select id="family-ai-model" value={choice.model} aria-disabled={busy || undefined} onChange={(event) => pick(event.target.value, choice.effort)}>
@@ -132,7 +136,7 @@ function NewFamiliesPanel({ family, secret, busy, onFamilyInvite, onRevokeFamily
   const invites = family.family_invites ?? []
   return <section className="ck-auth-panel" aria-labelledby="family-new-heading" data-family-new-invites>
     <h2 id="family-new-heading">Новые семьи</h2>
-    <p className="family-note family-sub">{familyTexts.familyInvites}</p>
+    <p className="family-note">{familyTexts.familyInvites}</p>
     {secret?.kind === 'family-invite' && <Secret secret={secret} onCopy={onCopy} />}
     {invites.length > 0 && <ul className="family-invites" aria-label="Действующие приглашения новых семей">
       {invites.map((invite) => <InviteRow key={invite.id} invite={invite} label="Новая семья" onRevoke={(id) => onRevokeFamily?.(id)} />)}
@@ -187,7 +191,7 @@ function AddMemberForm({ busy, onAdd }: { busy: boolean; onAdd: FamilyViewProps[
   const set = (name: keyof typeof values) => (value: string) => setValues({ ...values, [name]: value })
   return <form className="ck-auth-panel" onSubmit={submit} noValidate aria-labelledby="family-add-heading" data-family-add>
     <h2 id="family-add-heading">Добавить человека</h2>
-    <p className="family-note family-sub">Новая учётная запись сразу в вашей семье.</p>
+    <p className="family-note">Новая учётная запись сразу в вашей семье.</p>
     <div className="family-fields">
       <RowField id="family-username" label="Логин" value={values.username} placeholder="латиницей" onChange={set('username')} />
       <RowField id="family-first_name" label="Имя для показа" value={values.first_name} placeholder="например, Катя" onChange={set('first_name')} />
@@ -218,6 +222,8 @@ export function FamilyView(props: FamilyViewProps) {
   const count = household.members.length
   return <div className="ck-auth" data-family={head ? 'head' : 'member'}>
     {status}
+    {/* Two columns on a computer (theme/desktop.css): the people and ИИ at the left, the forms of the head at the right. */}
+    <div className="ck-auth-col">
     {secret && secret.kind !== 'family-invite' && <Secret secret={secret} onCopy={onCopy} />}
     <section className="ck-auth-panel" aria-labelledby="family-members-heading">
       <div className="ck-auth-head">
@@ -249,14 +255,16 @@ export function FamilyView(props: FamilyViewProps) {
           </li>
         })}
       </ul>
-      {!head && <button type="button" className="ck-auth-danger" data-family-leave onClick={() => onAsk({ kind: 'leave' })}>Выйти из семьи</button>}
+      {!head && <button type="button" className="ck-auth-danger family-leave" data-family-leave onClick={() => onAsk({ kind: 'leave' })}>Выйти из семьи</button>}
     </section>
     {family.ai && <AiPanel ai={family.ai} head={head} busy={busy} onAi={onAi} />}
+    </div>
+    <div className="ck-auth-col">
     {head && <>
       <AddMemberForm busy={busy} onAdd={onAdd} />
       <section className="ck-auth-panel" aria-labelledby="family-invite-heading" data-family-invites>
         <h2 id="family-invite-heading">Приглашение</h2>
-        <p className="family-note family-sub">Для человека, у которого уже есть учётная запись. {familyTexts.inviteOnce}</p>
+        <p className="family-note">Для человека, у которого уже есть учётная запись. {familyTexts.inviteOnce}</p>
         {family.invites.length > 0 && <ul className="family-invites" aria-label="Действующие приглашения">
           {family.invites.map((invite) => <InviteRow key={invite.id} invite={invite} label="Приглашение" onRevoke={onRevoke} />)}
         </ul>}
@@ -286,6 +294,7 @@ export function FamilyView(props: FamilyViewProps) {
       </Sheet>
     </>}
     {newFamilies}
+    </div>
   </div>
 }
 
@@ -302,9 +311,9 @@ const peopleCount = (count: number) => {
 
 const confirmTexts = (confirm: FamilyConfirm) => {
   switch (confirm.kind) {
-    case 'remove': return { title: 'Убрать из семьи', text: `${confirm.member.display_name} больше не увидит траты семьи. Его чеки останутся за ним.`, action: 'Убрать' }
-    case 'head': return { title: 'Передать роль главного', text: `Главным станет ${confirm.member.display_name}; вы останетесь членом семьи и не сможете скрывать платежи.`, action: 'Передать' }
-    case 'leave': return { title: 'Выйти из семьи', text: 'Вы перестанете видеть траты семьи; ваши чеки останутся у вас.', action: 'Выйти' }
+    case 'remove': return { title: 'Убрать из семьи?', text: `${confirm.member.display_name} больше не увидит траты семьи. Его чеки останутся за ним.`, action: 'Убрать из семьи', danger: true }
+    case 'head': return { title: 'Передать роль главного?', text: `Главным станет ${confirm.member.display_name}; вы останетесь членом семьи и не сможете скрывать платежи.`, action: 'Передать роль', danger: false }
+    case 'leave': return { title: 'Выйти из семьи?', text: 'Вы перестанете видеть траты семьи; ваши чеки останутся у вас.', action: 'Выйти из семьи', danger: true }
   }
 }
 
@@ -348,7 +357,7 @@ export default function FamilyPage({ joinToken }: { joinToken?: string }) {
     joinTried.current = true
     run('join', () => joinFamily(joinToken), (data) => { asFamily(data); return 'Вы в семье.' })
   })
-  if (loadFailed) return <p role="alert">Не удалось загрузить семью. Обновите страницу.</p>
+  if (loadFailed) return <RequestState kind="error" message="Не удалось загрузить семью." onRetry={() => { setLoadFailed(false); reload() }} />
   if (!family) return <RequestState kind="loading" message="Загружаем семью…" />
   const asked = confirm && confirmTexts(confirm)
   const answer = () => {
@@ -382,14 +391,7 @@ export default function FamilyPage({ joinToken }: { joinToken?: string }) {
       })}
       onAsk={setConfirm}
       onCopy={(value) => { void navigator.clipboard?.writeText(value).then(() => setMessage('Скопировано.'), () => setMessage('Скопируйте вручную.')) }} />
-    <Sheet open={confirm !== null} onClose={() => setConfirm(null)} title={asked?.title ?? ''} id="family-confirm">
-      <div className="ck-auth family-confirm">
-        <p>{asked?.text}</p>
-        <div className="ck-auth-actions">
-          <button type="button" className={confirm?.kind === 'head' ? 'ck-auth-primary' : 'ck-auth-danger'} data-family-confirm onClick={answer}>{asked?.action}</button>
-          <button type="button" className="ck-auth-secondary" onClick={() => setConfirm(null)}>Отмена</button>
-        </div>
-      </div>
-    </Sheet>
+    <ConfirmDialog open={confirm !== null} title={asked?.title ?? ''} message={asked?.text} confirmLabel={asked?.action ?? ''}
+      danger={asked?.danger ?? false} onConfirm={answer} onCancel={() => setConfirm(null)} />
   </>
 }

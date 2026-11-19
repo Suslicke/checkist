@@ -1,0 +1,55 @@
+/* The confirmation of an irreversible action (ConfirmDialog.tsx; docs/design-system/components/ConfirmDialog). A modal
+   <dialog> in the top layer: the element itself is the scrim over the whole window (a press on it cancels), the panel
+   inside holds the words and the buttons. `data-platform` on the dialog chooses the grammar:
+   - iOS — the action sheet: 8 px from the edges and above the home indicator, the explanation and the action in one
+     glass group, «Отмена» in its own group under it;
+   - Android and a computer — the Material 3 dialog in the middle: the question as the heading, the explanation, and at
+     the right «Отмена» and the action as words.
+   The action of a destruction is in the error colour, never the seal. Colours are tokens only. */
+.ck-confirm { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: var(--ck-space-6); border: 0; background: var(--ck-scrim); color: var(--ck-ink); overflow: auto; overscroll-behavior: contain; }
+.ck-confirm[open] { display: flex; align-items: center; justify-content: center; }
+/* The dialog draws its own scrim: the backdrop of the top layer stays clear. */
+.ck-confirm::backdrop { background: transparent; }
+.ck-confirm-panel { display: grid; gap: var(--ck-space-4); width: 100%; max-width: 420px; padding: var(--ck-space-6); border-radius: var(--ck-radius-sheet); background: var(--ck-surface); box-shadow: var(--ck-shadow-float); }
+.ck-confirm-group { display: grid; gap: var(--ck-space-2); }
+.ck-confirm-text { display: grid; gap: var(--ck-space-2); }
+.ck-confirm-title { margin: 0; color: var(--ck-ink); font-family: var(--ck-font-display); font-size: var(--ck-text-heading); font-weight: 600; line-height: 1.25; text-wrap: balance; }
+.ck-confirm-message { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-body); line-height: 1.45; }
+/* Android: the two words at the right of one row, «Отмена» first. */
+.ck-confirm-group-cancel-confirm { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--ck-space-2); }
+.ck-confirm-action, .ck-confirm-cancel { min-height: 40px; margin: 0; padding: 0 var(--ck-space-3); border: 0; border-radius: var(--ck-radius-pill); background: transparent; color: var(--ck-seal-ink); font-size: var(--ck-text-body); font-weight: 600; }
+.ck-confirm-danger { color: var(--ck-error); }
+.ck-confirm-action:hover:not(:disabled), .ck-confirm-cancel:hover:not(:disabled) { background: color-mix(in oklab, currentColor 8%, transparent); }
+.ck-confirm-action:active:not(:disabled), .ck-confirm-cancel:active:not(:disabled) { background: color-mix(in oklab, currentColor 10%, transparent); }
+
+/* iOS: the action sheet. */
+.ck-confirm[data-platform="ios"] { padding: var(--ck-space-2) max(var(--ck-space-2), env(safe-area-inset-right, 0px)) calc(var(--ck-space-2) + env(safe-area-inset-bottom, 0px)) max(var(--ck-space-2), env(safe-area-inset-left, 0px)); }
+.ck-confirm[data-platform="ios"][open] { align-items: flex-end; }
+.ck-confirm[data-platform="ios"] .ck-confirm-panel { gap: var(--ck-space-2); max-width: 480px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.ck-confirm[data-platform="ios"] .ck-confirm-group { gap: 0; overflow: hidden; border-radius: 20px; background: var(--ck-material); -webkit-backdrop-filter: blur(24px) saturate(1.8); backdrop-filter: blur(24px) saturate(1.8); }
+.ck-confirm[data-platform="ios"] .ck-confirm-group-cancel { background: var(--ck-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ck-confirm[data-platform="ios"] .ck-confirm-text { gap: var(--ck-space-1); padding: 14px var(--ck-space-4); border-bottom: 1px solid var(--ck-line); text-align: center; }
+.ck-confirm[data-platform="ios"] .ck-confirm-title { color: var(--ck-ink-2); font-family: var(--ck-font-ui); font-size: var(--ck-text-label); font-weight: 600; line-height: 1.35; }
+.ck-confirm[data-platform="ios"] .ck-confirm-message { font-size: var(--ck-text-label); line-height: 1.4; }
+.ck-confirm[data-platform="ios"] .ck-confirm-action, .ck-confirm[data-platform="ios"] .ck-confirm-cancel { display: block; width: 100%; min-height: 56px; padding: 0 var(--ck-space-4); border-radius: 0; font-size: var(--ck-text-title); font-weight: 400; }
+.ck-confirm[data-platform="ios"] .ck-confirm-cancel { font-weight: 600; }
+.ck-confirm[data-platform="ios"] .ck-confirm-action:hover:not(:disabled), .ck-confirm[data-platform="ios"] .ck-confirm-cancel:hover:not(:disabled) { background: transparent; }
+.ck-confirm[data-platform="ios"] .ck-confirm-action:active:not(:disabled), .ck-confirm[data-platform="ios"] .ck-confirm-cancel:active:not(:disabled) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ck-confirm[data-platform="ios"] .ck-confirm-group { background: var(--ck-surface); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ck-confirm[data-platform="ios"] .ck-confirm-group { background: var(--ck-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ck-confirm[open] { animation: ck-confirm-fade var(--ck-dur-state) var(--ck-ease-out); }
+  .ck-confirm[data-platform="ios"][open] .ck-confirm-panel { animation: ck-confirm-rise var(--ck-dur-sheet) var(--ck-ease-spring); }
+  @keyframes ck-confirm-fade { from { opacity: 0; } }
+  @keyframes ck-confirm-rise { from { transform: translateY(100%); } }
+}
+
+@media (forced-colors: active) {
+  .ck-confirm-panel, .ck-confirm[data-platform="ios"] .ck-confirm-group { border: 1px solid CanvasText; }
+}

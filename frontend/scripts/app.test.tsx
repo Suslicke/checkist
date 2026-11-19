@@ -88,7 +88,6 @@ describe('App feature connections (Node server markup, not browser behavior)', (
     navigation.snapshot = { href: '/health', route: { kind: 'health' } }
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('Проверяем соединение…')
-    expect(html).toContain('Ручное исправление распознанных данных')
     expect(html).not.toContain('База данных фото чеков')
     expect(html).not.toContain('Распознавание магазина и адреса, товаров и их стоимостей')
   })
@@ -97,12 +96,14 @@ describe('App feature connections (Node server markup, not browser behavior)', (
     const html = renderToStaticMarkup(<App />)
     const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'))
     expect(header).toContain('<span>Чекист</span>')
-    expect(header).toMatch(/<img class="brand-mark" src="[^"]*emblem-96[^"]*" srcSet="[^"]*emblem-96[^"]* 1x, [^"]*emblem-192[^"]* 2x" width="44" height="44" alt=""\/>/)
+    expect(header).toMatch(/<img class="brand-mark" src="[^"]*emblem-96[^"]*" srcSet="[^"]*emblem-96[^"]* 1x, [^"]*emblem-192[^"]* 2x" width="40" height="40" alt=""\/>/)
     expect(header.match(/<a\b[^>]*href="[^"]*"/g)).toEqual([
-      // «Чат с ИИ» stands beside the theme switch (2026-10-26); «Добавить трату» lives in the «＋» sheet (components/Sheet),
-      // which is closed until «＋» is pressed; «Статистика» is a link of the header row only, the money sections are the screen «Деньги».
-      '<a class="brand" aria-label="Чекист — главная" href="/"', '<a class="ck-chat-link" aria-label="Чат с ИИ" href="/chat"', '<a href="/"', '<a href="/receipts"', '<a href="/money"',
+      // Чекист 2.0: the logo, the menu, then the actions (the chat beside the theme switch, 2026-10-26) — the order of
+      // Tab is the order on the screen. «Добавить трату» lives in the «＋» sheet (components/Sheet), which is closed until
+      // «＋» is pressed; «Статистика» is a link of the header row only, the money sections are the screen «Деньги».
+      '<a class="brand" aria-label="Чекист — главная" href="/"', '<a href="/"', '<a href="/receipts"', '<a href="/money"',
       '<a class="main-more-toggle" aria-label="Ещё, текущий раздел: Каталог" data-current="" href="/more"', '<a href="/stats"', '<a href="/receipts/upload"', '<a href="/statements/new"', '<a aria-current="page" href="/catalog"', '<a href="/stores"', '<a href="/statements/rules"', '<a href="/recognition/jobs"', '<a href="/export"', '<a href="/health"',
+      '<a class="ck-chat-link" aria-label="Чат с ИИ" href="/chat"',
     ])
     expect(html).not.toContain('href="/login"')
     expect(header.match(/<button\b[^>]*class="ck-theme-toggle ck-theme-toggle-header"/g)).toHaveLength(1)

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Category } from '../../api/types'
+import Icon from '../../components/Icon'
+import Money from '../../components/Money'
 import { formatMoney } from '../../lib/money'
 import { categoryTree, LINES_MAX, sentIndexes } from './expense-form'
 import type { ExpenseErrors } from './expense-form'
@@ -27,8 +29,7 @@ function serviceCategory(chips: Category[]): number | null {
 const errorId = (name: string) => `expense-${name.replaceAll('.', '-')}-error`
 
 function Chevron() {
-  return <svg className="expense-line-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" /></svg>
+  return <Icon name="down" size={18} className="expense-line-chevron" />
 }
 
 /**
@@ -71,8 +72,8 @@ export default function LineEditor({ lines, errors, chips, currency, onChange: c
   return <div className="expense-row-block expense-lines" role="group" aria-labelledby="expense-lines-heading">
     <div className="expense-row">
       <span id="expense-lines-heading" className="expense-row-label">Позиции</span>
-      {lines.length < LINES_MAX && <button type="button" className="expense-add-line" onClick={() => add()}>
-        <span aria-hidden="true">+</span> Добавить<span className="expense-visually-hidden"> позицию</span></button>}
+      {lines.length < LINES_MAX && <button type="button" className="ck-button-ghost expense-add-line" onClick={() => add()}>
+        <Icon name="plus" size={18} />Добавить<span className="ck-visually-hidden"> позицию</span></button>}
     </div>
     {lines.length > 0 && <ol className="expense-line-list">{lines.map((line, index) => {
       const at = sent[index]
@@ -97,7 +98,7 @@ export default function LineEditor({ lines, errors, chips, currency, onChange: c
             <span className="expense-line-title">{summary.title}</span>
             {summary.detail && <span className="expense-line-detail">{summary.detail}</span>}
           </span>
-          <span className="expense-line-sum">{summary.sum}</span>
+          <span className="expense-line-sum">{summary.value === undefined ? summary.sum : <Money value={summary.value} currency={currency} size="row" />}</span>
           <Chevron />
         </button>}
         {unfolded && <div id={id('fields')} className="expense-line-fields">
@@ -135,17 +136,17 @@ export default function LineEditor({ lines, errors, chips, currency, onChange: c
                 {`${'\u2003'.repeat(depth)}${category.name}`}</option>)}
             </select>
           </label>
-          <button type="button" className="expense-line-remove" aria-label={`Убрать позицию ${index + 1}`}
+          <button type="button" className="ck-button-ghost expense-line-remove" aria-label={`Убрать позицию ${index + 1}`}
             onClick={() => onChange(lines.filter((other) => other.key !== line.key))}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            <Icon name={narrow ? 'trash' : 'close'} size={18} />
             {narrow && <span>Убрать</span>}
           </button>
         </div>}
         {failed.map((field) => <p key={field} className="expense-error" id={errorId(name(field))}>{errors[name(field)]}</p>)}
       </li>
     })}</ol>}
-    {!hasService && lines.length < LINES_MAX - 1 && <button type="button" className="expense-add-line expense-add-service" onClick={addService}>
-      <span aria-hidden="true">+</span> Обслуживание %</button>}
+    {!hasService && lines.length < LINES_MAX - 1 && <button type="button" className="ck-button-ghost expense-add-line expense-add-service" onClick={addService}>
+      <Icon name="plus" size={18} />Обслуживание %</button>}
     {extraDiscount && <p className="expense-hint-note expense-extra-discount">
       Скидка на весь чек: −{formatMoney(extraDiscount, currency)}, уже вычтена из итога.</p>}
     {errors.lines && <p className="expense-error" id={errorId('lines')}>{errors.lines}</p>}

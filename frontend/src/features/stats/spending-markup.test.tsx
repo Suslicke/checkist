@@ -16,7 +16,9 @@ import { shortAnswer } from './spending-tail-test-support'
 const read = (name: string) => statsFixture(name) as Spending
 const noop = () => {}
 const count = (html: string, pattern: RegExp) => (html.match(pattern) ?? []).length
-const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replaceAll(' ', ' ').replace(/\s+/g, ' ')
+/** The words of the markup: a sum drawn by Money reads as one value, «13 041,07 €». */
+const text = (html: string) => html.replace(/<span class="ck-money-(?:int|frac|cur|sign|approx)">([^<]*)<\/span>/g, '$1')
+  .replace(/<[^>]+>/g, ' ').replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ')
 
 const countries: CountryEntry[] = [
   { code: 'DE', name: 'Германия', currencies: ['EUR'], stores_count: 2, products_count: 30 },
@@ -45,8 +47,10 @@ describe('spending screen markup (Vitest/SSR — not what the browser shows, foc
     // one hero sum of the screen, the second a large one.
     expect(plain).toContain('Итого по чекам, € 13 041,07 € 373 чека')
     expect(plain).toContain('Итого по чекам, ₸ 438 091,92 ₸')
-    expect(html).toMatch(/<p class="spending-total ck-hero-figure">13[\s\u00a0\u202f]041,07[\s\u00a0\u202f]€<\/p>/)
-    expect(count(html, /ck-hero-figure/g)).toBe(1)
+    // Чекист 2.0: the sums are Money; the first total is the main number of the screen (display), the other a title.
+    expect(html).toContain('<p class="spending-total spending-total-main"><span class="ck-money ck-money--display"><span class="ck-money-int">13\u202f041</span><span class="ck-money-frac">,07</span>')
+    expect(count(html, /ck-money--display/g)).toBe(1)
+    expect(html).toContain('<p class="spending-total"><span class="ck-money ck-money--title">')
     expect(plain).toContain('Продукты питания 2 240 строк · 372 чека. 5 590,75 € 42,73 %')
     expect(plain).toContain('Суммы в разных валютах не складываются и не пересчитываются')
     expect(plain).toContain('разница — -42,59 €')
@@ -77,7 +81,7 @@ describe('spending screen markup (Vitest/SSR — not what the browser shows, foc
   it('offers the four breakdowns as links of the same filters', () => {
     const html = render({ date_from: '2026-01-01', group_by: 'product' }, ok('spending-product.json'))
     // One low switch on the width of the card, short words: nothing is cut on a 360 px phone.
-    expect(html).toContain('<nav class="spending-groupings stats-segments" aria-label="Разбивка трат"><a class="stats-segment" href="/stats?date_from=2026-01-01">Категории</a>')
+    expect(html).toContain('<nav class="spending-groupings stats-segments ck-segments" aria-label="Разбивка трат"><a class="stats-segment" href="/stats?date_from=2026-01-01">Категории</a>')
     expect(html).toContain('<a class="stats-segment" href="/stats?date_from=2026-01-01&amp;group_by=generic">Продукты</a>')
     expect(html).toContain('<a class="stats-segment" aria-current="true" href="/stats?date_from=2026-01-01&amp;group_by=product">Товары</a>')
     expect(html).toContain('<a class="stats-segment" href="/stats?date_from=2026-01-01&amp;group_by=store">Места</a>')
@@ -110,7 +114,8 @@ describe('spending screen markup (Vitest/SSR — not what the browser shows, foc
     const plain = text(html)
     expect(plain).toContain('Положительных сумм нет, диаграмма не построена.')
     expect(plain).toContain('Сумма не положительная: в диаграмму не входит, доля не считается.')
-    expect(plain).toContain('-7,14 € —')
+    // Money writes a negative sum with the minus sign U+2212.
+    expect(plain).toContain('\u22127,14 € —')
   })
 
   it('reserves the block while the first answer loads', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fixturesOf, statsFixture } from '../../api/stats-test-support'
 import type { Spending, SpendingGroupBy } from '../../api/stats'
+import { categoryTone } from '../../lib/category-tone'
 import { blockTail } from './spending-tail'
 import type { SpendingTailItem } from './spending-tail'
 import { cents, shortBlock } from './spending-tail-test-support'
@@ -69,7 +70,7 @@ describe('spending answer → chart and table rows (server fixtures)', () => {
     const items = pieItems(generic, 'generic', {})
     expect(items.map((item) => item.key)).toEqual(['generic:15', 'generic:11', 'generic:13', 'generic:3', 'generic:6', 'other', 'unmatched', 'service', 'deposit'])
     expect(items[5]).toEqual({
-      key: 'other', label: 'Прочее', value: 3508.72, tone: 'other', valueText: money('3 508,72 €'), shareText: money('26,82 %'),
+      key: 'other', label: 'Прочее', value: 3508.72, tone: 'other', valueText: money('3 508,72 €'), shareText: money('26,82 %'), amount: '3508.72',
       note: 'Ещё 9 обобщённых продуктов с меньшими суммами, одной строкой.',
       action: { label: 'Показать состав', ariaLabel: 'Показать состав „Прочего“, EUR', href: '/stats?other=open', expanded: false },
     })
@@ -78,6 +79,19 @@ describe('spending answer → chart and table rows (server fixtures)', () => {
     // Without special rows «Прочее» is simply the last one.
     const plain = pieItems({ ...generic, items: generic.items.filter((item) => item.id !== null) }, 'generic', {})
     expect(plain.at(-1)?.key).toBe('other')
+  })
+  it('passes the wire decimal of every sum for Money and gives a category its tone of «Главная»', () => {
+    const categories = read('spending-category.json').currencies[0]
+    const items = pieItems(categories, 'category', {})
+    expect(items.map((item) => item.amount)).toEqual(items.map((item) => item.key === 'other' ? categories.other?.amount
+      : categories.items.find((entry) => itemKey(entry) === item.key)?.amount))
+    for (const item of items) {
+      const source = categories.items.find((entry) => itemKey(entry) === item.key)
+      expect(item.categoryTone, item.key).toBe(source?.kind === 'category' && source.id !== null ? categoryTone(source.id) : undefined)
+    }
+    expect(items.some((item) => item.categoryTone !== undefined)).toBe(true)
+    // Generics, products and places take the series palette of the chart.
+    expect(pieItems(read('spending-generic.json').currencies[0], 'generic', {}).every((item) => item.categoryTone === undefined)).toBe(true)
   })
   it('sends a product row to the product card and shows its quantity', () => {
     const product = read('spending-product.json')
@@ -173,13 +187,13 @@ describe('open «Прочее»: the composition under its row', () => {
   })
   it('lists the composition in the order of the server with its own sums, shares, notes and drill-down links', () => {
     expect(other(tail)?.children).toEqual([
-      { key: 'generic:13', label: long.items[2].name, href: '/stats?currency=EUR&group_by=product&generic=13', valueText: money('1 012,70 €'), shareText: money('7,74 %'),
+      { key: 'generic:13', label: long.items[2].name, href: '/stats?currency=EUR&group_by=product&generic=13', valueText: money('1 012,70 €'), shareText: money('7,74 %'), amount: long.items[2].amount,
         note: expect.stringMatching(/^\S+ строк\S* · \S+ чек\S*\.$/) },
-      { key: 'generic:3', label: long.items[3].name, href: '/stats?currency=EUR&group_by=product&generic=3', valueText: money('928,99 €'), shareText: money('7,10 %'),
+      { key: 'generic:3', label: long.items[3].name, href: '/stats?currency=EUR&group_by=product&generic=3', valueText: money('928,99 €'), shareText: money('7,10 %'), amount: long.items[3].amount,
         note: expect.any(String) },
-      { key: 'generic:6', label: long.items[4].name, href: '/stats?currency=EUR&group_by=product&generic=6', valueText: money('694,68 €'), shareText: money('5,31 %'),
+      { key: 'generic:6', label: long.items[4].name, href: '/stats?currency=EUR&group_by=product&generic=6', valueText: money('694,68 €'), shareText: money('5,31 %'), amount: long.items[4].amount,
         note: expect.any(String) },
-      { key: 'rest', label: 'Ещё 9 обобщённых продуктов с меньшими суммами, одной строкой', valueText: money('3 508,72 €'), shareText: money('26,82 %'),
+      { key: 'rest', label: 'Ещё 9 обобщённых продуктов с меньшими суммами, одной строкой', valueText: money('3 508,72 €'), shareText: money('26,82 %'), amount: '3508.72',
         note: 'Чтобы увидеть их, сузьте период или откройте категорию.' },
     ])
     // A drill-down from the composition opens the next level closed.
@@ -205,7 +219,7 @@ describe('open «Прочее»: the composition under its row', () => {
   it('names the remainder and its hint by the breakdown, in Russian plurals', () => {
     const rest = (groupBy: SpendingGroupBy, count: number) => tailChildren(short, groupBy, {}, { kind: 'ok', items: [], sharesDiffer: false,
       rest: { count, amount: '46.31', share_percent: '0.42' } })[0]
-    expect(rest('product', 20)).toEqual({ key: 'rest', label: 'Ещё 20 товаров с меньшими суммами, одной строкой', valueText: money('46,31 €'), shareText: money('0,42 %'),
+    expect(rest('product', 20)).toEqual({ key: 'rest', label: 'Ещё 20 товаров с меньшими суммами, одной строкой', valueText: money('46,31 €'), shareText: money('0,42 %'), amount: '46.31',
       note: 'Чтобы увидеть их, сузьте период или откройте обобщённый продукт.' })
     expect(rest('product', 1).label).toBe('Ещё 1 товар с меньшими суммами, одной строкой')
     expect(rest('generic', 2).label).toBe('Ещё 2 обобщённых продукта с меньшими суммами, одной строкой')

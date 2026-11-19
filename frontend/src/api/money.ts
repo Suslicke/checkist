@@ -26,7 +26,7 @@ export type MoneyGoals = { count: number; share: Decimal | number; saved: Decima
 /** One of the last six months with its spends in the base currency, oldest first; the shown month is the last one. */
 export type MoneyMonth = { month: MonthCode; spent: Decimal }
 /** The last review of the month before: how the spends changed against the month before it (a per cent) and how many tips. */
-export type MoneyReview = { month: MonthCode; change_previous: Decimal | null; tips: number }
+export type MoneyReview = { month: MonthCode; change_previous: Decimal | null /* an amount in the base currency, not a per cent */; tips: number }
 export type Money = {
   month: MonthCode
   /** The base currency of the family: every sum of the answer is in it. */

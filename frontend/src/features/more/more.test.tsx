@@ -22,7 +22,7 @@ describe('«Ещё» as a screen of its own (2026-10-13, Vitest/SSR, not browser
     expect(buildRoute({ kind: 'more' })).toBe('/more')
   })
 
-  it('shows the person and the family, then «Данные» and «Настройки» with the theme; the money sections are the screen «Деньги» (2026-10-26)', () => {
+  it('shows the person and the family, then «Данные», «Настройки» and «Оформление»; the money sections are the screen «Деньги» (2026-10-26)', () => {
     const html = view(person)
     expect(html).toContain('<a class="ck-panel more-profile" aria-label="Аккаунт: Андрей" href="/account"><span class="more-avatar" aria-hidden="true">А</span>')
     expect(html).toContain('Семья «Пустовые» · пароль и уведомления')
@@ -30,10 +30,16 @@ describe('«Ещё» as a screen of its own (2026-10-13, Vitest/SSR, not browser
     expect(html).not.toContain('href="/incomes"')
     expect(html).toContain('<h2 id="more-data" class="more-title">Данные</h2>')
     expect(links(html)).toEqual(['/account', '/receipts/upload', '/statements/new', '/catalog', '/stores', '/statements/rules', '/recognition/jobs', '/export', '/family', '/health'])
-    // The account is the card on top, not a row again; the theme and the pictures of the spends end «Настройки».
+    // The account is the card on top, not a row again.
     expect(html.match(/href="\/account"/g)).toHaveLength(1)
-    expect(html).toMatch(/<h2 id="more-settings" class="more-title">Настройки<\/h2>.*<div class="more-toggles"><button type="button" class="ck-theme-toggle ck-theme-toggle-menu"/)
-    expect(html).toContain('data-list-icons="category"')
+    // «Оформление» closes the screen: the theme and the squares as segments, «Скрывать суммы», the main number of «Главная».
+    expect(html.indexOf('<h2 id="more-settings" class="more-title">Настройки</h2>')).toBeLessThan(html.indexOf('<h2 id="more-appearance-heading">Оформление</h2>'))
+    expect(html).toContain('<div class="ck-segments" role="group" aria-labelledby="more-appearance-theme-label">')
+    expect(html).toContain('<div class="ck-segments" role="group" aria-labelledby="more-appearance-icons-label"><button type="button" aria-pressed="true">Категория</button>')
+    expect(html).toMatch(/<input id="more-appearance-privacy" type="checkbox" role="switch" class="ck-switch"[^>]*>/)
+    expect(html).toContain('Главное число на Главной')
+    // The hint of the home screen is for Safari on an iPhone only: a server render never shows it.
+    expect(html).not.toContain('data-more-install')
   })
 
   it('has no card of the person without accounts', () => {

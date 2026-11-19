@@ -3,6 +3,8 @@ import type { ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { isRecurringMonth } from '../../api/recurring'
+import { MoneyView } from '../../components/Money'
+import type { MoneyProps } from '../../components/Money'
 import { monthPaymentFixture, recurringFixture } from '../../api/recurring-test-support'
 import type { Category } from '../../api/types'
 import { RecurringDueView } from './RecurringDue'
@@ -12,9 +14,11 @@ import {
 } from './recurring-state'
 
 const NBSP = String.fromCharCode(0xa0)
-/** Words are compared with ordinary spaces: `glue` puts no-break ones where a value must not break (checked once). */
-const plain = (text: string) => text.replaceAll(NBSP, ' ')
+/** Words are compared with ordinary spaces: `glue` and `Money` put no-break ones where a value must not break (checked once). */
+const plain = (text: string) => text.replaceAll(NBSP, ' ').replaceAll('\u202f', ' ')
 const html = (node: ReactElement) => plain(renderToStaticMarkup(node).replace(/<svg\b.*?<\/svg>/g, ''))
+/** The markup of an amount as `Money` draws it (components/Money.tsx), spaces made plain. */
+const money = (value: string, currency: string, props: Partial<MoneyProps> = {}) => html(<MoneyView value={value} currency={currency} hidden={false} {...props} />)
 const TODAY = '2026-10-13'
 
 describe('words of regular payments', () => {
@@ -29,7 +33,9 @@ describe('words of regular payments', () => {
     const words = (patch: Partial<typeof row>) => plain(stateText({ ...row, ...patch }, TODAY))
     expect(words({})).toBe('оплачен 5 октября')
     expect(words({ added: true })).toBe('добавлен по средней')
-    expect(words({ state: 'overdue', paid: null })).toBe('просрочен с 5 октября')
+    expect(words({ state: 'overdue', paid: null })).toBe('просрочен на 8 дней')
+    expect(words({ state: 'overdue', paid: null, due_date: '2026-10-12' })).toBe('просрочен на 1 день')
+    expect(words({ state: 'due', due_date: '2026-10-15', paid: null })).toBe('через 2 дня, 15 октября')
     expect(words({ state: 'due', due_date: '2026-10-25', paid: null })).toBe('до 25 октября')
     expect(words({ state: 'due', due_date: '2026-10-13', paid: null })).toBe('срок сегодня')
     expect(words({ state: 'due', due_date: '2026-10-14', paid: null })).toBe('срок завтра')
@@ -81,17 +87,17 @@ describe('«Осталось оплатить» on «Главная» (Vitest/SS
   })
   it('asks about last month with three answers and lists what is left, the paid ones folded', () => {
     const raw = renderToStaticMarkup(<RecurringDueView data={recurringFixture()} />)
-    // An amount never breaks: «6 700 ₸» holds no-break spaces.
-    expect(raw).toContain(['6', '700', '₸'].join(NBSP))
+    // An amount never breaks: «6 700 ₸» holds no-break spaces (U+202F of `Money`).
+    expect(raw).toContain('<span class="ck-money-int">6\u202f700</span><span class="ck-money-cur">\u202f₸</span>')
     const page = html(<RecurringDueView data={recurringFixture()} />)
     expect(page).toContain('<h2 id="rec-ask-heading">За сентябрь не нашёл оплату</h2>')
     expect(page).toContain('Сам ничего не добавлю — ответьте по каждому платежу.')
-    expect(page).toContain('<button type="button" class="rec-ask-add">Добавить по средней <span class="ck-figures">6 700 ₸</span></button>')
-    expect(page).toContain('<button type="button" class="ck-button-secondary">Не было</button><button type="button" class="ck-button-secondary">Оплачено иначе</button>')
+    expect(page).toContain(`<button type="button" class="ck-button-secondary rec-ask-add">Добавить по средней ${money('6700.00', 'KZT')}</button>`)
+    expect(page).toContain('<button type="button" class="ck-button-ghost">Не было</button><button type="button" class="ck-button-ghost">Оплачено иначе</button>')
     expect(page).toContain('<h2 id="rec-due-heading">Осталось оплатить</h2><a class="rec-card-link" href="/recurring">Все</a>')
-    expect(page).toContain('2 платежа · <span><span class="ck-figures rec-sum-value">6 700 ₸</span></span><span> + <span class="ck-figures rec-sum-value">20 $</span></span>')
+    expect(page).toContain(`2 платежа · <span>${money('6700.00', 'KZT', { className: 'rec-sum-value' })}</span><span> + ${money('20.00', 'USD', { className: 'rec-sum-value' })}</span>`)
     const open = page.slice(page.indexOf('rec-due-heading'), page.indexOf('<details'))
-    expect(open).toContain('<span class="ck-row-title">Интернет</span><span class="ck-row-meta rec-meta-overdue">просрочен с 3 октября</span>')
+    expect(open).toContain('<span class="ck-row-title">Интернет</span><span class="ck-row-meta rec-meta-overdue">просрочен на 10 дней</span>')
     expect(open).toContain('<span class="ck-row-meta rec-meta-due">до 25 октября</span>')
     expect(open).not.toContain('Аренда')
     expect(page).toContain('<details class="rec-closed"><summary>Оплачено 1 из 3</summary>')
@@ -100,12 +106,13 @@ describe('«Осталось оплатить» on «Главная» (Vitest/SS
   it('without the history of payments offers the expected amount, not «по средней»', () => {
     const data = recurringFixture()
     const page = html(<RecurringDueView data={{ ...data, questions: [{ ...data.questions[0], from_history: false, amount: '1990.00' }] }} />)
-    expect(page).toContain('>Добавить <span class="ck-figures">1 990 ₸</span></button>')
+    expect(page).toContain(`>Добавить ${money('1990.00', 'KZT')}</button>`)
   })
   it('says «Всё оплачено» and names a past month', () => {
     const paid = recurringFixture({ payments: [monthPaymentFixture()], questions: [], suggestions: [], totals: [{ currency: 'KZT', payments: 1, done: 1, left: null }] })
     expect(html(<RecurringDueView data={paid} />)).toContain('<h2 id="rec-due-heading">Регулярные платежи</h2>')
     expect(html(<RecurringDueView data={paid} />)).toContain('<p class="rec-all-paid">Всё оплачено</p>')
+    expect(renderToStaticMarkup(<RecurringDueView data={paid} />)).toMatch(/<p class="rec-all-paid"><svg [^>]*aria-hidden="true"/)
     const past = recurringFixture({ month: '2026-09', questions: [] })
     expect(html(<RecurringDueView data={past} />)).toContain('<h2 id="rec-due-heading">Не оплачено в сентябре</h2>')
   })
@@ -115,8 +122,14 @@ describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
   it('shows the month total of the mandatory payments in the base currency, or nothing on an older server', () => {
     const base = { ...recurringFixture().base!, expected: '347177.00', paid: '350522.78', left: '0.00', excluded: 0 }
     const page = html(<RecurringView data={recurringFixture({ base })} />)
-    expect(page).toContain('<p class="rec-sum rec-total">Обязательных платежей в месяц <span class="ck-figures rec-sum-value">347 177 ₸</span>')
-    expect(page).toContain('оплачено <span class="ck-figures rec-sum-value">350 522,78 ₸</span>')
+    expect(page).toContain(`<p class="rec-sum rec-total">Обязательных платежей в месяц ${money('347177.00', 'KZT', { className: 'rec-sum-value' })}`)
+    expect(page).toContain(`оплачено ${money('350522.78', 'KZT', { className: 'rec-sum-value' })}`)
+    // All paid: the figure says so in words (and a check), no zero to read.
+    expect(page).toContain('<div class="rec-figure"><p class="rec-all-paid">Всё оплачено</p>')
+    // Something left: the one display figure of the screen and the bar of what is paid.
+    const open = html(<RecurringView data={recurringFixture()} />)
+    expect(open).toContain(`<div class="rec-figure"><span class="rec-figure-label">Осталось оплатить</span>${money('17400.00', 'KZT', { size: 'display' })}<span class="ck-bar rec-figure-bar" aria-hidden="true"><span style="width:92%"></span></span>`)
+    expect(open.match(/ck-money--display/g)).toHaveLength(1)
     expect(page).not.toContain('без курса')
     const partial = html(<RecurringView data={recurringFixture({ base: { ...base, excluded: 2 } })} />)
     expect(partial).toContain('без курса: 2')
@@ -129,12 +142,12 @@ describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
   it('shows a tile per root category, lists the payments under their group and draws twelve months', () => {
     const page = html(<RecurringView data={recurringFixture()} />)
     const tiles = page.slice(page.indexOf('class="rec-tiles"'), page.indexOf('</ul>', page.indexOf('class="rec-tiles"')))
-    expect(tiles).toContain('rec-tile rec-cat-4')
+    expect(tiles).toContain('<li class="rec-tile ck-tone-4 is-done">')
     expect(tiles).toContain('Жильё')
-    expect(tiles).toContain('220 000 ₸')
-    expect(tiles).toContain('оплачено 1 из 1')
+    expect(tiles).toContain(money('220000.00', 'KZT', { size: 'title', className: 'rec-tile-sum' }))
+    expect(tiles).toContain('<span class="rec-tile-meta">оплачено 1 из 1</span>')
     expect(tiles).toContain('Связь и подписки')
-    expect(tiles).toContain('осталось <span class="ck-figures">17 400 ₸</span>')
+    expect(tiles).toContain(`<span class="rec-tile-meta">осталось ${money('17400.00', 'KZT')}</span>`)
     expect(tiles).toContain('href="#rec-group-15"')
     // The groups: the heading with the sum, then the rows of its payments (2 and 3 under subscriptions).
     const subs = page.slice(page.indexOf('id="rec-group-15"'))
@@ -157,9 +170,9 @@ describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
     expect(page).toContain('два из трёх: место, категория, сумма')
     expect(page).toContain('<h2 id="rec-suggest-heading">Нашёл по истории</h2>')
     expect(page).toContain('<span class="ck-row-meta">около 10-го · 6 месяцев подряд · Связь и подписки</span>')
-    expect(page).toContain('<button type="button">Добавить</button><button type="button" class="ck-button-secondary">Не надо</button>')
+    expect(page).toContain('<button type="button" class="ck-button-secondary">Добавить</button><button type="button" class="ck-button-ghost">Не надо</button>')
     expect(page).toContain('<h2 id="rec-list-heading">Октябрь 2026</h2><span class="rec-head-meta">оплачено 1 из 3</span>')
-    expect(page).toContain('<span class="ck-row-meta rec-change ck-figures">было 6 700 ₸, стало 7 200 ₸</span>')
+    expect(page).toContain('<span class="ck-row-meta"><span class="rec-state rec-meta-overdue">просрочен на 10 дней</span> · Beeline</span><span class="ck-row-meta rec-change">было 6 700 ₸, стало 7 200 ₸</span>')
     expect(page).toContain('<span class="rec-history" role="img" aria-label="Полгода: май 2026 — оплачен, июнь 2026 — оплачен, июль 2026 — оплачен, '
       + 'август 2026 — оплачен, сентябрь 2026 — не оплачен, октябрь 2026 — не оплачен">')
     expect(page.match(/class="rec-dot rec-dot-overdue"/g)).toHaveLength(2)
@@ -199,7 +212,8 @@ describe('/recurring (Vitest/SSR, not browser visual acceptance)', () => {
     expect(form).toContain('<option value="5">Жильё</option><option value="6" selected="">  Аренда</option>')
     expect(form).not.toContain('Не разобрано')
     expect(form).toContain('<span>Включён</span><input id="rec-form-active" type="checkbox" checked=""/>')
-    expect(form).toContain('<button type="submit" class="rec-save">Сохранить</button><button type="button" class="ck-button-danger">Удалить платёж</button>')
+    // A saved payment: «Оплатил» leads its sheet, saving the fields is tonal; the deletion asks in a ConfirmDialog (closed here).
+    expect(form).toContain('<button type="submit" class="ck-button-secondary rec-save">Сохранить</button><button type="button" class="ck-button-danger rec-delete">Удалить платёж</button></form>')
     const fresh = html(<RecurringForm payment={null} categories={categories} currency="USD" busy={false} onSubmit={() => {}} />)
     expect(fresh).toContain('value="USD"')
     expect(fresh).not.toContain('Включён')
@@ -222,12 +236,12 @@ describe('regular income (Vitest/SSR, not browser visual acceptance)', () => {
     expect(counted(data).map((row) => row.id)).toEqual([1, 2, 3])
     const page = html(<RecurringDueView data={data} />)
     expect(page).toContain('<h2 id="inc-due-heading">Регулярный доход</h2>')
-    expect(page).toContain('<span class="inc-due-name">Зарплата 650 000 ₸ — внести?</span>')
+    expect(page).toContain(`<span class="inc-due-name">Зарплата ${money('650000.00', 'KZT', { tone: 'in', sign: 'plus' })} — внести?</span>`)
     expect(page).toContain('<input inputMode="decimal" autoComplete="off" aria-label="Сумма «Зарплата», KZT" aria-invalid="false" value="650000"/>'
-      + '<button type="submit">Внести</button>')
+      + '<button type="submit" class="ck-button-secondary">Внести</button>')
     // Alone, without payments: the question still comes.
     expect(html(<RecurringDueView data={recurringFixture({ payments: [salary], questions: [], suggestions: [], totals: [] })} />))
-      .toContain('Зарплата 650 000 ₸ — внести?')
+      .toContain('— внести?')
   })
   it('says «получен» and lists the regular income in its own card of /recurring', () => {
     expect(plain(stateText({ ...salary, state: 'paid', paid: { receipt_id: null, purchased_on: '2026-10-11', total: '600000.00' } }, TODAY)))

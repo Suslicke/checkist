@@ -308,10 +308,17 @@ export function sumText(value: string): string {
 /** «Сохранить · 4 501 KZT»: the amount that will be saved, rounded up to whole units like every amount on screen
  * (`lib/money.ts`); just «Сохранить» while there is no valid amount yet. */
 export function saveLabel(draft: ExpenseDraft): string {
+  const total = saveTotal(draft)
+  return total ? `Сохранить · ${formatMoney(total.value, total.currency)}` : 'Сохранить'
+}
+
+/** The amount the save button names (Чекист 2.0: «Сохранить · <Money>»): the sum of the positions or the typed amount,
+ * with the currency when its code is valid; `undefined` while there is no valid amount yet. */
+export function saveTotal(draft: ExpenseDraft): { value: string; currency: string } | undefined {
   const itemized = filledLines(draft.lines).length > 0
-  const amount = itemized ? itemizedTotal(draft) : normalizeAmount(draft.amount)
+  const value = itemized ? itemizedTotal(draft) : normalizeAmount(draft.amount)
   const currency = draft.currency.trim().toUpperCase()
-  return amount ? `Сохранить · ${formatMoney(amount, /^[A-Z]{3}$/.test(currency) ? currency : '')}` : 'Сохранить'
+  return value ? { value, currency: /^[A-Z]{3}$/.test(currency) ? currency : '' } : undefined
 }
 
 /** The day before a calendar date, counted on the calendar (no time zone, no daylight saving). */

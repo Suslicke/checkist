@@ -1,11 +1,9 @@
-/** Pure helpers of the lines of a receipt: the facts of a phone row and the categories of the header. */
+/** Pure helpers of the lines of a receipt: the facts of a line of the paper slip and the categories of the header. */
 import type { Line } from '../../api/receipts'
 import type { NamedObject } from '../../api/types'
 import { formatQuantity, formatUnit } from '../../lib/format'
-import { money, price, recognizedValue } from './state'
-
-/** The headings of the lines table in the order of its columns; the first one is the row heading. */
-export type LineColumns = readonly [heading: string, quantity: string, price: string, amount: string, discount: string, paid: string]
+import { formatMoneyNumber } from '../../lib/money'
+import { price, recognizedValue } from './state'
 
 /** A Decimal of the server as a comparable string: "2.50" and "2.5" are one value. Never a Number. */
 export function canonical(value: string | null): string | null {
@@ -17,24 +15,34 @@ export function canonical(value: string | null): string | null {
   return number === '0' ? '0' : `${match[1]}${number}`
 }
 
-/** One fact under the name of a line: `label` is read by a screen reader only when `quiet`. */
-export type LineFact = { key: 'quantity' | 'discount' | 'paid'; label: string; value: string; quiet?: boolean }
+/** A number of the paper slip: the digits of an amount without its currency (the slip names it once, at the total),
+ * the minus of an amount U+2212. An unreadable value is said. */
+export function slipNumber(value: string | null): string {
+  return recognizedValue(formatMoneyNumber(value)).replace(/^-/, '\u2212')
+}
+
+/** One line of the paper under the printed name: «2 шт × 1,29 ……… 2,58», then «Скидка ……… −0,20» and «Оплачено ……… 2,38»
+ * only when they say something. `quiet` — the label is read by a screen reader only. */
+export type SlipFact = { key: 'amount' | 'discount' | 'paid'; label: string; value: string; quiet?: boolean }
 
 /**
- * The facts of a line row, in the order of the table columns. «2 шт × 1,29 €» — only when the quantity is not one (then
- * the price is the amount itself); a zero discount and a paid amount equal to the amount are left out. The source
- * values are compared, not the formatted text; an unreadable value is shown.
+ * The facts of a line of the slip, in the order of the former table columns. The first one is the amount: its label is
+ * «2 шт × 1,29» when the quantity is not one, otherwise the price is the amount itself and the label «Сумма» is only
+ * read by a screen reader; a zero discount and a paid amount equal to the amount are left out. The source values are
+ * compared, not the formatted text; an unreadable value is shown.
  */
-export function lineFacts(line: Line, currency: string | undefined, columns: LineColumns): LineFact[] {
+export function slipFacts(line: Line): SlipFact[] {
   const amount = canonical(line.amount)
   const quantity = canonical(line.quantity)
-  const facts: (LineFact | null)[] = [
-    quantity === '1' ? null : { key: 'quantity', label: `${columns[1]} и ${columns[2].toLocaleLowerCase('ru-RU')}`, quiet: true,
-      value: `${recognizedValue(formatQuantity(line.quantity, line.unit))} × ${price(line.unit_price, currency)}` },
-    canonical(line.discount_amount) === '0' ? null : { key: 'discount', label: columns[4], value: money(line.discount_amount, currency) },
-    amount !== null && canonical(line.paid_amount) === amount ? null : { key: 'paid', label: columns[5], value: money(line.paid_amount, currency) },
+  const discount = canonical(line.discount_amount)
+  const facts: (SlipFact | null)[] = [
+    quantity === '1' ? { key: 'amount', label: 'Сумма', quiet: true, value: slipNumber(line.amount) }
+      : { key: 'amount', label: `${recognizedValue(formatQuantity(line.quantity, line.unit))} × ${price(line.unit_price)}`, value: slipNumber(line.amount) },
+    discount === '0' ? null : { key: 'discount', label: 'Скидка',
+      value: discount === null ? slipNumber(line.discount_amount) : slipNumber(discount.startsWith('-') ? discount.slice(1) : `-${discount}`) },
+    amount !== null && canonical(line.paid_amount) === amount ? null : { key: 'paid', label: 'Оплачено', value: slipNumber(line.paid_amount) },
   ]
-  return facts.filter((fact): fact is LineFact => fact !== null)
+  return facts.filter((fact): fact is SlipFact => fact !== null)
 }
 
 /**

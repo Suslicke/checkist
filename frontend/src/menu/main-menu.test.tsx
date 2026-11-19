@@ -36,8 +36,9 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
     ['ten items in accounts', reader, ['Загрузить чек', 'Загрузить выписку', 'Каталог', 'Магазины', 'Правила выписок', 'Обработка чеков', 'Выгрузка', 'Семья', 'synthetic-reader', 'Состояние сервисов']],
   ])('keeps the links after the third one behind «Ещё» with %s', (_name, session, more) => {
     const html = render(session, { kind: 'not-found', path: '/missing' })
-    // The same nav: «Главная · Траты · ＋ · Деньги · Ещё» (2026-10-26); the sections are its direct children, with no new attributes.
-    expect(html).toMatch(/^<nav class="main-navigation" aria-label="Основная навигация"><a href="\/">Главная<\/a><a href="\/receipts">Траты<\/a><div class="main-add">.*<\/div><a href="\/money">Деньги<\/a><div class="main-more">/)
+    // The same nav: «Главная · Траты · Деньги · Ещё» and «＋» after them (Чекист 2.0: the action stands apart from the
+    // sections — beside the capsule on iOS, the FAB on Android — and the order of Tab is the order on the screen).
+    expect(html).toMatch(/^<nav class="main-navigation" aria-label="Основная навигация"><a href="\/">Главная<\/a><a href="\/receipts">Траты<\/a><a href="\/money">Деньги<\/a><div class="main-more">.*<\/div><div class="main-add">.*<\/div><\/nav>$/)
     // «Статистика» is the first link of the header row behind «Ещё»: a phone reaches it from the tile of «Деньги».
     expect(links(html)).toEqual(['Главная', 'Траты', 'Деньги', 'Ещё', 'Статистика', ...more])
     // «Ещё» of the phone's bar is a link to its screen (/more, 2026-10-13); «＋» a closed sheet (a dialog, components/Sheet).
@@ -68,12 +69,12 @@ describe('markup of the main menu (SSR only: the bar, touches and keys are check
 
   it('offers the actions: one «Снять чек» for the camera, the gallery and files, its field outside of the sheet, and «Трата или доход»', () => {
     const html = render(reader, catalog)
-    const add = html.slice(html.indexOf('<div class="main-add">'), html.indexOf('<a href="/money">'))
+    const add = html.slice(html.indexOf('<div class="main-add">'), html.lastIndexOf('</nav>'))
     // Closed: the button and the two fields only. The open sheet is drawn by Sheet (components/sheet-markup.test.tsx).
     expect(add).not.toContain('main-add-list')
     const source = readFileSync(new URL('./MainMenu.tsx', import.meta.url), 'utf8')
     expect(source).toContain('<Sheet open={open} onClose={close} title="Добавить" id={ADD_SHEET_ID}>')
-    // Big rows: a picture, the action and a line about it; «Снять чек» is the main one.
+    // «Снять чек» is the one main action across the sheet; the other ways in are tiles: a picture, the action, a line.
     expect(source).toContain(`<button type="button" className="main-add-action main-add-primary" onClick={choose(shot.open)}>{body('camera', 'Снять чек', `)
     expect(source).not.toContain('Из галереи')
     expect(source).toContain(`<Link className="main-add-action" to="/receipts/new" onClick={close}>{body('pencil', 'Трата или доход', `)

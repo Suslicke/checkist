@@ -1,16 +1,25 @@
 import type { Failure } from './state'
 import { errorMessage } from './state'
 
-/** The inline deletion of a photo receipt; `withPhoto` is the «Удалить и фото» checkbox, on by default. */
+/** The deletion of a photo receipt: the choice under its actions (`withPhoto` — the «Удалить и фото» switch, on by
+ * default), then the confirmation of the irreversible step in the shared ConfirmDialog. */
 export type ReceiptDeleteStep =
   | { kind: 'idle' }
   | { kind: 'confirm'; withPhoto: boolean }
   | { kind: 'deleting'; withPhoto: boolean }
   | { kind: 'failed'; withPhoto: boolean; message: string }
 
-export const deleteQuestion = 'Удалить этот чек? Строки чека удалятся, отменить удаление нельзя.'
 export const withPhotoLabel = 'Удалить и фото'
 export const withPhotoHint = 'Вместе с фото удалятся задания распознавания и вырезки. Без отметки они останутся в «Обработке».'
+
+/** The words of the step: the danger button of the choice and the dialog that confirms it (title, explanation, action). */
+export function deleteWords(withPhoto: boolean): { title: string; message: string; action: string } {
+  return withPhoto
+    ? { title: 'Удалить чек и фото?', action: 'Удалить чек и фото',
+      message: 'Строки чека, фото, задания распознавания и вырезки удалятся. Отменить удаление нельзя.' }
+    : { title: 'Удалить чек?', action: 'Удалить чек',
+      message: 'Строки чека удалятся, фото и его задание останутся в «Обработке». Отменить удаление нельзя.' }
+}
 
 export function askDelete(): ReceiptDeleteStep {
   return { kind: 'confirm', withPhoto: true }

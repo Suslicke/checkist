@@ -34,14 +34,13 @@ export type Menu = {
   more: MenuItem[]
   /** `more` by sections. */
   groups: MenuGroup[]
-  /** The round «＋» of the phone's bar («Снять чек», «Добавить трату»), after the second link: a signed-in person only. */
+  /** «＋» of the phone's bar («Снять чек», «Трата или доход», «Загрузить выписку»), after «Ещё»: a signed-in person only. */
   add: boolean
 }
 
-/** The bottom bar of a phone holds four things besides «＋»: three links and «Ещё». */
+/** The bottom bar of a phone holds four sections besides «＋»: three links and «Ещё» («Главная · Траты · Деньги · Ещё»);
+ * «＋» stands apart from them (Чекист 2.0: navigation and the action are not mixed). */
 export const BAR_SLOTS = 4
-/** How many links stand before «＋» in the bar: «Главная · Траты · ＋ · Деньги · Ещё». */
-export const ADD_AFTER = 2
 
 /** The month dashboard at '/', its limits at '/budget/limits' and the spends of one of its categories. */
 const homeKinds: Route['kind'][] = ['dashboard', 'limits', 'category-spends']

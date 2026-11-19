@@ -1,21 +1,47 @@
-/* Offline mode: the banner and the spends waiting on the phone. Colours are tokens only (theme/tokens.css);
-   no font-size of its own: the sizes stay those of the page. */
+/* Offline mode (Чекист 2.0): the banner and the spends waiting on the phone. Calm — ink and ink-2 on the surfaces of the
+   page, the state said in words with its picture; only a refusal of the server is said in the error colour, with its
+   words. Colours — 2.0 tokens only (theme/tokens.css); font sizes — the 2.0 scale only. */
+
+/* The strip at the top of the window. iOS paints the page under its status bar (black-translucent): the strip starts
+   under it (env(safe-area-inset-top)). */
 .offline-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--ck-space-2);
   margin: 0;
-  padding: 6px 16px;
-  border-bottom: 1px solid var(--ck-warning-border);
-  background: var(--ck-warning-bg);
-  color: var(--ck-warning-text);
-  line-height: 1.35;
-  text-align: center;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--ck-space-2)) var(--ck-space-4) var(--ck-space-2);
+  border-bottom: 1px solid var(--ck-line);
+  background: var(--ck-surface-2);
+  color: var(--ck-ink);
+  font-size: var(--ck-text-label);
+  line-height: 1.4;
 }
 
-/* «Ждут отправки» on «Траты», laid out as a day of the list: a quiet heading with the explanation, then one card with a
-   row per spend — a warning badge, the place and the date, the amount — the actions under the row, «Отправить сейчас»
-   at the end. Font sizes — the scale --ck-text-* only. */
+.offline-banner p {
+  margin: 0;
+  max-width: 720px;
+}
+
+.offline-banner strong {
+  font-weight: 600;
+}
+
+.offline-banner-icon {
+  flex: none;
+  margin-top: 1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* «Ждут отправки» on «Траты», laid out as a day of the list: a quiet heading with the explanation, then one panel with a
+   row per spend — a tile, the place and the date, the amount — the actions under the row, «Отправить сейчас» at the end. */
 .pending-spends {
   display: grid;
-  gap: 8px;
+  gap: var(--ck-space-2);
   min-width: 0;
   margin: 0;
 }
@@ -23,30 +49,30 @@
 .pending-spends-head {
   display: grid;
   gap: 2px;
-  padding: 0 4px;
+  padding: 0 var(--ck-space-1);
 }
 
 .pending-spends h2 {
   margin: 0;
-  color: var(--ck-warning-text);
-  font-size: var(--ck-text-sm);
-  font-weight: 700;
+  color: var(--ck-ink);
+  font-family: var(--ck-font-ui);
+  font-size: var(--ck-text-label);
+  font-weight: 600;
 }
 
 .pending-spends-head p {
   margin: 0;
-  color: var(--ck-text-muted);
-  font-size: var(--ck-text-xs);
+  color: var(--ck-ink-2);
+  font-size: var(--ck-text-caption);
 }
 
 .pending-spends-card {
   display: grid;
-  gap: 12px;
-  padding: 4px 16px 16px;
-  border: 1px solid var(--ck-warning-border);
-  border-radius: var(--ck-radius);
+  gap: var(--ck-space-3);
+  padding: var(--ck-space-1) var(--ck-space-4) var(--ck-space-4);
+  border: 1px solid var(--ck-line);
+  border-radius: var(--ck-radius-card);
   background: var(--ck-surface);
-  box-shadow: var(--ck-card-shadow);
 }
 
 .pending-spend-list {
@@ -55,17 +81,17 @@
   list-style: none;
 }
 
-/* A row like a spend of the list: the badge, the place and the date, the amount; the buttons and a refusal below. */
+/* A row like a spend of the list: the tile, the place and the date, the amount; the buttons and a refusal below. */
 .pending-spend {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  padding: 12px 0;
+  gap: var(--ck-space-2) var(--ck-space-3);
+  padding: var(--ck-space-3) 0;
 }
 
 .pending-spend + .pending-spend {
-  border-top: 1px solid var(--ck-divider);
+  border-top: 1px solid var(--ck-line);
 }
 
 .pending-spend-badge {
@@ -74,15 +100,15 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: var(--ck-radius-sm);
-  background: var(--ck-warning-bg);
-  color: var(--ck-warning-text);
+  border-radius: var(--ck-radius-field);
+  background: var(--ck-surface-2);
+  color: var(--ck-ink-2);
 }
 
 .pending-spend-badge svg {
   fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -96,71 +122,57 @@
 
 .pending-spend-place {
   overflow: hidden;
-  font-size: var(--ck-text-sm);
-  font-weight: 700;
+  font-size: var(--ck-text-body);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .pending-spend-main time {
-  color: var(--ck-text-muted);
-  font-size: var(--ck-text-xs);
+  color: var(--ck-ink-2);
+  font-size: var(--ck-text-label);
 }
 
 .pending-spend-amount {
   flex: none;
-  font-size: var(--ck-text-sm);
   white-space: nowrap;
 }
 
-/* The buttons start under the place, past the badge. */
+/* The buttons start under the place, past the tile. */
 .pending-spend-actions {
   display: flex;
   flex: 1 1 100%;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-left: 52px;
+  gap: var(--ck-space-2);
+  margin-left: calc(52px - var(--ck-space-3));
 }
 
 .pending-spend-actions button {
-  min-height: 44px;
-  border-color: var(--ck-border);
-  padding: 0 16px;
-  border-radius: var(--ck-radius-pill);
-  font-size: var(--ck-text-sm);
-  font-weight: 700;
+  padding: 0 var(--ck-space-3);
+  font-size: var(--ck-text-label);
 }
 
+/* Dropping a spend of the phone is a danger: its word in the error colour. */
 .pending-spend-actions .pending-spend-delete {
-  color: var(--ck-error-text);
+  color: var(--ck-error);
 }
 
 .pending-spend-error {
   flex-basis: 100%;
   margin: 0;
   padding-left: 52px;
-  color: var(--ck-error-text);
-  font-size: var(--ck-text-xs);
-  font-weight: 600;
+  color: var(--ck-error);
+  font-size: var(--ck-text-label);
+  font-weight: 500;
 }
 
 .pending-spends-send {
   width: 100%;
-  min-height: 48px;
-  border-color: var(--ck-primary);
-  background: var(--ck-primary);
-  color: var(--ck-on-primary);
-  font-weight: 800;
 }
 
 .pending-spends-note {
   margin: 0;
-  color: var(--ck-text-muted);
-  font-size: var(--ck-text-xs);
+  color: var(--ck-ink-2);
+  font-size: var(--ck-text-caption);
   text-align: center;
-}
-
-.pending-spends-send:hover:not(:disabled) {
-  border-color: var(--ck-primary-hover);
-  background: var(--ck-primary-hover);
 }

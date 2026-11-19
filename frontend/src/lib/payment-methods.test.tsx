@@ -54,7 +54,8 @@ describe('the way of payment (Vitest/SSR, not browser visual acceptance)', () =>
       { ...base, id: 2, source: 'manual', store: null, purchased_on: '2026-10-12', currency: 'KZT', total: '990.00', payment_method: '' },
     ]
     const html = plain(renderToStaticMarkup(<SpendDays receipts={rows} today="2026-10-12" showOwner={false} />))
-    expect(html).toContain('1 060 ₸<span class="spends-row-method"><span aria-hidden="true">Kaspi</span><span class="spends-hidden">, Kaspi Gold</span></span></span>')
+    // The amount is Money of 2.0 (components/Money.tsx); the way of payment stands under it, short, and whole for a screen reader.
+    expect(html).toContain('<span class="ck-money-int">1\u202f060</span><span class="ck-money-cur">\u202f₸</span></span><span class="spends-row-method"><span aria-hidden="true">Kaspi</span><span class="spends-hidden">, Kaspi Gold</span></span></span>')
     expect(html.match(/spends-row-method/g)).toHaveLength(1)
     const page = renderToStaticMarkup(<ReceiptHeader receipt={{ ...rows[0], payment_method: 'cash' } as Receipt} />)
     expect(page).toContain('<div><dt>Оплата</dt><dd>Наличные</dd></div>')

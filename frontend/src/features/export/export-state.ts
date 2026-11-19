@@ -48,7 +48,8 @@ export function plural(count: number, one: string, few: string, many: string): s
 
 const grouped = (count: number) => String(count).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
-export type PreviewPart = { text: string; figure?: boolean }
+/** A part of the preview sentence: words, a count (`figure`) or a sum (`money`: drawn by Money, `text` is its words). */
+export type PreviewPart = { text: string; figure?: boolean; money?: { value: string; currency: string } }
 
 /** «Будет выгружено: 3 чека, 4 строки, сумма 1 235 EUR · 2 500 KZT»; numbers are figures, currencies never added. */
 export function previewText(data: ExportPreview): PreviewPart[] {
@@ -64,7 +65,7 @@ export function previewText(data: ExportPreview): PreviewPart[] {
     parts.push({ text: ', сумма ' })
     currencies.forEach((block, index) => {
       if (index) parts.push({ text: ' · ' })
-      parts.push({ text: formatMoney(block.total, block.currency), figure: true })
+      parts.push({ text: formatMoney(block.total, block.currency), figure: true, money: { value: block.total, currency: block.currency } })
     })
   }
   return parts

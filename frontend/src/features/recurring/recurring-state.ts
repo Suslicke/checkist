@@ -32,7 +32,11 @@ export function paymentsText(count: number): string {
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10))
   - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
 
-/** What a payment is in its month, in a few words: «оплачен 5 октября», «до 25 октября», «просрочен с 5 октября». */
+/** «3 дня», «1 день». */
+const daysText = (days: number) => glue(String(days), plural(days, 'день', 'дня', 'дней'))
+
+/** What a payment is in its month, in a few words: «оплачен 5 октября», «через 2 дня, 15 октября», «до 25 октября»,
+ * «просрочен на 8 дней». */
 export function stateText(row: Pick<RecurringMonthPayment, 'state' | 'due_date' | 'paid' | 'added' | 'kind'>, today: string): string {
   const income = row.kind === 'income'
   switch (row.state) {
@@ -45,9 +49,14 @@ export function stateText(row: Pick<RecurringMonthPayment, 'state' | 'due_date' 
       const days = daysBetween(today, row.due_date)
       if (days === 0) return 'срок сегодня'
       if (days === 1) return 'срок завтра'
+      if (days > 1 && days <= 7) return `${glue('через', daysText(days))}, ${dayAndMonth(row.due_date)}`
       return glue('до', dayAndMonth(row.due_date))
     }
-    case 'overdue': return income ? glue('не внесён, срок', dayAndMonth(row.due_date)) : glue('просрочен с', dayAndMonth(row.due_date))
+    case 'overdue': {
+      if (income) return glue('не внесён, срок', dayAndMonth(row.due_date))
+      const days = daysBetween(row.due_date, today)
+      return days > 0 ? glue('просрочен на', daysText(days)) : glue('просрочен с', dayAndMonth(row.due_date))
+    }
     case 'before': return 'ещё не начался'
     case 'inactive': return 'выключен'
   }

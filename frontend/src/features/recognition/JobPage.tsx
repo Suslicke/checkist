@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getJob, getPhoto, getReceiptImages } from '../../api/recognition'
 import type { JobDetail, ReviewConfirmResult } from '../../api/recognition'
 import type { LocalApiFailure } from '../../api/types'
@@ -30,6 +30,8 @@ function JobImages({ job, busy, review, register }: { job: JobDetail; busy: bool
   const imageKey = imageKeyOf(job)
   const lastImageKey = useRef(imageKey)
   const lastStage = useRef(job.stage)
+  // The job ran when its page opened: what it saves now is new to the person (fresh-receipt.ts).
+  const [watched] = useState(() => isActive(job))
   useEffect(() => {
     if (lastImageKey.current === imageKey) return
     lastImageKey.current = imageKey
@@ -55,7 +57,7 @@ function JobImages({ job, busy, review, register }: { job: JobDetail; busy: bool
         <DownloadOriginal url={data.download_url} /></>}
     </RequestBlock>
     <RequestBlock title={`Вырезки чеков (${job.items_count})`} id="recognition-images-title" state={images.state} retry={images.request.refresh}>
-      {(data) => <ReceiptImages images={data.results} finished={!isActive(job)} busy={busy} review={review} />}
+      {(data) => <ReceiptImages images={data.results} finished={!isActive(job)} busy={busy} review={review} watched={watched} />}
     </RequestBlock>
   </>
 }

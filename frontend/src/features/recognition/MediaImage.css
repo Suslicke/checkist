@@ -1,6 +1,4 @@
-/* «Скачать оригинал» next to a photo or a crop: the look of .action-link, only its place here. */
-.ck-media-download { justify-self: start; align-self: start; }
-.ck-media-meta { margin: 0; }
-@media (max-width: 540px) {
-  .ck-media-download { justify-self: stretch; text-align: center; }
-}
+/* «Скачать оригинал» next to a photo or a crop (also on the page of a receipt): a small tonal link-button under the
+   picture, not a second main action; its look is .action-link of App.css, only its place and size here. */
+.action-link.ck-media-download { justify-self: start; align-self: start; min-height: 40px; padding: 8px var(--ck-space-4); border-radius: var(--ck-radius-pill); font-size: var(--ck-text-label); }
+.ck-media-meta { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); }

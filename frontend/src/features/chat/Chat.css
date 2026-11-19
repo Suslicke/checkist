@@ -1,67 +1,82 @@
-/* «Чат с ИИ» (feature/planned-and-chat, 2026-10-26) в языке артефакта: карточки .ck-panel, список бесед .ck-list / .ck-row,
-   лента сообщений — человек справа на акцентной подложке, модель слева на приподнятой; вердикты планов карточкой в
-   сообщении (пилюли «Берите» / «Подождите» / «Отговариваю» из утверждённого макета), действия модели — кнопками
-   «Подтвердить: …» и «Сделано: …». Ввод липнет к низу окна над меню телефона (--ck-bottom-occupied, слой — токеном).
-   Цвета — только токены, размеры текста — шкала --ck-text-*; телефон (≤ 540 px) — одна колонка без прокрутки вбок,
-   компьютер (от 960 px) — беседы полосой 280 px слева (theme/desktop.css). Текст модели — обычный текст абзацами. */
-.chat-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; max-width: 760px; }
+/* «Чат с ИИ» (feature/planned-and-chat, 2026-10-26) in the language of Чекист 2.0: the threads as rows of a panel
+   (.ck-panel, .ck-list, .ck-row), the open thread on the paper of the page — the person's questions at the right on
+   surface-2, the answers of the assistant at the left on the surface with its gold mark (gold is the voice of the
+   assistant only); the verdicts of the plans as chips with words, the actions of the model as tonal buttons
+   «Подтвердить: …» and, done, «Сделано: …» in the income tone. The composer sticks to the bottom of the window above
+   the navigation of a phone (--ck-bottom-occupied, its layer by a token). 2.0 tokens only, sizes from the text scale;
+   a phone (≤ 540 px) — one column, a computer (from 960 px) — the threads a 280 px rail at the left (theme/desktop.css).
+   The words of the model are plain text in paragraphs. */
+.chat-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ck-space-3); min-width: 0; max-width: 760px; }
 /* An open thread takes the phone and the tablet alone; desktop.css shows the list beside it from 960 px. */
 .chat-page.chat-open > .chat-side { display: none; }
-.chat-side { gap: 8px; }
-.chat-page h2 { margin: 0; font-size: var(--ck-text-lg); font-weight: 800; overflow-wrap: anywhere; }
-.chat-threads > li:first-child { border-top: 1px solid var(--ck-divider); }
-.chat-thread { min-height: 56px; padding: 8px 0; }
-.chat-thread-current > .ck-row-main > .ck-row-title { color: var(--ck-link); }
-.chat-thread-date { flex: none; color: var(--ck-text-muted); font-size: var(--ck-text-xs); white-space: nowrap; }
-.chat-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.chat-empty { gap: 8px; }
-.chat-note { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-xs); line-height: 1.4; }
+.chat-side { gap: var(--ck-space-1); }
+.chat-page h2 { margin: 0; font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.chat-thread { min-height: 60px; padding: var(--ck-space-2) 0; }
+.chat-thread:active { background: color-mix(in srgb, var(--ck-ink) 6%, transparent); }
+.chat-thread-current > .ck-row-main > .ck-row-title { color: var(--ck-seal-ink); }
+.chat-thread-date { flex: none; align-self: flex-start; padding-top: 2px; color: var(--ck-ink-2); font-size: var(--ck-text-caption); white-space: nowrap; }
+.chat-main { display: flex; flex-direction: column; gap: var(--ck-space-3); min-width: 0; }
+.chat-note { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-caption); line-height: 1.4; }
 
-/* The thread: its title and the quiet dangerous «Удалить беседу», the question before the deletion, the bubbles. */
-.chat-thread-head { align-items: center; }
-.chat-delete { flex: none; min-height: 36px; padding-inline: 12px; font-size: var(--ck-text-xs); white-space: nowrap; }
-.chat-confirm { display: grid; gap: 8px; padding: 12px; border-radius: var(--ck-radius-sm); background: var(--ck-error-bg); color: var(--ck-error-text); }
-.chat-confirm > p { margin: 0; font-size: var(--ck-text-sm); font-weight: 600; }
-.chat-confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.chat-messages { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; min-width: 0; }
-.chat-bubble { display: grid; gap: 8px; max-width: min(calc(100% - 24px), 560px); min-width: 0; padding: 10px 14px; border-radius: var(--ck-radius); font-size: var(--ck-text-base); line-height: 1.5; overflow-wrap: anywhere; }
+/* The start of a new thread: the gold mark, the invitation, what the assistant reads. */
+.chat-empty { align-items: flex-start; gap: var(--ck-space-2); padding-block: var(--ck-space-5); }
+.chat-empty > h2 { font-family: var(--ck-font-display); font-size: var(--ck-text-heading); font-weight: 600; line-height: 1.25; text-wrap: balance; }
+.chat-empty > .chat-note { font-size: var(--ck-text-label); }
+.chat-mark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 7px; background: var(--ck-gold-soft); color: var(--ck-gold-ink); }
+.chat-mark-large { width: 40px; height: 40px; margin-bottom: var(--ck-space-1); border-radius: var(--ck-radius-field); }
+
+/* The thread: its title and the quiet dangerous «Удалить беседу» (a ConfirmDialog asks), then the bubbles. */
+.chat-thread-panel { display: flex; flex-direction: column; gap: var(--ck-space-3); min-width: 0; }
+.chat-thread-head { display: flex; align-items: center; justify-content: flex-end; gap: var(--ck-space-3); min-width: 0; margin-bottom: calc(var(--ck-space-2) * -1); }
+.chat-thread-head > h2 { min-width: 0; }
+.chat-page .chat-delete { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: var(--ck-tap); padding: 0 var(--ck-space-2); border: 0; border-radius: var(--ck-radius-field); background: transparent; color: var(--ck-error); font-size: var(--ck-text-label); font-weight: 600; white-space: nowrap; }
+.chat-page .chat-delete:active { background: var(--ck-error-soft); color: var(--ck-error); }
+.chat-page .chat-delete:disabled { background: transparent; color: var(--ck-ink-2); }
+.chat-messages { display: flex; flex-direction: column; gap: var(--ck-space-3); margin: 0; padding: 0; list-style: none; min-width: 0; }
+.chat-bubble { display: grid; gap: var(--ck-space-2); max-width: min(calc(100% - 32px), 560px); min-width: 0; padding: var(--ck-space-3) var(--ck-space-4); border-radius: var(--ck-radius-card); font-size: var(--ck-text-body); line-height: 1.55; overflow-wrap: anywhere; }
 .chat-bubble > p { margin: 0; }
-.chat-bubble-person { align-self: flex-end; border-bottom-right-radius: var(--ck-radius-sm); background: var(--ck-accent-bg); color: var(--ck-accent-text); }
-.chat-bubble-model { align-self: flex-start; border-bottom-left-radius: var(--ck-radius-sm); background: var(--ck-surface-raised); color: var(--ck-text); }
+.chat-bubble-person { align-self: flex-end; border-bottom-right-radius: 6px; background: var(--ck-surface-2); color: var(--ck-ink); }
+.chat-bubble-model { align-self: flex-start; border: 1px solid var(--ck-line); border-bottom-left-radius: 6px; background: var(--ck-surface); color: var(--ck-ink); }
+/* «✦ ИИ» over each answer: the assistant speaks in gold. */
+.chat-who { display: inline-flex; align-items: center; gap: 6px; color: var(--ck-gold-ink); font-size: var(--ck-text-caption); font-weight: 600; line-height: 1.3; }
 /* «печатает…» over a static skeleton of two lines (the pulse, if any, is the skeleton's own, Skeleton.css). */
-.chat-typing { display: grid; gap: 6px; min-width: 160px; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; }
-.chat-failed { color: var(--ck-error-text); font-size: var(--ck-text-sm); font-weight: 600; }
-.chat-retry { justify-self: start; min-height: 40px; padding-inline: 14px; font-size: var(--ck-text-sm); }
-.chat-unverified { padding: 10px 12px; border-radius: var(--ck-radius-sm); background: var(--ck-warning-bg); color: var(--ck-warning-text); font-size: var(--ck-text-sm); font-weight: 600; }
+.chat-typing { display: grid; gap: 6px; min-width: 160px; color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; }
+.chat-failed { padding-left: var(--ck-space-3); border-left: 3px solid var(--ck-error); color: var(--ck-error); font-size: var(--ck-text-label); font-weight: 600; }
+.chat-page .chat-retry { justify-self: start; min-height: var(--ck-tap); padding-inline: 14px; font-size: var(--ck-text-label); }
+.chat-unverified { padding: var(--ck-space-2) var(--ck-space-3); border-left: 3px solid var(--ck-over); border-radius: 0 var(--ck-radius-field) var(--ck-radius-field) 0; background: var(--ck-over-soft); color: var(--ck-ink); font-size: var(--ck-text-label); }
 
-/* The verdicts of the plans: a card inside the answer, a pill and the reason per plan. */
-.chat-verdicts { display: grid; gap: 0; padding: 4px 14px 0; border-radius: var(--ck-radius-sm); background: var(--ck-surface); }
-.chat-page .chat-verdicts > h3 { margin: 8px 0 4px; color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 800; }
+/* The verdicts of the plans: a card inside the answer, a chip with the word and the reason per plan. */
+.chat-verdicts { display: grid; gap: 0; padding: var(--ck-space-1) var(--ck-space-3) 0; border-radius: var(--ck-radius-field); background: var(--ck-surface-2); }
+.chat-page .chat-verdicts > h3 { margin: var(--ck-space-2) 0 var(--ck-space-1); color: var(--ck-ink-2); font-family: var(--ck-font-ui); font-size: var(--ck-text-label); font-weight: 600; }
 .chat-verdict-list { margin: 0; padding: 0; list-style: none; }
-.chat-verdict-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: center; min-width: 0; padding: 10px 0; border-top: 1px solid var(--ck-divider); }
-.chat-verdict { display: inline-flex; align-items: center; min-width: 108px; padding: 3px 10px; border-radius: var(--ck-radius-pill); font-size: var(--ck-text-2xs); font-weight: 800; white-space: nowrap; }
-.chat-verdict-yes { background: var(--ck-success-bg); color: var(--ck-success-text); }
-.chat-verdict-wait { background: var(--ck-warning-bg); color: var(--ck-warning-text); }
-.chat-verdict-no { background: var(--ck-error-bg); color: var(--ck-error-text); }
-.chat-verdict-name { min-width: 0; font-size: var(--ck-text-sm); font-weight: 700; }
-.chat-verdict-why { grid-column: 1 / -1; color: var(--ck-text-muted); font-size: var(--ck-text-xs); line-height: 1.45; }
+.chat-verdict-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px var(--ck-space-3); align-items: center; min-width: 0; padding: var(--ck-space-3) 0; border-top: 1px solid var(--ck-line); }
+.chat-verdict { display: inline-flex; align-items: center; justify-content: center; min-width: 104px; min-height: 26px; padding: 2px 10px; border: 1px solid transparent; border-radius: var(--ck-radius-pill); font-size: var(--ck-text-caption); font-weight: 600; white-space: nowrap; }
+.chat-verdict-yes { background: var(--ck-income-soft); color: var(--ck-income); }
+.chat-verdict-wait { background: var(--ck-over-soft); color: var(--ck-over); }
+.chat-verdict-no { border-color: var(--ck-line-strong); background: var(--ck-surface); color: var(--ck-ink); }
+.chat-verdict-name { min-width: 0; font-size: var(--ck-text-body); font-weight: 600; }
+.chat-verdict-why { grid-column: 1 / -1; color: var(--ck-ink-2); font-size: var(--ck-text-label); line-height: 1.45; }
 
-/* The actions of the model: a button each; done — the success tint, disabled. */
-.chat-actions { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; min-width: 0; }
-.chat-action { width: 100%; text-align: left; font-size: var(--ck-text-sm); white-space: normal; overflow-wrap: anywhere; }
-.chat-action-done, .chat-action-done:disabled { border-color: var(--ck-success-text); background: var(--ck-success-bg); color: var(--ck-success-text); }
-.chat-action-error { margin: 4px 0 0; color: var(--ck-error-text); font-size: var(--ck-text-xs); }
+/* The actions of the model: a tonal button each, the check before the words; done — the income tone, disabled. */
+.chat-actions { display: flex; flex-direction: column; gap: var(--ck-space-2); margin: 0; padding: 0; list-style: none; min-width: 0; }
+.chat-page .chat-action { display: flex; align-items: flex-start; gap: var(--ck-space-2); width: 100%; min-height: var(--ck-tap); padding: 10px 14px; border: 1px solid var(--ck-line-strong); border-radius: var(--ck-radius-button); background: var(--ck-surface-2); color: var(--ck-ink); font-size: var(--ck-text-body); font-weight: 600; line-height: 1.35; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.chat-page .chat-action:active:not(:disabled) { background: color-mix(in srgb, var(--ck-ink) 10%, var(--ck-surface-2)); }
+.chat-page .chat-action:disabled { border-color: var(--ck-surface-2); background: var(--ck-surface-2); color: var(--ck-ink-2); }
+.chat-page .chat-action-done, .chat-page .chat-action-done:disabled { border-color: transparent; background: var(--ck-income-soft); color: var(--ck-income); cursor: default; }
+.chat-action-icon { flex: none; margin-top: 1px; }
+.chat-action-error { margin: var(--ck-space-1) 0 0; color: var(--ck-error); font-size: var(--ck-text-label); }
+.chat-thread-note { padding-inline: var(--ck-space-1); }
 
 /* The composer: pinned above the bottom of the window — the navigation of a phone, nothing on a wide screen. */
-.chat-composer { position: sticky; bottom: var(--ck-bottom-occupied); z-index: var(--ck-z-action-bar); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; min-width: 0; padding-block: 10px; background: var(--ck-bg); box-shadow: 0 var(--ck-safe-bottom) 0 var(--ck-bg); }
-.chat-composer > textarea { min-width: 0; min-height: 48px; max-height: 160px; font: inherit; font-size: var(--ck-text-base); resize: vertical; }
-.chat-composer > button { align-self: end; }
-.chat-composer > .chat-notice, .chat-composer > .chat-note { grid-column: 1 / -1; }
-.chat-notice { margin: 0; color: var(--ck-error-text); font-size: var(--ck-text-sm); font-weight: 600; }
-.chat-sr { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); white-space: nowrap; }
+.chat-composer { position: sticky; bottom: var(--ck-bottom-occupied); z-index: var(--ck-z-action-bar); display: grid; gap: var(--ck-space-2); min-width: 0; padding-block: var(--ck-space-2); background: var(--ck-paper); box-shadow: 0 var(--ck-safe-bottom) 0 var(--ck-paper); }
+.chat-compose-row { display: flex; align-items: flex-end; gap: var(--ck-space-2); min-width: 0; }
+.chat-compose-row > textarea { flex: 1; min-width: 0; min-height: var(--ck-tap); max-height: 160px; padding: 10px var(--ck-space-4); border-radius: var(--ck-radius-card); background: var(--ck-surface); font: inherit; font-size: var(--ck-text-field); line-height: 1.4; resize: none; }
+.chat-compose-row > button { flex: none; min-height: var(--ck-tap); padding: 0 var(--ck-space-4); border-radius: var(--ck-radius-pill); }
+.chat-notice { margin: 0; padding-left: var(--ck-space-3); border-left: 3px solid var(--ck-error); color: var(--ck-error); font-size: var(--ck-text-label); font-weight: 600; }
+.chat-hint { padding-inline: var(--ck-space-4); }
 
-/* The entry points elsewhere: a link-looking button on «Разбор месяца», a secondary button under the actions of a spend. */
+/* The entry points elsewhere: a link-looking button, a tonal button under the actions of a spend (features/receipts). */
 .chat-start-link { padding: 0; border: 0; background: none; cursor: pointer; }
 .chat-start-link:disabled { cursor: default; opacity: 0.7; }
-.chat-start-failed { margin: 0; color: var(--ck-error-text); font-size: var(--ck-text-sm); font-weight: 600; }
-.chat-ask-spend { margin-top: 12px; }
+.chat-start-failed { margin: 0; color: var(--ck-error); font-size: var(--ck-text-label); font-weight: 600; }
+.chat-ask-spend { margin-top: var(--ck-space-3); }

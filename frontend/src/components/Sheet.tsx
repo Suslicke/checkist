@@ -20,11 +20,28 @@ export interface SheetProps {
 
 const reachable = (node: HTMLElement | null) => node ? [...node.querySelectorAll<HTMLElement>(SHEET_FOCUSABLE)] : []
 
+type CloseWatcherLike = { onclose: (() => void) | null; destroy(): void }
+
+/** The system «назад» of Android closes the open sheet (CloseWatcher of Chrome: no entry in the history). Elsewhere —
+ * nothing; Esc, the scrim and «✕» close it everywhere. */
+function watchSystemBack(onClose: () => void): () => void {
+  const Watcher = typeof window === 'undefined' ? undefined : (window as Window & { CloseWatcher?: new () => CloseWatcherLike }).CloseWatcher
+  if (!Watcher) return () => {}
+  try {
+    const watcher = new Watcher()
+    watcher.onclose = onClose
+    return () => watcher.destroy()
+  } catch {
+    return () => {}
+  }
+}
+
 /**
  * A sheet that slides up from the bottom of the window: a modal dialog with its own heading and close button.
- * The focus goes to its first control, Tab stays inside, Esc and a tap on the backdrop close it, the focus
- * returns to the control that opened it. The page behind does not scroll while it is open. The handle at the
- * top is a picture only: the sheet is not dragged. A closed sheet renders nothing.
+ * The focus goes to its first control, Tab stays inside, Esc, a tap on the scrim and the system «назад» of Android
+ * close it, the focus returns to the control that opened it. The page behind does not scroll while it is open. The
+ * handle at the top is a picture only: the sheet is not dragged. A closed sheet renders nothing. The look follows the
+ * platform (Sheet.css): a floating sheet on iOS, the Material 3 sheet on Android and a computer.
  *
  * In the browser it is rendered into `document.body`, above every layer of the page; a server render
  * (renderToStaticMarkup in the tests) draws it in place.
@@ -37,6 +54,13 @@ export default function Sheet({ open, onClose, title, children, id, closeLabel =
 
   useLayoutEffect(() => {
     if (!open) return
+    // One request to close per opening: Esc may reach the sheet and the watcher of the system «назад» both.
+    let asked = false
+    const stopBack = watchSystemBack(() => {
+      if (asked) return
+      asked = true
+      close.current()
+    })
     const node = dialog.current
     const opener = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null
     const root = document.documentElement
@@ -48,6 +72,7 @@ export default function Sheet({ open, onClose, title, children, id, closeLabel =
     }
     document.addEventListener('focusin', onFocusIn)
     return () => {
+      stopBack()
       document.removeEventListener('focusin', onFocusIn)
       root.classList.remove('ck-sheet-open')
       const active = document.activeElement

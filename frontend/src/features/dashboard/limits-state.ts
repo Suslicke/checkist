@@ -5,6 +5,7 @@ import { formatMoney, formatMoneyNumber } from '../../lib/money'
 import { personName } from '../../lib/people'
 import { glue } from '../../lib/text'
 import { plural } from './dashboard-state'
+import type { Phrase } from './home-hero'
 
 /** A row of the limits screen: a category of any level; its spends include those of its descendants. */
 export type LimitTreeRow = {
@@ -178,6 +179,8 @@ export function saveBarLabel(count: number): string {
 /** An entry of «История изменений» as the screen shows it. `badge` — «▲ 25,00 %» for a raised limit, «▼ …» for a lowered one. */
 export type LimitHistoryEntry = {
   key: string; dateTime: string; date: string; who: string; categoryId: number; category: string; text: string
+  /** The same change with its sums apart, for `Money`: «120 000 → 150 000 ₸». */
+  phrase: Phrase
   direction: 'up' | 'down' | null; badge: string | null
 }
 
@@ -196,6 +199,13 @@ export function historyChangeText(change: Pick<BudgetLimitChange, 'kind' | 'old_
   return `${formatMoneyNumber(change.old_amount)} → ${formatMoney(change.new_amount, change.currency)}`
 }
 
+/** The change as words and sums (home-hero.ts `Phrase`): the screen draws the sums by `Money`. */
+export function historyChangePhrase(change: Pick<BudgetLimitChange, 'kind' | 'old_amount' | 'new_amount' | 'currency'>): Phrase {
+  if (change.kind === 'created') return ['новый лимит ', { money: change.new_amount ?? '0', currency: change.currency }]
+  if (change.kind === 'deleted') return ['удалён, был ', { money: change.old_amount ?? '0', currency: change.currency }]
+  return [{ money: change.old_amount ?? '0', currency: '' }, ' → ', { money: change.new_amount ?? '0', currency: change.currency }]
+}
+
 /** The journal newest first, as the server sends it; who — the name to show, «—» when unknown (a limit from before the journal). */
 export function historyEntries(changes: readonly BudgetLimitChange[]): LimitHistoryEntry[] {
   return changes.map((change) => {
@@ -205,7 +215,7 @@ export function historyEntries(changes: readonly BudgetLimitChange[]): LimitHist
       key: String(change.id), dateTime: change.changed_at, date: historyDate(change.changed_at),
       who: change.changed_by ? personName(change.changed_by.username, change.changed_by.display_name) : '—',
       categoryId: change.category.id, category: change.category.path.map((step) => step.name).join(' › ') || change.category.name,
-      text: historyChangeText(change), direction,
+      text: historyChangeText(change), phrase: historyChangePhrase(change), direction,
       badge: direction === null || percent === null ? null : `${direction === 'up' ? '▲' : '▼'} ${formatPercent(percent.replace(/^-/, ''))}`,
     }
   })

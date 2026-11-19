@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { confirmAction, createThread, deleteThread, getMessage, getThread, listThreads, sendMessage } from '../../api/chat'
 import type { ChatAction, ChatMessage, ThreadDetail, ThreadSummary } from '../../api/chat'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import Icon from '../../components/Icon'
 import RequestState from '../../components/RequestState'
 import Skeleton from '../../components/Skeleton'
 import { usePageTitle } from '../../components/page-header'
@@ -19,8 +21,8 @@ import './Chat.css'
 /** What a thread shows besides its messages: nothing, a question before the deletion, or the deletion under way. */
 export type DeleteStep = 'idle' | 'confirm' | 'busy'
 
-/** The model's words of one message: paragraphs, the verdicts of the plans, the numbers it could not check, the actions
- * it offers as buttons. Plain text only, never markup. */
+/** The model's words of one message: the mark of the assistant, paragraphs, the verdicts of the plans, the numbers it
+ * could not check, the actions it offers as buttons. Plain text only, never markup. */
 function ModelBubble({ message, failure, busyAction, actionErrors, onConfirm, onRetry }: {
   message: ChatMessage; failure?: string; busyAction?: string; actionErrors: Record<string, string>
   onConfirm: (message: ChatMessage, index: number) => void; onRetry: (message: ChatMessage) => void
@@ -29,6 +31,7 @@ function ModelBubble({ message, failure, busyAction, actionErrors, onConfirm, on
   const failed = failure ?? (message.status === 'failed' ? insightErrorMessage(message.error?.code ?? '') : undefined)
   const answer = message.answer
   return <li className="chat-bubble chat-bubble-model" aria-busy={pending}>
+    <span className="chat-who"><span className="chat-mark" aria-hidden="true"><Icon name="insight" size={14} /></span>{chatTexts.assistant}</span>
     {pending && <div className="chat-typing" role="status"><span>{chatTexts.typing}</span><Skeleton compact /></div>}
     {failed && <>
       <p className="chat-failed" role="alert">{failed}</p>
@@ -49,7 +52,10 @@ function ModelBubble({ message, failure, busyAction, actionErrors, onConfirm, on
       const done = isDone(action)
       return <li key={key}>
         <button type="button" className={`chat-action${done ? ' chat-action-done' : ''}`} disabled={done || busyAction === key} aria-disabled={done || undefined}
-          onClick={() => onConfirm(message, index)}>{busyAction === key ? chatTexts.sending : actionLabel(action)}</button>
+          onClick={() => onConfirm(message, index)}>
+          <Icon name="check" size={18} className="ck-icon chat-action-icon" />
+          <span>{busyAction === key ? chatTexts.sending : actionLabel(action)}</span>
+        </button>
         {actionErrors[key] && <p className="chat-action-error" role="alert">{actionErrors[key]}</p>}
       </li>
     })}</ul>}
@@ -66,13 +72,15 @@ export function Composer({ text, busy, notice, autoFocus = false, onText, onSubm
     event.preventDefault()
     if (canSend(text, busy)) onSubmit()
   }
-  return <form className="chat-composer" onSubmit={submit} noValidate aria-busy={busy}>
-    <label htmlFor="chat-field" className="chat-sr">{chatTexts.field}</label>
-    <textarea id="chat-field" rows={1} maxLength={QUESTION_MAX} placeholder={chatTexts.placeholder} enterKeyHint="send" autoComplete="off"
-      autoFocus={autoFocus} value={text} readOnly={busy} onChange={(event) => onText(event.target.value)} onKeyDown={keyDown} />
-    <button type="submit" disabled={!canSend(text, busy)}>{busy ? chatTexts.sending : chatTexts.send}</button>
+  return <form className="chat-composer ck-own-bottom" onSubmit={submit} noValidate aria-busy={busy}>
     {notice && <p className="chat-notice" role="alert">{notice}</p>}
-    <p className="chat-note">{chatTexts.hint}</p>
+    <div className="chat-compose-row">
+      <label htmlFor="chat-field" className="ck-visually-hidden">{chatTexts.field}</label>
+      <textarea id="chat-field" rows={1} maxLength={QUESTION_MAX} placeholder={chatTexts.placeholder} enterKeyHint="send" autoComplete="off"
+        autoFocus={autoFocus} value={text} readOnly={busy} onChange={(event) => onText(event.target.value)} onKeyDown={keyDown} />
+      <button type="submit" disabled={!canSend(text, busy)}>{busy ? chatTexts.sending : chatTexts.send}</button>
+    </div>
+    <p className="chat-note chat-hint">{chatTexts.hint}</p>
   </form>
 }
 
@@ -85,7 +93,7 @@ export type ChatViewProps = {
   text: string
   /** A message is on its way, or a thread is being started: the composer waits. */
   sending: boolean
-  /** A refusal of the last send, under the composer. */
+  /** A refusal of the last send, over the composer. */
   notice: string | null
   /** Words of a failed wait, by the id of the message. */
   failures?: Record<number, string>
@@ -102,7 +110,9 @@ export type ChatViewProps = {
 }
 
 /** `/chat` and `/chat/{id}` without loading: the markup tests render it directly. The list of threads is always in
- * the DOM; beside an open thread it is hidden below 960 px (Chat.css) and a 280 px rail at the left above (desktop.css). */
+ * the DOM; beside an open thread it is hidden below 960 px (Chat.css) and a 280 px rail at the left above (desktop.css).
+ * The thread lies on the paper of the page: the person's questions at the right on surface-2, the answers of the
+ * assistant at the left on the surface with its gold mark; the composer is pinned at the bottom. */
 export function ChatView({
   threads, threadId, thread, text, sending, notice, failures = {}, busyAction, actionErrors = {}, deleteStep = 'idle',
   onText = () => {}, onSubmit = () => {}, onConfirm = () => {}, onRetry = () => {}, onDelete = () => {}, onRetryThreads = () => {}, onRetryThread = () => {},
@@ -132,28 +142,26 @@ export function ChatView({
     </section>
     <div className="chat-main">
       {!open && <section className="ck-panel chat-empty" aria-labelledby="chat-empty-heading">
+        <span className="chat-mark chat-mark-large" aria-hidden="true"><Icon name="insight" size={22} /></span>
         <h2 id="chat-empty-heading">{Array.isArray(threads) && threads.length > 0 ? chatTexts.newThread : chatTexts.empty}</h2>
         <p className="chat-note">{chatTexts.emptyNote}</p>
       </section>}
       {open && thread?.kind === 'loading' && <RequestState kind="loading" message="Загружаем беседу…" />}
       {open && thread?.kind === 'error' && <RequestState kind="error" message={thread.message} onRetry={onRetryThread} />}
-      {detail && <section className="ck-panel chat-thread-panel" aria-labelledby="chat-thread-heading" aria-busy={waiting}>
-        <div className="ck-panel-head chat-thread-head">
-          <h2 id="chat-thread-heading">{threadTitle(detail.thread)}</h2>
-          {deleteStep === 'idle' && <button type="button" className="ck-button-danger chat-delete" onClick={() => onDelete('confirm')}>{chatTexts.deleteThread}</button>}
+      {detail && <section className="chat-thread-panel" aria-labelledby="chat-thread-heading" aria-busy={waiting}>
+        <div className="chat-thread-head">
+          {/* The title of the thread is the heading of the page already (the top bar): here it only names the section. */}
+          <h2 id="chat-thread-heading" className="ck-visually-hidden">{threadTitle(detail.thread)}</h2>
+          <button type="button" className="chat-delete" disabled={deleteStep === 'busy'} onClick={() => onDelete('confirm')}>
+            <Icon name="trash" size={18} className="ck-icon chat-delete-icon" />{deleteStep === 'busy' ? chatTexts.deleting : chatTexts.deleteThread}</button>
         </div>
-        {deleteStep !== 'idle' && <div className="chat-confirm" role="group" aria-labelledby="chat-delete-question">
-          <p id="chat-delete-question">{chatTexts.deleteQuestion}</p>
-          <div className="chat-confirm-actions">
-            <button type="button" className="ck-button-danger" disabled={deleteStep === 'busy'} onClick={() => onDelete('busy')}>{deleteStep === 'busy' ? chatTexts.deleting : chatTexts.deleteThread}</button>
-            <button type="button" className="ck-button-secondary" disabled={deleteStep === 'busy'} onClick={() => onDelete('idle')}>{chatTexts.cancel}</button>
-          </div>
-        </div>}
         <ol className="chat-messages" aria-live="polite">{bubbles(detail.messages).map((bubble) => bubble.kind === 'person'
           ? <li key={bubble.key} className="chat-bubble chat-bubble-person"><p>{bubble.text}</p></li>
           : <ModelBubble key={bubble.key} message={bubble.message} failure={failures[bubble.message.id]} busyAction={busyAction} actionErrors={actionErrors}
             onConfirm={onConfirm} onRetry={onRetry} />)}</ol>
-        {detail.messages.length > 0 && <p className="chat-note">{chatTexts.note}</p>}
+        {detail.messages.length > 0 && <p className="chat-note chat-thread-note">{chatTexts.note}</p>}
+        <ConfirmDialog open={deleteStep === 'confirm'} title={chatTexts.deleteQuestion} message={chatTexts.deleteNote}
+          confirmLabel={chatTexts.deleteThread} cancelLabel={chatTexts.cancel} danger onConfirm={() => onDelete('busy')} onCancel={() => onDelete('idle')} />
       </section>}
       {(!open || detail) && <Composer text={text} busy={sending || waiting} notice={notice} autoFocus={!open} onText={onText} onSubmit={onSubmit} />}
     </div>
@@ -274,7 +282,8 @@ export default function ChatPage({ threadId, q }: { threadId?: number; q?: strin
     if (step !== 'busy' || threadId === undefined) return
     void deleteThread(threadId).then((result) => {
       if (!alive.current || result.kind === 'aborted') return
-      if (result.kind === 'error' && result.reason !== 'not_found') { setDeleteStep('confirm'); setNotice(dashboardErrorMessage(result)); return }
+      // A refusal closes the question: its words stand over the composer and «Удалить беседу» can be pressed again.
+      if (result.kind === 'error' && result.reason !== 'not_found') { setDeleteStep('idle'); setNotice(dashboardErrorMessage(result)); return }
       navigate('/chat')
     })
   }, [threadId])

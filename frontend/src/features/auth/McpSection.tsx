@@ -35,17 +35,17 @@ export function McpView({ origin, tokens, failed, issued, busy, error, onCreate,
       <p className="ck-auth-hint">Claude, ChatGPT, Cursor и другие клиенты MCP подключаются по адресу <code>{mcpUrl(origin)}</code> с
         личным токеном. Нейросеть видит и меняет ровно то же, что вы; токен «{scopeTexts.read}» ничего не меняет.</p>
 
-      {lines && issued && <div className="ck-auth-mcp-issued" role="status" data-mcp-issued>
+      {lines && issued && <div className="ck-auth-mcp-issued ck-auth-slip ck-tape" role="status" data-mcp-issued>
         <p><strong>Токен «{issued.name}» выпущен.</strong> Скопируйте его сейчас — больше он показан не будет.</p>
         {([['Токен', issued.token], ['Заголовок', lines.header], ['Адрес с токеном — только чтение (если клиент берёт только адрес)', lines.inUrl],
           ['Claude Code', lines.claudeCode]] as const).map(([label, value]) => <div key={label} className="ck-auth-mcp-copy">
           <span className="ck-auth-row-label">{label}</span>
           <div className="ck-auth-mcp-copy-row">
             <input readOnly value={value} aria-label={label} onFocus={(event) => event.target.select()} />
-            <button type="button" className="ck-button-secondary" onClick={() => copy(value)}>Копировать</button>
+            <button type="button" className="ck-auth-slip-button" onClick={() => copy(value)}>Копировать</button>
           </div>
         </div>)}
-        <button type="button" className="ck-button-secondary" onClick={onHide}>Готово, скрыть</button>
+        <button type="button" className="ck-auth-slip-button" onClick={onHide}>Готово, скрыть</button>
       </div>}
 
       <form className="ck-auth-mcp-form" onSubmit={submit} noValidate>
@@ -61,7 +61,7 @@ export function McpView({ origin, tokens, failed, issued, busy, error, onCreate,
             {scopeTexts[value]}
           </label>)}
         </fieldset>
-        <button type="submit" disabled={busy || !name.trim()}>{busy ? 'Выпускаем…' : 'Выпустить токен'}</button>
+        <button type="submit" className="ck-auth-secondary" disabled={busy || !name.trim()}>{busy ? 'Выпускаем…' : 'Выпустить токен'}</button>
         {error && <p className="ck-auth-error" role="alert">{error}</p>}
       </form>
 
@@ -73,7 +73,7 @@ export function McpView({ origin, tokens, failed, issued, busy, error, onCreate,
             <span className="ck-row-meta">{scopeTexts[token.scope]} · {token.prefix}… · {token.revoked_at
               ? `отозван ${day(token.revoked_at)}` : token.last_used_at ? `последний раз ${day(token.last_used_at)}` : 'ещё не использовался'}</span>
           </span>
-          {!token.revoked_at && <button type="button" className="ck-button-danger" disabled={busy}
+          {!token.revoked_at && <button type="button" className="ck-auth-danger" disabled={busy}
             aria-label={`Отозвать токен «${token.name}»`} onClick={() => onRevoke(token.id)}>Отозвать</button>}
         </li>)}
       </ul>}

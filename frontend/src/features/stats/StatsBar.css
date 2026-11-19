@@ -1,44 +1,41 @@
-/* Верх «Статистики» (feature/stats-compact, 2026-10-13, жалоба с iPhone «кнопки и фильтры слишком большие»):
-   на телефоне под вкладками одна строка — «Период: … ▾» слева (лист с готовыми периодами и «Свой период»), значок
-   фильтров с числом справа (ResponsiveFilters, `compact`); разбивка и интервал внутри карточек — низкий переключатель
-   на всю ширину. Подписи не обрезаются: кнопка периода переносит слова, переключатель делит ширину по подписям.
-   Цвета — только токены, размеры текста — только шкала --ck-text-*. */
+/* The top of «Статистика», Чекист 2.0 (2026-11-20): on a phone under the tabs one low row — «Период: … ▾» on the left
+   (a sheet with the ready periods and «Свой период»), the picture of the filters with its number on the right
+   (ResponsiveFilters, `compact`); the breakdown and the interval inside a panel are 2.0 segments (.ck-segments of
+   App.css) laid out by their words. Labels are never cut: the period button wraps its words. Colours are 2.0 tokens
+   only, text sizes only the 2.0 scale. */
 .stats-period-open {
   display: inline-flex; justify-self: start; align-items: center; gap: 6px; min-width: 0; max-width: 100%; min-height: 40px; padding: 4px 10px 4px 14px;
-  border: 1px solid var(--ck-border-field); border-radius: var(--ck-radius-pill); background: var(--ck-surface); color: var(--ck-text);
-  font-size: var(--ck-text-sm); font-weight: 600; text-align: left;
+  border: 1px solid var(--ck-line-strong); border-radius: var(--ck-radius-pill); background: var(--ck-surface); color: var(--ck-ink);
+  font-size: var(--ck-text-label); font-weight: 500; text-align: left;
 }
-.stats-period-open:where(:hover:not(:disabled)) { border-color: var(--ck-text-muted); background: var(--ck-surface-raised); }
-.stats-period-open:where(:active:not(:disabled)) { border-color: var(--ck-text-muted); background: var(--ck-surface-raised); }
+.stats-period-open:where(:active:not(:disabled)) { border-color: var(--ck-line-strong); background: var(--ck-surface-2); color: var(--ck-ink); }
 .stats-period-text { min-width: 0; }
-.stats-period-word { color: var(--ck-text-muted); font-weight: 600; }
-.stats-period-open strong { font-weight: 800; }
-.stats-period-open .ck-icon { flex: none; color: var(--ck-text-muted); }
+.stats-period-word { color: var(--ck-ink-2); font-weight: 500; }
+.stats-period-open strong { font-weight: 600; }
+.stats-period-open .ck-icon { flex: none; color: var(--ck-ink-2); }
 
-/* The sheet: the exact period, the ready ones as rows of a list (the chosen one bold with a tick), «Свой период». */
-.stats-period-sheet { display: grid; gap: 12px; padding-bottom: 4px; }
-.stats-period-sheet > p { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
-.stats-period-choice { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 4px; color: var(--ck-text); text-decoration: none; }
-.stats-period-choice:where(:hover) .stats-period-choice-label { text-decoration: underline; text-underline-offset: 3px; }
-.stats-period-choice[aria-current="true"] { color: var(--ck-link); }
-.stats-period-choice[aria-current="true"] .stats-period-choice-label { font-weight: 800; }
-.stats-period-choice[aria-disabled="true"] { color: var(--ck-text-muted); }
+/* The sheet: the exact period, the ready ones as rows of a list (the chosen one with a tick), «Свой период». */
+.stats-period-sheet { display: grid; gap: var(--ck-space-3); padding-bottom: 4px; }
+.stats-period-sheet > p { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); }
+.stats-period-choice { display: flex; align-items: center; gap: var(--ck-space-3); min-height: 52px; padding: 8px 4px; color: var(--ck-ink); text-decoration: none; }
+.stats-period-choice[aria-current="true"] .stats-period-choice-label { font-weight: 600; }
+.stats-period-choice[aria-current="true"] .ck-icon { color: var(--ck-ink); }
+.stats-period-choice[aria-disabled="true"] { color: var(--ck-ink-2); }
 .stats-period-choice .ck-icon { flex: none; margin-left: auto; }
 .stats-period-choice-text { display: grid; gap: 2px; min-width: 0; }
-.stats-period-choice-label { font-size: var(--ck-text-base); font-weight: 600; }
-.stats-period-choice-note { color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
-.stats-period-custom { margin: 8px 0 0; font-size: var(--ck-text-base); font-weight: 800; }
+.stats-period-choice-label { font-size: var(--ck-text-body); font-weight: 500; }
+.stats-period-choice-note { color: var(--ck-ink-2); font-size: var(--ck-text-caption); }
+.stats-period-custom { margin: var(--ck-space-2) 0 0; font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; letter-spacing: normal; }
 
-/* A low switch inside a card (the breakdown of «Траты», the interval of «Среднего чека»): one row, on a phone on the
-   whole width of the card, every segment as wide as its words need, the chosen one in the colours of a selected chip. */
-.stats-segments { display: flex; gap: 2px; width: fit-content; min-width: 0; max-width: 100%; padding: 2px; border: 1px solid var(--ck-border); border-radius: var(--ck-radius-pill); background: var(--ck-bg); }
-.stats-segment {
-  display: inline-flex; flex: 1 1 auto; align-items: center; justify-content: center; min-height: 32px; padding: 0 10px;
-  border-radius: var(--ck-radius-pill); color: var(--ck-text); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; white-space: nowrap;
+/* 2.0 segments inside a panel (the breakdown of «Траты», the interval of «Среднего чека»): one row, each segment as
+   wide as its words need; on a phone on the whole width of the panel. The look is .ck-segments of App.css. */
+.stats-segments { display: flex; width: fit-content; min-width: 0; max-width: 100%; }
+.stats-segments > .stats-segment { flex: 1 1 auto; white-space: nowrap; }
+@media (hover: hover) {
+  .stats-period-open:hover { background: var(--ck-surface-2); }
+  .stats-period-choice:hover .stats-period-choice-label { text-decoration: underline; text-underline-offset: 3px; }
 }
-.stats-segment:where(:hover) { background: var(--ck-surface-raised); }
-.stats-segment[aria-current="true"] { background: var(--ck-chip-selected-bg); color: var(--ck-chip-selected-text); }
 @media (max-width: 540px) {
-  .stats-segments { width: auto; }
-  .stats-segment { padding: 0 6px; font-size: var(--ck-text-xs); }
+  .stats-segments { width: 100%; }
+  .stats-segments > .stats-segment { padding-inline: var(--ck-space-2); }
 }

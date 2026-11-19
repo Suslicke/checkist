@@ -37,10 +37,11 @@ describe('phone view of the catalog (SSR markup and the text of the rules)', () 
     const search = rule('.ck-catalog-search.ck-catalog-panel', narrow)
     expect(search).not.toContain('position: sticky;')
     expect(search).toContain('padding: 12px 16px;')
-    expect(rule('.ck-catalog-price', css)).toContain('font-family: var(--ck-font-figures);')
+    expect(rule('.ck-catalog-price', css)).toContain('font-family: var(--ck-font-display);')
     expect(Number(rule('.ck-catalog-row', css).match(/min-height: (\d+)px/)?.[1])).toBeGreaterThanOrEqual(56)
-    // The products are rows of one card of the artifact.
-    expect(rule('.ck-catalog-rows', css)).toContain('background: var(--ck-surface); box-shadow: var(--ck-card-shadow);')
+    // The products are rows of one panel of 2.0: the surface in a line frame, no shadow.
+    expect(rule('.ck-catalog-rows', css)).toContain('border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface);')
+    expect(rule('.ck-catalog-rows', css)).not.toContain('box-shadow')
     // The help of the search is hidden from sight only: no display or visibility.
     expect(rule('.ck-catalog-search > .ck-catalog-search-field:first-child > .ck-catalog-note', narrow)).not.toMatch(/display|visibility/)
   })

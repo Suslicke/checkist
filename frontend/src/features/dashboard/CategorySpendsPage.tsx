@@ -5,7 +5,8 @@ import type { CategorySpendCurrency, CategorySpendItem, CategorySpends } from '.
 import Icon from '../../components/Icon'
 import { usePageTitle } from '../../components/page-header'
 import RequestState from '../../components/RequestState'
-import { currencySymbol, formatApproxMoney, formatMoney } from '../../lib/money'
+import { currencySymbol } from '../../lib/money'
+import Money from '../../components/Money'
 import { excludedNote } from '../../lib/base-currency'
 import { Link } from '../../navigation'
 import { capitalize, dashboardErrorMessage, dayAndMonth, deviceMonth, inMonth, monthSlide, monthTitle, plural, shiftMonth } from './dashboard-state'
@@ -17,25 +18,31 @@ import { useSpendIcon } from '../../lib/list-icons'
 import { spendSource as entrySource } from '../receipts/spends'
 import './Dashboard.css'
 
+/** The source of a spend as a stamp (Чекист 2.0): «Фото» of a receipt, «Выписка» of a bank statement, «Вручную». */
+const stampOf = { photo: 'Фото', statement: 'Выписка', manual: 'Вручную' } as const
+
 function SpendItem({ item, currency, tone, icon }: { item: CategorySpendItem; currency: string; tone: number; icon?: string | null }) {
   const note = spendNote(item)
+  const source = entrySource(item)
   // The picture of the category or how the spend came in — the choice of the device (lib/list-icons), as in «Траты».
-  const picture = useSpendIcon(entrySource(item), icon)
+  const picture = useSpendIcon(source, icon)
   const whole = wholeReceipt(item, currency)
   // A spend in another currency, counted in the base one: its own amount first, the converted one under it.
   const original = item.currency !== undefined && item.currency !== currency && item.original_amount !== undefined
+  const bank = source === 'statement' ? spendSource(item).replace(/^Выписка\s*/, '') : ''
   return <li className="cat-spend">
-    <Link className="cat-spend-row" to={`/receipts/${item.receipt_id}`}>
-      {/* The meta line names the source whatever the picture shows. */}
-      <span className={`cat-spend-badge dash-cat-${tone}`} data-icon={picture} aria-hidden="true"><Icon name={picture} size={20} /></span>
-      <span className="cat-spend-main">
-        <span className="cat-spend-title">{spendTitle(item)}</span>
+    <Link className="ck-row cat-spend-row" to={`/receipts/${item.receipt_id}`}>
+      {/* The stamp of the meta line names the source whatever the picture shows. */}
+      <span className={`ck-row-badge${tone > 0 ? ` ck-tone-${tone}` : ''}`} data-icon={picture} aria-hidden="true"><Icon name={picture} size={20} /></span>
+      <span className="ck-row-main">
+        <span className="ck-row-title">{spendTitle(item)}</span>
         {note && <span className="cat-spend-note">{note}</span>}
-        <span className="cat-spend-meta"><time dateTime={item.purchased_on}>{dayAndMonth(item.purchased_on)}</time> · {spendSource(item)} · {item.owner_name}</span>
+        <span className="ck-row-meta cat-spend-meta"><span className="ck-stamp">{stampOf[source]}</span>
+          <span className="cat-spend-meta-text"><time dateTime={item.purchased_on}>{dayAndMonth(item.purchased_on)}</time>{bank && ` · ${bank}`} · {item.owner_name}</span></span>
       </span>
-      <span className="cat-spend-amount">
-        <span className="ck-figures">{original ? formatMoney(item.original_amount, item.currency) : formatMoney(item.category_amount, currency)}</span>
-        {original && <span className="cat-spend-whole">{formatApproxMoney(item.category_amount, currency)}</span>}
+      <span className="ck-row-amount cat-spend-amount">
+        {original ? <Money size="row" value={item.original_amount} currency={item.currency} /> : <Money size="row" value={item.category_amount} currency={currency} />}
+        {original && <Money className="ck-twin" value={item.category_amount} currency={currency} approx />}
         {whole && <span className="cat-spend-whole">{whole}</span>}
       </span>
     </Link>
@@ -43,7 +50,7 @@ function SpendItem({ item, currency, tone, icon }: { item: CategorySpendItem; cu
       <summary>Позиции: {item.lines.length.toLocaleString('ru-RU')}</summary>
       <ul>{item.lines.map((line) => <li key={line.id} className="ck-leader">
         <span className="cat-spend-line-name">{line.name}<span className="cat-spend-line-category"> · {line.category_name}</span></span>
-        <span className="ck-figures">{formatMoney(line.amount, currency)}</span>
+        <Money value={line.amount} currency={currency} />
       </li>)}</ul>
     </details>}
   </li>
@@ -71,7 +78,7 @@ function CurrencyBlock({ block, month, hero, categoryName, tone, icon, steps, no
     <section className="ck-panel dash-card cat-spends-total" aria-label={`Потрачено, ${block.currency}`}>
       {steps}
       <p className="dash-label">{steps ? 'Потрачено' : `Потрачено ${inMonth(month)}`}{hero ? '' : `, ${currencySymbol(block.currency)}`}</p>
-      <p className={`dash-total ${hero ? 'ck-hero-figure' : 'ck-figures dash-total-plain'}`}>{formatMoney(block.total, block.currency)}</p>
+      <p className="dash-total"><Money size={hero ? 'hero' : 'display'} value={block.total} currency={block.currency} /></p>
       <p className="dash-note cat-spends-count">{glue(block.receipts_count.toLocaleString('ru-RU'), plural(block.receipts_count, 'чек или трата', 'чека или траты', 'чеков и трат'))}</p>
       {note && <p className="dash-note">{note}</p>}
       {parts.length > 0 && <ul className="cat-parts" aria-label="Из чего сложилось">
@@ -79,13 +86,13 @@ function CurrencyBlock({ block, month, hero, categoryName, tone, icon, steps, no
           const share = partShare(part, block.total)
           const body = <>
             <span className="cat-part-head">
-              <span className="dash-dot" aria-hidden="true" />
+              <span className="dash-limit-dot" aria-hidden="true" />
               <span className="cat-part-name">{part.direct ? `${categoryName} без подкатегории` : part.name}</span>
-              <span className="cat-part-amount ck-figures">{formatMoney(part.amount, block.currency)}</span>
+              <Money className="cat-part-amount" value={part.amount} currency={block.currency} />
             </span>
-            <span className="dash-bar dash-bar-small" aria-hidden="true"><span className="dash-bar-fill" style={{ width: `${share}%` }} /></span>
+            <span className="ck-bar dash-bar-small" aria-hidden="true"><span style={{ width: `${share}%` }} /></span>
           </>
-          return <li key={`${part.id}:${part.direct}`} className={`dash-limit dash-cat-${categoryTone(part.id)}`}>
+          return <li key={`${part.id}:${part.direct}`} className={`cat-part-item ck-tone-${categoryTone(part.id)}`}>
             {part.direct ? <span className="cat-part">{body}</span>
               : <Link className="cat-part cat-part-link" to={categorySpendsHref(part.id, month)}>{body}</Link>}
           </li>

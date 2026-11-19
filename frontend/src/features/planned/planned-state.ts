@@ -69,20 +69,24 @@ export function railOf(plan: PlannedSpend, largest: bigint): Rail {
 
 export type Pill = { kind: 'over' | 'under' | 'ai-wait' | 'ai-drop'; text: string }
 
-/** The pill at the end of the row: «+7 400 ₸» (spent more than planned), «−2 000 ₸» (less), «ИИ: подождать»,
- * «ИИ: отговаривает»; none for a plan spent to the tenge, a verdict «брать» or no verdict. */
+/** The pill at the end of the row: «+7 400 ₸ сверх плана» (spent more than planned, in the colour of an overspend),
+ * «−2 000 ₸ от плана» (less), «ИИ: лучше подождать», «ИИ: лучше не брать» (the assistant, in gold); none for a plan spent
+ * to the tenge, a verdict «брать» or no verdict. */
 export function pillOf(plan: PlannedSpend): Pill | null {
   if (plan.receipt) {
     if (plan.receipt.currency !== plan.currency) return null
     const delta = cents(plan.receipt.total) - cents(plan.amount)
-    if (delta > 0n) return { kind: 'over', text: `+${formatMoney(decimalOf(delta), plan.currency)}` }
-    if (delta < 0n) return { kind: 'under', text: `−${formatMoney(decimalOf(-delta), plan.currency)}` }
+    if (delta > 0n) return { kind: 'over', text: `+${formatMoney(decimalOf(delta), plan.currency)} сверх плана` }
+    if (delta < 0n) return { kind: 'under', text: `−${formatMoney(decimalOf(-delta), plan.currency)} от плана` }
     return null
   }
-  if (plan.ai?.verdict === 'wait') return { kind: 'ai-wait', text: 'ИИ: подождать' }
-  if (plan.ai?.verdict === 'drop') return { kind: 'ai-drop', text: 'ИИ: отговаривает' }
+  if (plan.ai?.verdict === 'wait') return { kind: 'ai-wait', text: verdictWords.wait }
+  if (plan.ai?.verdict === 'drop') return { kind: 'ai-drop', text: verdictWords.drop }
   return null
 }
+
+/** The verdict of the assistant in its own words (the pill of a row and the card of the sheet). */
+export const verdictWords = { keep: 'ИИ: берите', wait: 'ИИ: лучше подождать', drop: 'ИИ: лучше не брать' } as const
 
 /** Cents back as the decimal of the API: 740000n → "7400.00". */
 export function decimalOf(value: bigint): string {
@@ -123,7 +127,7 @@ export function plansText(count: number): string {
 }
 
 /** A card of the row of months: a listed month with its sum, or a gap («пока пусто») between listed ones. */
-export type MonthCardView = { month: string; label: string; now: boolean; empty: boolean; sum: string | null; meta: string; segments: Segment[] }
+export type MonthCardView = { month: string; label: string; now: boolean; empty: boolean; sum: string | null; amount: string | null; meta: string; segments: Segment[] }
 
 /** The months from the shown one to the last one with plans, the gaps filled: a month without plans invites to add
  * one. The shown month is always first, even when the server lists none. */
@@ -135,11 +139,11 @@ export function monthsRow(months: PlannedMonthCard[], shown: string, today: stri
     const item = byMonth.get(month)
     const now = month === shown
     if (!item || item.count === 0) {
-      result.push({ month, label: monthLabel(month, today), now, empty: true, sum: null, meta: '＋ добавить', segments: [] })
+      result.push({ month, label: monthLabel(month, today), now, empty: true, sum: null, amount: null, meta: '＋ добавить', segments: [] })
       continue
     }
     const meta = item.done_count > 0 ? `${plansText(item.count)} · ${item.done_count} сделано` : plansText(item.count)
-    result.push({ month, label: monthLabel(month, today), now, empty: false, sum: formatMoney(item.expected, currency), meta, segments: segmentsOf(item.segments) })
+    result.push({ month, label: monthLabel(month, today), now, empty: false, sum: formatMoney(item.expected, currency), amount: item.expected, meta, segments: segmentsOf(item.segments) })
   }
   return result
 }
@@ -251,6 +255,8 @@ export type OptionView = {
   key: AdviceKey; name: string; available: boolean
   /** The big figure: what to put in, or «—». */
   sum: string
+  /** The same figure as the decimal of the API, for `Money`; null — not available. */
+  amount: string | null
   /** Under the figure: «сегодня, один раз», «в месяц × 3», the reason when not available. */
   under: string
   /** The shares of the bar: the money put in and what the bank adds, as `flex`. */
@@ -265,7 +271,7 @@ export function optionView(option: AdviceOption, advice: PlannedAdvice): OptionV
   const name = optionNames[option.key]
   if (!option.available || option.amount === null) {
     // The short «not for …» under the dash; the server's reason once, as the small print (never beside the sum: it would not fit).
-    return { key: option.key, name, available: false, sum: '—', under: advice.months === null ? 'не для плана без срока' : advice.months === 0 ? 'срок меньше месяца' : `не для ${glue(String(advice.months), plural(advice.months, 'месяца', 'месяцев', 'месяцев'))}`, bar: null, meta: option.reason ? [option.reason] : [], risk: option.risk }
+    return { key: option.key, name, available: false, sum: '—', amount: null, under: advice.months === null ? 'не для плана без срока' : advice.months === 0 ? 'срок меньше месяца' : `не для ${glue(String(advice.months), plural(advice.months, 'месяца', 'месяцев', 'месяцев'))}`, bar: null, meta: option.reason ? [option.reason] : [], risk: option.risk }
   }
   const money = (value: string) => formatMoney(value, advice.currency)
   const times = option.times ?? 1
@@ -274,7 +280,7 @@ export function optionView(option: AdviceOption, advice: PlannedAdvice): OptionV
   const gain = option.gain ? `банк добавит ≈ ${money(option.gain)}${rateText(option.rate) ? ` · ${rateText(option.rate)}` : ''}` : rateText(option.rate)
   const liquid = option.liquid ? 'снять можно в любой день' : advice.due ? `без снятия до ${dayAndMonth(advice.due)}` : 'без снятия до срока'
   return {
-    key: option.key, name, available: true, sum: money(option.amount), under,
+    key: option.key, name, available: true, sum: money(option.amount), amount: option.amount, under,
     bar: { in: Math.max(Number(cents(option.amount) * BigInt(times)) / 100, 0), gain: Math.max(Number(cents(option.gain ?? '0')) / 100, 0) },
     meta: [put, gain, liquid].filter((item): item is string => Boolean(item)), risk: option.risk,
   }

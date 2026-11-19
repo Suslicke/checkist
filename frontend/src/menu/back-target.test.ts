@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Route } from '../navigation'
-import { backTarget, headerAction, hubOf, isFocusRoute, isHubSection } from './back-target'
+import { backName, backTarget, headerAction, hubOf, isFocusRoute, isHubSection, screenName } from './back-target'
 
 const at = (route: Route, returnTo?: string) => backTarget({ route, returnTo })
 
@@ -94,3 +94,31 @@ describe('the round control of the header row (pure, no browser)', () => {
       .toEqual({ kind: 'back', to: '/receipts', label: 'Назад к тратам', step: true })
   })
 })
+
+describe('the name of «назад» on iOS: the screen it leads to (pure, no browser)', () => {
+  it('names a screen of the app by its short name, and anything unknown plainly', () => {
+    expect(screenName('/receipts?store=4&page=2')).toBe('Траты')
+    expect(screenName('/')).toBe('Главная')
+    expect(screenName('/?month=2026-09')).toBe('Главная')
+    expect(screenName('/money')).toBe('Деньги')
+    expect(screenName('/more')).toBe('Ещё')
+    expect(screenName('/recurring')).toBe('Платежи')
+    expect(screenName('/catalog/categories/4?page=3')).toBe('Категория')
+    expect(screenName('/receipts/7')).toBe('Трата')
+    expect(screenName('/missing/page')).toBe('Назад')
+  })
+
+  it('names the screen the person came from when «назад» steps back to it, otherwise its own address', () => {
+    // From «Платежи» to a spend: «назад» steps back to «Платежи», not to «Траты».
+    const fromPayments = { href: '/receipts/71', depth: 1, from: '/recurring' }
+    const action = headerAction({ route: { kind: 'receipt', receiptId: 71 }, ...fromPayments })!
+    expect(backName(fromPayments, action)).toBe('Платежи')
+    // Entered directly: the parent list.
+    expect(backName({ href: '/receipts/71' }, action)).toBe('Траты')
+    // A section opened from a hub always goes to the hub.
+    expect(backName({ href: '/goals', depth: 1, from: '/money' }, { to: '/money' })).toBe('Деньги')
+    // Only a filter of the same page lies behind: not a step back.
+    expect(backName({ href: '/receipts/71?x=1', depth: 2, from: '/receipts/71' }, action)).toBe('Траты')
+  })
+})
+

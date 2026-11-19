@@ -46,7 +46,8 @@ describe('statement draft screen', () => {
     expect(html.match(/type="checkbox"/g)).toHaveLength(5 + 1 + 1)
     expect(html.match(/checked=""/g)).toHaveLength(4)
     expect(html).toContain('Сохранить 4 траты · 30 150 ₸')
-    expect(html).toContain('+35 000 ₸')
+    // An incoming is an amount of Money with «+» in the income tone.
+    expect(html).toMatch(/<span class="ck-row-amount statement-income"><span class="ck-money ck-money--row ck-money--in"><span class="ck-money-sign">\+<\/span><span class="ck-money-int">35\u202f000<\/span><span class="ck-money-cur">\u202f₸<\/span><\/span><\/span>/u)
     expect(html).toContain('class="statement-actions ck-action-bar"')
   })
 

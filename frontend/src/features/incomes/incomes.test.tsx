@@ -12,8 +12,10 @@ import { IncomesView } from './IncomesPage'
 import { INCOME_MONTH_KEY, incomeSeries, rememberIncomeMonth, sessionIncomeMonth, summaryParts } from './incomes-state'
 
 const NBSP = String.fromCharCode(0xa0)
-const plain = (text: string) => text.replaceAll(NBSP, ' ')
+const plain = (text: string) => text.replaceAll(NBSP, ' ').replaceAll('\u202f', ' ')
 const html = (node: ReactElement) => plain(renderToStaticMarkup(node).replace(/<svg\b.*?<\/svg>/g, ''))
+/** The words of a piece of markup without its tags: an amount drawn by `Money` reads as «650 000 ₸». */
+const words = (markup: string) => markup.replace(/<[^>]+>/g, '')
 
 const summary = (patch: Partial<IncomeSummary> = {}): IncomeSummary => ({
   month: '2026-10', base_currency: 'KZT', income: '950000.00', spent: '200000.00', saved: '750000.00', saved_percent: '78.95',
@@ -50,13 +52,15 @@ describe('/incomes (Vitest/SSR)', () => {
     const page = html(<IncomesView data={data} categories={[{ id: 1, name: 'Зарплата', built_in: true }]} />)
     expect(page).toContain('<h2 id="inc-month-heading">Октябрь 2026</h2>')
     expect(page).toContain('aria-label="Прошлый месяц" href="/incomes?month=2026-09"')
-    expect(page).toContain('<span>Доход семьи</span><strong class="ck-figures">950 000 ₸</strong>')
-    expect(page).toContain('<a class="ck-row" href="/incomes/7/edit">')
+    // The family total — the one figure of the screen, money in: the colour of the income with «+».
+    expect(page).toContain('<span>Доход семьи</span><span class="ck-money ck-money--display ck-money--in"><span class="ck-money-sign">+</span><span class="ck-money-int">950 000</span>')
+    expect(page).toContain('<a class="ck-row" href="/incomes/7/edit"><span class="ck-row-badge ck-tone-1" aria-hidden="true"></span>')
     expect(page).toContain('<span class="ck-row-meta">5 октября · Лиза · аванс</span>')
+    expect(page).toContain('<span class="ck-row-amount"><span class="ck-money ck-money--row ck-money--in"><span class="ck-money-sign">+</span><span class="ck-money-int">650 000</span>')
     expect(page).toContain('<a class="inc-add" href="/receipts/new?kind=income">Добавить доход</a>')
     expect(page).toContain('<li class="inc-chip">Зарплата</li>')
     const nothing = html(<IncomesView data={{ ...data, family_total: null, results: [] }} categories={[]} />)
-    expect(nothing).toContain('не внесён')
+    expect(nothing).toContain('<strong class="inc-total-missing">не внесён</strong>')
     expect(nothing).toContain('Доходов за месяц пока нет.')
     // A member of the family sees the total but not the records of the others.
     expect(html(<IncomesView data={{ ...data, results: [] }} categories={[]} />)).toContain('Ваших записей за месяц нет.')
@@ -82,7 +86,7 @@ describe('«Трата / Доход» in the form (Vitest/SSR)', () => {
     expect(form).not.toContain('Позиции')
     expect(form).not.toContain('Все категории')
     expect(form).toContain('aria-pressed="true" title="Зарплата"')
-    expect(form).toContain('Сохранить · 650 000 ₸')
+    expect(words(form)).toContain('Сохранить · 650 000 ₸')
     expect(form).toContain('Удалить доход')
   })
   it('builds the body of an income and reads it back', () => {

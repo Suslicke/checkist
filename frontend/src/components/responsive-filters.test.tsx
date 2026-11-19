@@ -44,6 +44,6 @@ describe('filters of a screen by the width of the window (Node server render)', 
   it('styles the phone view with tokens only and no width query of its own', () => {
     const css = readFileSync(new URL('./ResponsiveFilters.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     expect(css).not.toMatch(/@media|#[0-9a-f]{3,8}\b|\b(?:rgb|hsl)a?\(|font-size|transition|animation/i)
-    expect(css).toContain('min-height: 48px;')
+    expect(css).toContain('min-height: var(--ck-tap);')
   })
 })

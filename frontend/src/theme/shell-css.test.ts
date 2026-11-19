@@ -5,6 +5,8 @@ const source = new URL('../', import.meta.url)
 const raw = (path: string) => readFileSync(new URL(path, source), 'utf8')
 const read = (path: string) => raw(path).replace(/\/\*[\s\S]*?\*\//g, '')
 const app = read('App.css')
+/** The shell of Чекист 2.0 (header, bars, «назад»): its own stylesheet, guarded in full by menu/menu-css.test.ts. */
+const shell = read('shell.css')
 const tokens = raw('theme/tokens.css')
 
 /** Flat rules: a media block of these stylesheets holds whole rules. */
@@ -46,34 +48,27 @@ describe('colours live in the theme tokens only (text of the files, not renderin
 })
 
 describe('account link of the header (text of the rules, not rendering)', () => {
-  it('takes its text from the header tokens and sets no state of its own', () => {
-    const own = rules(app).filter((item) => /\.account-link(?![\w-])/.test(item.selector))
-    expect(own.map((item) => item.selector)).toEqual(['.account-link', '.brand-bar .account-link'])
-    expect(rule('.account-link', app)).toBe('max-width: 100%; font-weight: 600; overflow-wrap: anywhere;')
-    expect(rule('.brand-bar .account-link', app)).toBe('color: var(--ck-header-text);')
-    expect(rule('.brand-bar', app)).toContain('color: var(--ck-header-text);')
+  it('sets no colour and no state of its own: the header links (shell.css) draw it', () => {
+    const own = rules(shell).filter((item) => /\.account-link(?![\w-])/.test(item.selector))
+    expect(own.map((item) => item.selector)).toEqual(['.account-link'])
+    expect(rule('.account-link', shell)).toBe('max-width: 100%; font-weight: 600; overflow-wrap: anywhere;')
+    expect(rules(app).some((item) => item.selector.includes('account-link'))).toBe(false)
   })
 
-  it('yields to the hover, the current page and the focus ring of the header links', () => {
-    // The link is an `a` of the header navigation: these rules reach it and must weigh more than its own colour.
-    const base = weight('.brand-bar .account-link')
-    expect(rule('.brand-bar .main-navigation a:hover', app)).toBe('background: var(--ck-header-hover-bg); text-decoration: underline;')
-    expect(rule('.brand-bar .main-navigation a[aria-current]', app)).toBe('color: var(--ck-header-accent); background: var(--ck-header-hover-bg);')
-    expect(rule('.brand-bar :focus-visible', app)).toBe('outline-color: var(--ck-header-focus);')
-    expect(weight('.brand-bar .main-navigation a[aria-current]')).toBeGreaterThan(base)
-    expect(weight('.brand-bar .main-navigation a:hover')).toBeGreaterThan(base)
+  it('yields to the current page of the header links, which weighs more than its class', () => {
+    expect(rule('.main-navigation a[aria-current]', shell)).toContain('background: var(--ck-seal-soft); color: var(--ck-seal-ink); font-weight: 700;')
+    expect(weight('.main-navigation a[aria-current]')).toBeGreaterThan(weight('.account-link'))
   })
 })
 
 describe('emblem of the header (text of the rules and headers of the files, not rendering)', () => {
   const bytes = (path: string) => readFileSync(new URL(path, source))
 
-  it('lies straight on the header bar: no backing, no frame, only the size', () => {
-    const own = rules(app).filter((item) => /\.brand-mark(?![\w-])/.test(item.selector))
-    expect(own.map((item) => item.body)).toEqual(['flex: none; width: 44px; height: 44px;', 'width: 40px; height: 40px;'])
-    // The bar under the transparent emblem takes the colour of a card in each theme: both blocks define it.
-    expect(rule('.brand-bar', app)).toContain('background: var(--ck-header-bg);')
-    expect(tokens.match(/^\s*--ck-header-bg:/gm)).toHaveLength(2)
+  it('lies straight on the header: no backing, no frame, only the size', () => {
+    const own = rules(shell).filter((item) => /\.brand-mark(?![\w-])/.test(item.selector))
+    expect(own.map((item) => item.body)).toEqual(['flex: none; width: 40px; height: 40px;', 'width: 32px; height: 32px;'])
+    // Чекист 2.0: the header lies on the surface of each theme (shell.css), the emblem straight on it.
+    expect(rule('.brand-bar', shell)).toContain('background: var(--ck-surface);')
   })
 
   it.each([['emblem-96.webp', 96], ['emblem-192.webp', 192]])('%s is a square WebP with an alpha channel', (name, side) => {
@@ -97,45 +92,56 @@ describe('state rules of the shell (text of the rules, not rendering)', () => {
 
   it('keeps every general state rule as weak as its base rule', () => {
     // App.css follows the screen stylesheets in the build: a general state rule that weighs as much as a class of a
-    // screen wins over it. A new one goes through :where() and into this list; the header and the skip link are the
-    // shell's own parts, and the disabled button must win over the fill that a class of a screen sets.
-    const found = rules(app).filter((item) => state.test(item.selector)).map((item) => `${item.selector} = ${weight(item.selector)}`)
+    // screen wins over it. A new one goes through :where() and into this list; the disabled button must win over the fill
+    // that a class of a screen sets. The parts of the shell (top bar, menu, «＋», skip link, sections of a part) move to
+    // shell.css (Чекист 2.0, F2) and keep their own guards: this list is the language of App.css (F1).
+    const shell = /skip-link|brand|main-|section-navigation|ck-chat-link|ck-round|ck-close|ck-back|intro|account-link/
+    const found = rules(app).filter((item) => state.test(item.selector) && !shell.test(item.selector)).map((item) => `${item.selector} = ${weight(item.selector)}`)
     expect(found).toEqual([
       'button:focus-visible = 1', 'a:focus-visible = 1', 'input:focus-visible = 1', 'select:focus-visible = 1', 'textarea:focus-visible = 1',
       '[tabindex]:focus-visible = 2',
       // The heading of the page takes the ring off itself: focused by script only (focus-ring-css.test.ts).
       'h1[tabindex="-1"]:focus-visible = 2',
-      '.skip-link:focus = 2', '.skip-link:focus-visible = 2', '.brand-bar :focus-visible = 2',
-      // The mark of «Чат с ИИ» beside the theme switch (2026-10-26): as weak as its class.
-      '.ck-chat-link:where(:hover) = 1',
-      '.brand-bar .main-navigation a:hover = 3',
-      // The rows of the «＋» sheet and the round control of the header row (artifact design): as weak as their class.
-      '.main-add-action:where(:hover) .main-add-title = 2',
-      // A section of the low switch of a part (Статистика, каталог; feature/stats-compact): as weak as its link.
-      '.section-navigation a:where(:hover) = 1',
-      '.ck-round:where(:hover) = 1',
-      'button:where(:hover:not(:disabled)) = 0', 'button:where(:active:not(:disabled)) = 0', 'button:disabled = 1',
-      '.action-link:where(:hover) = 1',
-      // The secondary and the quiet danger looks of a button (mobile design 2026-10-12): as weak as their class.
-      '.ck-button-secondary:where(:hover:not(:disabled)) = 1', '.ck-button-secondary:where(:active:not(:disabled)) = 1',
-      '.ck-button-danger:where(:hover:not(:disabled)) = 1', '.ck-button-danger:where(:active:not(:disabled)) = 1',
-      '.expense-danger:where(:hover:not(:disabled)) = 1', '.expense-danger:where(:active:not(:disabled)) = 1',
+      // The press of the main action (seal-press) and of `.ck-btn`; the disabled button outweighs a class of a screen.
+      'button:where(:active:not(:disabled)) = 0', '.ck-btn:where(:active) = 1', 'button:disabled = 1',
+      // iOS dims a pressed control to 55 % (platforms.md): as weak as the element or the class.
+      ':where(:root[data-platform="ios"]) button:where(:active:not(:disabled)) = 0', ':where(:root[data-platform="ios"]) .ck-btn:where(:active) = 1',
+      ':where(:root[data-platform="ios"]) .action-link:where(:active) = 1',
+      // A field of 2.0: invalid and disabled as weak as the element.
+      'input:where([aria-invalid="true"]) = 0', 'select:where([aria-invalid="true"]) = 0', 'textarea:where([aria-invalid="true"]) = 0',
+      'input:where(:disabled) = 0', 'select:where(:disabled) = 0', 'textarea:where(:disabled) = 0',
+      // The press of the tonal link, the primary link, the tonal, ghost and danger buttons: as weak as their class.
+      '.action-link:where(:active) = 1', '.action-link.ck-btn-primary:where(:active) = 2',
+      '.ck-button-secondary:where(:active:not(:disabled)) = 1', '.ck-button-ghost:where(:active:not(:disabled)) = 1',
+      '.ck-button-danger:where(:active:not(:disabled)) = 1', '.expense-danger:where(:active:not(:disabled)) = 1',
+      // The round icon button: pressed (aria-pressed) is a choice of the component, filled with ink.
+      '.ck-icon-button:where(:active:not(:disabled)) = 1', '.ck-icon-button[aria-pressed="true"] = 2',
+      // Segments and the drawn switch: states of the components themselves (the selected segment, the checked switch).
+      '.ck-segments > [aria-pressed="true"] = 2', ':where(:root:not([data-platform="ios"])) .ck-segments > [aria-pressed="true"]::after = 2',
+      ':where(:root[data-platform="ios"]) .ck-segments > [aria-pressed="true"] = 2',
+      ':where(:root:not([data-switch="native"])) .ck-switch:checked = 2', ':where(:root:not([data-switch="native"])) .ck-switch:checked::after = 2',
+      ':where(:root:not([data-switch="native"])) .ck-switch:checked::before = 2',
+      ':where(:root[data-platform="ios"]:not([data-switch="native"])) .ck-switch:checked = 2',
+      ':where(:root[data-platform="ios"]:not([data-switch="native"])) .ck-switch:checked::after = 2',
+      ':where(:root[data-platform="ios"]:not([data-switch="native"])) .ck-switch:checked::before = 2',
       '.rec-issues summary:focus-visible = 2',
-      // «Данные» and «Настройки» of a wide screen (a list under the word, 2026-10-13): the shell's own part, as heavy
-      // as the header links.
-      '.brand-bar .main-group-toggle:where(:hover) = 2', '.brand-bar .main-group-toggle[aria-expanded="true"] = 3',
-      '.brand-bar .main-group-list a:hover = 3',
-      // The bottom bar of a phone and the list behind «Ещё»: the shell's own parts, like the links of the header. They
-      // weigh as much as the header rules they replace in the bar, and come after them.
-      '.brand-bar .main-navigation :focus-visible = 3',
-      // «Ещё» is a link to its screen (2026-10-13): its hover weighs as much as the header rule it replaces.
-      '.brand-bar .main-navigation > a:hover = 3', '.brand-bar .main-more > a:hover = 3',
-      // «＋» of the bar opens a modal sheet (components/Sheet) that covers it: the button has no open state of its own.
+      // Hover only where a pointer hovers (@media (hover: hover)), never while pressed: as weak as the element or class.
+      'button:where(:hover:not(:disabled)) = 0', '.ck-btn:where(:hover:not(:active)) = 1',
+      '.action-link:where(:hover:not(:active)) = 1', '.action-link.ck-btn-primary:where(:hover:not(:active)) = 2',
+      '.ck-button-secondary:where(:hover:not(:active):not(:disabled)) = 1', '.ck-button-ghost:where(:hover:not(:active):not(:disabled)) = 1',
+      '.ck-button-danger:where(:hover:not(:active):not(:disabled)) = 1', '.expense-danger:where(:hover:not(:active):not(:disabled)) = 1',
+      '.ck-icon-button:where(:hover:not(:active):not(:disabled):not([aria-pressed="true"])) = 1',
+      '.ck-segments > button:where(:hover:not(:disabled):not([aria-pressed="true"])) = 1',
+      '.ck-segments > a:where(:hover:not([aria-current="page"]):not([aria-current="true"])) = 1',
+      // The squeeze of a press (@media (prefers-reduced-motion: no-preference)).
+      'button:where(:active:not(:disabled)) = 0', '.ck-btn:where(:active) = 1', '.action-link:where(:active) = 1',
+      // Forced colours: a frame of the system colours.
+      '.ck-switch:checked = 2', '.ck-icon-button[aria-pressed="true"] = 2',
     ])
   })
 
-  it('sets only the outline in the general focus rule', () => {
-    expect(rule('button:focus-visible', app)).toBe('outline: 3px solid var(--ck-focus); outline-offset: 4px;')
+  it('sets only the outline in the general focus rule: 2 px of the focus colour, 2 px away (Чекист 2.0)', () => {
+    expect(rule('button:focus-visible', app)).toBe('outline: 2px solid var(--ck-focus); outline-offset: 2px;')
   })
 })
 
@@ -158,8 +164,8 @@ describe('width of the page and values that never break (text of the rules, not 
     expect(width).toBeGreaterThanOrEqual(1160)
     expect(width).toBeLessThanOrEqual(1240)
     expect(page).toContain('margin: auto;')
-    // The bar spans the window: its side padding is the gap beside .page plus .page's own padding, never less than it.
-    const bar = /padding: \d+px max\((\d+)px, calc\(50% - (\d+)px\)\) \d+px;/.exec(rule('.brand-bar', wide))
+    // The header spans the window (shell.css): its side padding is the gap beside .page plus .page's own padding.
+    const bar = /padding: max\(var\(--ck-space-3\), env\(safe-area-inset-top, 0px\)\) max\((\d+)px, calc\(50% - (\d+)px\)\) var\(--ck-space-3\);/.exec(rule('.brand-bar', shell.slice(0, shell.indexOf('@media'))))
     expect(bar?.slice(1).map(Number)).toEqual([padding, width / 2 - padding])
   })
 
@@ -168,9 +174,11 @@ describe('width of the page and values that never break (text of the rules, not 
     const phone = /@media \(max-width: 540px\) \{([\s\S]*?)\n\}/.exec(app)?.[1] ?? ''
     // The 16 px margins of the artifact design.
     expect(rule('.page', phone)).toBe('padding: 0 16px;')
-    expect(rule('.brand-bar', phone)).toBe('padding: 10px 20px 11px; gap: 4px 10px;')
-    expect(rule('.brand-bar .main-navigation', phone)).toContain('flex-wrap: nowrap;')
-    expect(rule('.brand-bar .main-navigation', phone)).toContain('overflow-x: auto;')
+    // The header strip of a tiny or low window (shell.css): the menu is one row scrolled sideways.
+    const shellPhone = /@media \(max-width: 540px\) \{([\s\S]*?)\n\}/.exec(shell)?.[1] ?? ''
+    expect(rule('.brand-bar', shellPhone)).toContain('padding: max(var(--ck-space-2), env(safe-area-inset-top, 0px))')
+    expect(rule('.brand-bar .main-navigation', shellPhone)).toContain('flex-wrap: nowrap;')
+    expect(rule('.brand-bar .main-navigation', shellPhone)).toContain('overflow-x: auto;')
   })
 })
 
@@ -182,9 +190,9 @@ describe('name of the product in the page and the theme file', () => {
     expect(html).toContain('<title>Чекист</title>')
   })
 
-  it('does not promise a look of dangerous actions that no button has', () => {
+  it('promises the look of a dangerous action that the buttons have: an error outline, never the seal', () => {
     const comment = tokens.slice(0, tokens.indexOf('СПРАВОЧНИК ТОКЕНОВ'))
-    expect(comment).not.toMatch(/Опасное действие[^.]*тройка\s+ошибки/)
-    expect(comment).toContain('решение за человеком')
+    expect(comment).toMatch(/опасное\s+действие\s+—\s+не\s+seal,\s+а\s+--ck-error\s+контуром\s+\(\.ck-button-danger\)/)
+    expect(rule('.ck-button-danger', app)).toBe('border-color: var(--ck-error); background: transparent; color: var(--ck-error);')
   })
 })

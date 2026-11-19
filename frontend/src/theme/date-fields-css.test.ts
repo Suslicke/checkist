@@ -83,6 +83,8 @@ describe('fields of a date keep the width of their panel (text of the rules and 
       .filter((match) => /(^|[\s;-])appearance\s*:/.test(match[2]))
       .flatMap((match) => match[1].split(',').map((selector) => selector.trim()))
       .filter((selector) => !/(^|[\s>])select(?![\w-])/.test(selector))
+      // A progress bar and a radio drawn by their own look (Чекист 2.0) are no fields of a date either.
+      .filter((selector) => !/(^|[\s>])progress(?![\w-])|\[type="radio"\]/.test(selector))
     expect(sheets.filter((path) => own(path).length)).toEqual([])
     expect(sheets.filter((path) => new RegExp(`type="(${kind})"`).test(read(path)))).toEqual([])
   })

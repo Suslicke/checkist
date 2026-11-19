@@ -132,6 +132,14 @@ export function spendSource(receipt: Pick<ReceiptListItem, 'source' | 'note'>): 
   return receipt.source === 'photo' ? 'photo' : 'manual'
 }
 
+/** The provenance stamp of a row (Чекист 2.0, SpendRow): «Фото», «Вручную», a statement by its bank. The badge may show
+ * the category instead, so the stamp is the one place that says how the spend came in — for the eye and the screen
+ * reader; the meta line leaves the same words out. */
+export function stampWord(receipt: Pick<ReceiptListItem, 'source' | 'note'>): string {
+  const source = spendSource(receipt)
+  return source === 'statement' ? sourceMark(receipt.source, receipt.note) : source === 'photo' ? 'Фото' : 'Вручную'
+}
+
 /** «Владелец · Категории · выписка или N позиций»: who, then «на что». The owner only in a family; the badge of the row
  * already says a photo or a hand-typed spend, so the words name only the bank of a statement and the positions of a
  * photo; «Возврат» for a refund. A row with nothing else to say says where it came from. */

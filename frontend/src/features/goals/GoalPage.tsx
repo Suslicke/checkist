@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react'
 import { addContribution, deleteContribution, deleteGoal, getGoal, reconcileGoal, updateContribution, updateGoal } from '../../api/goals'
 import type { Contribution, GoalDetail } from '../../api/goals'
 import type { LocalApiResult } from '../../api/types'
+import Icon from '../../components/Icon'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import { usePageTitle } from '../../components/page-header'
 import { LineChart } from '../../lib/charts'
-import { formatApproxMoney, formatMoney } from '../../lib/money'
+import { formatApproxMoney } from '../../lib/money'
 import { initials } from '../../lib/people'
 import { navigate } from '../../navigation'
 import { useSession } from '../../session'
 import { formatMonthStart, formatMonthTick, moneyAxis } from '../stats/trends-state'
 import { ContributionForm, GoalForm, InterestRecord, ReconcileForm } from './GoalForms'
 import {
-  barShare, contributionBody, contributionMeta, contributionTitle, deadlineText, depositLines, depositTerms, excludedText, goalBody,
+  barShare, contributionBody, contributionMeta, deadlineText, depositLines, depositTerms, excludedText, goalBody,
   goalFailure, growthSeries, kindText, paceText, reconcileBody,
 } from './goals-state'
 import type { ContributionDraft, GoalDraft, ReconcileDraft } from './goals-state'
@@ -36,8 +38,8 @@ function DepositPanel({ goal, onReconcile }: { goal: GoalDetail; onReconcile: ()
   return <section className="ck-panel goal-deposit" aria-labelledby="goal-deposit-heading">
     <div className="ck-panel-head"><h2 id="goal-deposit-heading">Рост депозита</h2></div>
     <dl className="goal-split">
-      <div><dt>Внесено</dt><dd className="ck-figures">{formatMoney(figures.deposits, goal.currency)}</dd></div>
-      <div><dt>Проценты</dt><dd className="ck-figures">{formatApproxMoney(figures.interest, goal.currency)}</dd></div>
+      <div><dt>Внесено</dt><dd><Money value={figures.deposits} currency={goal.currency} size="title" /></dd></div>
+      <div className="goal-split-interest"><dt>Проценты</dt><dd><Money value={figures.interest} currency={goal.currency} size="title" approx tone="in" /></dd></div>
     </dl>
     {goal.series?.length
       ? <LineChart title={`Рост депозита по месяцам, ${goal.currency}`} series={growthSeries(goal)} interval="month"
@@ -48,45 +50,54 @@ function DepositPanel({ goal, onReconcile }: { goal: GoalDetail; onReconcile: ()
   </section>
 }
 
+/** A record of the history: who put money aside (or «Сверка с банком» with «%»), the day and where it came from, the
+ * amount — a contribution in ink with «+», the interest of the bank in the colour of the income. */
+function HistoryRow({ item, onEdit }: { item: Contribution; onEdit: (item: Contribution) => void }) {
+  const interest = item.kind === 'interest'
+  return <li>
+    <button type="button" className="ck-row goal-gift" aria-haspopup="dialog" onClick={() => onEdit(item)}>
+      <span className={`ck-row-badge ${interest ? 'goal-interest' : 'goal-person'}`} aria-hidden="true">
+        {interest ? '%' : initials(item.user?.display_name ?? '?')}</span>
+      <span className="ck-row-main">
+        <span className="ck-row-title">{interest ? 'Сверка с банком' : item.user?.display_name ?? 'Взнос'}</span>
+        <span className="ck-row-meta">{contributionMeta({ ...item, user: null })}</span>
+      </span>
+      <span className="ck-row-amount"><Money value={item.amount} currency={item.currency} size="row" sign={item.amount.startsWith('-') ? 'auto' : 'plus'}
+        tone={interest && !item.amount.startsWith('-') ? 'in' : undefined} /></span>
+    </button>
+  </li>
+}
+
 /** One goal without loading: the progress card, the forecast, the history of contributions. */
 export function GoalView({ goal, notice = null, onAdd = () => {}, onEditGoal = () => {}, onEdit = () => {}, onReconcile = () => {} }: GoalViewProps) {
   const pace = paceText(goal)
   const deadline = deadlineText(goal)
   const excluded = excludedText(goal)
   return <div className="goals ck-stack">
-    <section className="ck-panel goal-hero" aria-label="Прогресс">
+    <section className={`ck-panel goal-hero${goal.reached ? ' is-reached' : ''}`} aria-label="Прогресс">
       <p className="goal-kind">{[kindText(goal), depositTerms(goal)].filter(Boolean).join(' · ')}</p>
-      {goal.deposit && <p className="goal-kind">На депозите</p>}
-      <p className="goal-hero-sum"><span className="ck-hero-figure">{(goal.deposit ? formatApproxMoney : formatMoney)(goal.saved, goal.currency)}</span></p>
-      <p className="goal-of">из <span className="ck-figures">{formatMoney(goal.amount, goal.currency)}</span> · <span className="ck-figures">{goal.percent}&nbsp;%</span></p>
+      <p className="goal-hero-sum">{goal.deposit && <span className="goal-hero-label">На депозите</span>}
+        <Money value={goal.saved} currency={goal.currency} size="hero" approx={Boolean(goal.deposit)} /></p>
+      <p className="goal-of">из <Money value={goal.amount} currency={goal.currency} /> · <span className="goal-of-percent">{goal.percent}&nbsp;%</span></p>
       <div className={`ck-bar goal-bar-big${goal.reached ? ' goal-bar-done' : ''}`} role="img" aria-label={`Накоплено ${goal.percent} %`}>
         <span style={{ width: `${barShare(goal)}%` }} />
       </div>
-      {goal.reached && <p className="goal-reached">Цель достигнута.</p>}
+      {goal.reached && <p className="goal-reached"><Icon name="check" size={18} />Цель достигнута.</p>}
       {pace && <p className="goal-line">{pace}</p>}
       {deadline && <p className={`goal-line${goal.overdue ? ' goal-overdue' : ''}`}>{deadline}</p>}
-      {goal.deposit && <p className="goal-line">≈ заработано процентами <span className="ck-figures">{formatMoney(goal.deposit.interest, goal.currency)}</span></p>}
+      {goal.deposit && <p className="goal-line">≈ заработано процентами <Money value={goal.deposit.interest} currency={goal.currency} tone="in" /></p>}
       {excluded && <p className="goal-note">{excluded}</p>}
       <div className="goal-actions">
         <button type="button" aria-haspopup="dialog" onClick={onAdd}>Добавить взнос</button>
         <button type="button" className="ck-button-secondary" aria-haspopup="dialog" onClick={onEditGoal}>Изменить цель</button>
       </div>
     </section>
-    {notice && <p className="goal-notice" role="status">{notice}</p>}
+    {notice && <p className="goal-notice" role="status"><Icon name="check" size={18} className="ck-icon goal-notice-mark" /><span>{notice}</span></p>}
     <DepositPanel goal={goal} onReconcile={onReconcile} />
     <section className="ck-panel" aria-labelledby="goal-history-heading">
       <div className="ck-panel-head"><h2 id="goal-history-heading">{goal.deposit ? 'История' : 'Взносы'}</h2><span className="goal-count">{goal.contributions.length}</span></div>
       {goal.contributions.length
-        ? <ul className="ck-list goal-list">{goal.contributions.map((item) => <li key={item.id}>
-          <button type="button" className="ck-row goal-gift" aria-haspopup="dialog" onClick={() => onEdit(item)}>
-            <span className={`ck-row-badge ${item.kind === 'interest' ? 'goal-interest' : 'goal-person'}`} aria-hidden="true">
-              {item.kind === 'interest' ? '%' : initials(item.user?.display_name ?? '?')}</span>
-            <span className="ck-row-main">
-              <span className="ck-row-title ck-figures">{contributionTitle(item)}</span>
-              <span className="ck-row-meta">{contributionMeta(item)}</span>
-            </span>
-          </button>
-        </li>)}</ul>
+        ? <ul className="ck-list goal-list">{goal.contributions.map((item) => <HistoryRow key={item.id} item={item} onEdit={onEdit} />)}</ul>
         : <p className="goal-note">Взносов пока нет. Добавьте первый — или отметьте перевод на депозит в черновике выписки
           как взнос в эту цель.</p>}
     </section>

@@ -58,9 +58,13 @@ describe('«Уведомления» block', () => {
     expect(html).toContain(pushTexts.enable)
     expect(html).toContain(pushTexts.off)
     for (const title of ['Регулярные платежи', 'Лимиты', 'Итоги недели', 'Разбор месяца', 'Крупные траты семьи']) expect(html).toContain(title)
+    // Five switches of 2.0: a checkbox with the role of a switch, the whole row its label.
     expect(html.match(/role="switch"/g)).toHaveLength(5)
-    expect(html).toMatch(/aria-checked="false"[^>]*data-push-kind="large"/)
-    expect(html).toMatch(/aria-checked="true"[^>]*data-push-kind="weekly"/)
+    const input = (kind: string) => html.match(new RegExp(`<input[^>]*data-push-kind="${kind}"[^>]*>`))?.[0] ?? ''
+    expect(input('large')).toContain('type="checkbox" role="switch" class="ck-switch"')
+    expect(input('large')).not.toContain('checked')
+    expect(input('weekly')).toContain('checked=""')
+    expect(html).toContain('<label class="ck-switch-row push-kind" for="push-weekly-switch">')
     expect(html).toContain('от 100 000 ₸')
     expect(html).toContain(pushTexts.test)
     expect(html).toContain(pushTexts.quiet)

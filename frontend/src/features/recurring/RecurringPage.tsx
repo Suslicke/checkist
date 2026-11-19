@@ -9,6 +9,8 @@ import {
 } from '../../api/recurring'
 import type { RecurringBase, RecurringMonth, RecurringMonthPayment, RecurringPayment, RecurringSuggestion } from '../../api/recurring'
 import type { Category, LocalApiResult } from '../../api/types'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import { StackedColumns } from '../../lib/charts'
@@ -17,7 +19,7 @@ import { categoryIcon } from '../../lib/category-icons'
 import Icon from '../../components/Icon'
 import { formatMonthStart, formatMonthTick, monthStart, moneyAxis } from '../stats/trends-state'
 import { formatMoney } from '../../lib/money'
-import { dashboardErrorMessage, monthTitle } from '../dashboard/dashboard-state'
+import { cents, dashboardErrorMessage, monthTitle } from '../dashboard/dashboard-state'
 import { DueBadge, NoticeLine, QuestionsCard } from './RecurringDue'
 import type { Decide } from './RecurringDue'
 import { Field, PaySection } from './RecurringPay'
@@ -40,37 +42,43 @@ function History({ row }: { row: RecurringMonthPayment }) {
   </span>
 }
 
-/** A payment of the list: the whole row opens its form. */
+/** A payment of the list: the whole row opens its sheet. A regular income — its amount in the colour of the income. */
 function PaymentItem({ row, today, onEdit }: { row: RecurringMonthPayment; today: string; onEdit: (payment: RecurringPayment) => void }) {
   const change = changeText(row)
+  const income = row.kind === 'income'
   return <li>
     <button type="button" className="ck-row rec-row rec-row-button" aria-haspopup="dialog" onClick={() => onEdit(row)}>
       <DueBadge row={row} />
       <span className="ck-row-main">
         <span className="ck-row-title">{row.name}</span>
-        <span className={`ck-row-meta rec-meta-${row.state}`}>{[stateText(row, today), row.store?.name ?? row.category.name].join(' · ')}</span>
-        {change && <span className="ck-row-meta rec-change ck-figures">{change}</span>}
+        <span className="ck-row-meta"><span className={`rec-state rec-meta-${row.state}`}>{stateText(row, today)}</span> · {row.store?.name ?? row.category.name}</span>
+        {change && <span className="ck-row-meta rec-change">{change}</span>}
         {row.state !== 'inactive' && <History row={row} />}
       </span>
-      <span className="ck-row-amount ck-figures">{formatMoney(row.paid?.total ?? row.amount, row.currency)}</span>
+      <span className="ck-row-amount"><Money value={row.paid?.total ?? row.amount} currency={row.currency} size="row"
+        tone={income ? 'in' : undefined} sign={income ? 'plus' : 'auto'} /></span>
     </button>
   </li>
 }
 
 const groupKey = (id: number | null) => (id === null ? 'none' : String(id))
 
-/** The dashboard of the month: a tile per root category — expected sum, how many are paid, what is left; a tap scrolls to the group. */
+/** The month by root category: a tile each — the expected sum, what is left or that all is paid; a tap scrolls to the group. */
 function Tiles({ base }: { base: RecurringBase }) {
   return <ul className="rec-tiles" aria-label="Платежи по категориям">
-    {base.groups.map((group) => <li key={groupKey(group.category_id)} className={`rec-tile rec-cat-${categoryTone(group.category_id)}`}>
-      <a href={`#rec-group-${groupKey(group.category_id)}`}>
-        <span className="rec-tile-head"><Icon name={categoryIcon(group.icon)} size={18} /><span className="rec-tile-name">{group.name}</span></span>
-        <span className="rec-tile-sum ck-figures">{formatMoney(group.expected, base.currency)}</span>
-        <span className="rec-tile-meta">{group.done === group.payments
-          ? `оплачено ${group.done} из ${group.payments}`
-          : <>осталось <span className="ck-figures">{formatMoney(group.left, base.currency)}</span></>}</span>
-      </a>
-    </li>)}
+    {base.groups.map((group) => {
+      const done = group.done === group.payments
+      return <li key={groupKey(group.category_id)} className={`rec-tile ck-tone-${categoryTone(group.category_id)}${done ? ' is-done' : ''}`}>
+        <a href={`#rec-group-${groupKey(group.category_id)}`}>
+          <span className="rec-tile-head"><span className="ck-row-badge rec-tile-icon" aria-hidden="true"><Icon name={categoryIcon(group.icon)} size={18} /></span>
+            <span className="rec-tile-name">{group.name}</span></span>
+          <Money value={group.expected} currency={base.currency} size="title" className="rec-tile-sum" />
+          <span className="rec-tile-meta">{done
+            ? <><Icon name="check" size={14} />оплачено {group.done} из {group.payments}</>
+            : <>осталось <Money value={group.left} currency={base.currency} /></>}</span>
+        </a>
+      </li>
+    })}
   </ul>
 }
 
@@ -83,10 +91,10 @@ function Groups({ base, rows, today, onEdit }: { base?: RecurringBase; rows: Rec
   return <>
     {base.groups.map((group) => {
       const items = rows.filter((row) => group.payment_ids.includes(row.id))
-      return items.length === 0 ? null : <section key={groupKey(group.category_id)} className={`rec-group rec-cat-${categoryTone(group.category_id)}`}
+      return items.length === 0 ? null : <section key={groupKey(group.category_id)} className={`rec-group ck-tone-${categoryTone(group.category_id)}`}
         id={`rec-group-${groupKey(group.category_id)}`} aria-label={group.name}>
         <h3 className="rec-group-head"><span className="rec-tile-dot" aria-hidden="true" />{group.name}
-          <span className="rec-group-sum ck-figures">{formatMoney(group.expected, base.currency)}</span></h3>
+          <Money value={group.expected} currency={base.currency} className="rec-group-sum" /></h3>
         {list(items)}
       </section>
     })}
@@ -124,13 +132,36 @@ function SuggestionItem({ item, busy, onAccept, onDismiss }: {
         <span className="ck-row-title">{item.name}</span>
         <span className="ck-row-meta">{suggestionMeta(item)} · {item.category_name}</span>
       </span>
-      <span className="ck-row-amount ck-figures">{formatMoney(item.amount, item.currency)}</span>
+      <span className="ck-row-amount"><Money value={item.amount} currency={item.currency} size="row" /></span>
     </div>
     <div className="rec-suggestion-actions">
-      <button type="button" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onAccept(item)}>Добавить</button>
-      <button type="button" className="ck-button-secondary" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDismiss(item)}>Не надо</button>
+      <button type="button" className="ck-button-secondary" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onAccept(item)}>Добавить</button>
+      <button type="button" className="ck-button-ghost" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDismiss(item)}>Не надо</button>
     </div>
   </li>
+}
+
+/** The figure of the month: what is still to pay in the base currency (several currencies without a base — each), the
+ * bar of what is paid, the mandatory sum of the month. */
+function MonthFigure({ data, rows }: { data: RecurringMonth; rows: RecurringMonthPayment[] }) {
+  const { base } = data
+  const left = data.totals.filter((total) => total.left !== null)
+  const open = rows.filter((row) => row.state === 'due' || row.state === 'overdue').length
+  const share = base && cents(base.expected) > 0n ? Math.min(100, Number((cents(base.paid) * 100n) / cents(base.expected))) : null
+  return <div className="rec-figure">
+    {base
+      ? cents(base.left) > 0n
+        ? <><span className="rec-figure-label">Осталось оплатить</span><Money value={base.left} currency={base.currency} size="display" /></>
+        : <p className="rec-all-paid"><Icon name="check" size={20} />Всё оплачено</p>
+      : left.length > 0
+        ? <p className="rec-sum">Осталось оплатить {left.map((total, index) => <span key={total.currency}>
+          {index > 0 && ' + '}<Money value={total.left} currency={total.currency} className="rec-sum-value" /></span>)}</p>
+        : open === 0 && rows.length > 0 ? <p className="rec-all-paid"><Icon name="check" size={20} />Всё оплачено</p> : null}
+    {share !== null && <span className="ck-bar rec-figure-bar" aria-hidden="true"><span style={{ width: `${share}%` }} /></span>}
+    {base && <p className="rec-sum rec-total">Обязательных платежей в месяц <Money value={base.expected} currency={base.currency} className="rec-sum-value" />
+      {' · '}оплачено <Money value={base.paid} currency={base.currency} className="rec-sum-value" />
+      {base.excluded > 0 && ` · без курса: ${base.excluded}`}</p>}
+  </div>
 }
 
 export type RecurringViewProps = {
@@ -149,7 +180,6 @@ export function RecurringView({ data, busy = false, notice = null, onDecide = ()
   const active = data.payments.filter((row) => row.state !== 'inactive' && row.kind !== 'income')
   const incomes = data.payments.filter((row) => row.state !== 'inactive' && row.kind === 'income')
   const off = data.payments.filter((row) => row.state === 'inactive')
-  const left = data.totals.filter((total) => total.left !== null)
   const rows = counted(data)
   return <div className="rec-page">
     <p className="rec-intro">Оплачен — если около срока нашлась трата, где сошлись два из трёх: место, категория, сумма (±25 %).
@@ -164,22 +194,18 @@ export function RecurringView({ data, busy = false, notice = null, onDecide = ()
       <ul className="ck-list rec-list">{data.suggestions.map((item) => <SuggestionItem key={`${item.store_id}:${item.category_id}:${item.currency}`}
         item={item} busy={busy} onAccept={onAccept} onDismiss={onDismiss} />)}</ul>
     </section>}
-    <section className="ck-panel rec-card" aria-labelledby="rec-list-heading">
+    <section className="ck-panel rec-card rec-month" aria-labelledby="rec-list-heading">
       <div className="ck-panel-head">
         <h2 id="rec-list-heading">{monthTitle(data.month)}</h2>
         {rows.length > 0 && <span className="rec-head-meta">оплачено {rows.length - rows.filter((row) => row.state === 'due' || row.state === 'overdue').length} из {rows.length}</span>}
       </div>
+      <MonthFigure data={data} rows={rows} />
       {data.base && data.base.groups.length > 0 && <Tiles base={data.base} />}
-      {data.base && <p className="rec-sum rec-total">Обязательных платежей в месяц <span className="ck-figures rec-sum-value">{formatMoney(data.base.expected, data.base.currency)}</span>
-        {' · '}оплачено <span className="ck-figures rec-sum-value">{formatMoney(data.base.paid, data.base.currency)}</span>
-        {data.base.excluded > 0 && ` · без курса: ${data.base.excluded}`}</p>}
-      {left.length > 0 && <p className="rec-sum">Осталось оплатить {left.map((total, index) => <span key={total.currency}>
-        {index > 0 && ' + '}<span className="ck-figures rec-sum-value">{formatMoney(total.left, total.currency)}</span></span>)}</p>}
       {active.length
         ? <Groups base={data.base} rows={active} today={data.today} onEdit={onEdit} />
         : <p className="rec-note">Регулярных платежей пока нет. Добавьте аренду, коммунальные или подписки — на главной будет видно, что
           осталось оплатить в месяце.</p>}
-      <button type="button" className="rec-add" onClick={() => onEdit(null)} aria-haspopup="dialog">Добавить платёж</button>
+      <button type="button" className="rec-add" onClick={() => onEdit(null)} aria-haspopup="dialog"><Icon name="plus" size={20} />Добавить платёж</button>
     </section>
     {data.base && data.base.year.length > 0 && <YearCard base={data.base} />}
     </div>
@@ -267,14 +293,16 @@ export function RecurringForm({ payment, categories, currency, busy, failure = n
       </div>}
     </div>
     {failure && <p className="rec-field-error" role="alert">{failure}</p>}
-    <button type="submit" className="rec-save" aria-disabled={busy || undefined}>{payment ? 'Сохранить' : income ? 'Добавить доход' : 'Добавить платёж'}</button>
-    {payment && onDelete && (confirming
-      ? <div className="rec-confirm">
-        <p>Удалить «{payment.name}»? {income ? 'Внесённые доходы останутся.' : 'Ответы по месяцам удалятся вместе с ним, траты останутся.'}</p>
-        <button type="button" className="ck-button-danger" aria-disabled={busy || undefined} onClick={busy ? undefined : onDelete}>Удалить</button>
-        <button type="button" className="ck-button-secondary" onClick={() => setConfirming(false)}>Отмена</button>
-      </div>
-      : <button type="button" className="ck-button-danger" onClick={() => setConfirming(true)}>Удалить платёж</button>)}
+    {/* A saved payment: the main action of its sheet is «Оплатил»; saving the fields is the quieter one. */}
+    <button type="submit" className={payment ? 'ck-button-secondary rec-save' : 'rec-save'} aria-disabled={busy || undefined}>
+      {payment ? 'Сохранить' : income ? 'Добавить доход' : 'Добавить платёж'}</button>
+    {payment && onDelete && <>
+      <button type="button" className="ck-button-danger rec-delete" onClick={() => setConfirming(true)}>{income ? 'Удалить доход' : 'Удалить платёж'}</button>
+      <ConfirmDialog open={confirming} danger title={`Удалить «${payment.name}»?`}
+        message={income ? 'Внесённые доходы останутся.' : 'Ответы по месяцам удалятся вместе с ним, траты останутся.'}
+        confirmLabel={income ? 'Удалить доход' : 'Удалить платёж'}
+        onConfirm={() => { if (!busy) { setConfirming(false); onDelete() } }} onCancel={() => setConfirming(false)} />
+    </>}
   </form>
 }
 

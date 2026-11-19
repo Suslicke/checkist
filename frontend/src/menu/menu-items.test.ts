@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Route } from '../navigation'
 import type { Session } from '../session'
-import { ADD_AFTER, BAR_SLOTS, menuItems } from './menu-items'
+import { BAR_SLOTS, menuItems } from './menu-items'
 
 const loading: Session = { kind: 'loading' }
 const failed: Session = { kind: 'error' }
@@ -33,12 +33,12 @@ describe('items of the main menu and their split for the bottom bar of a phone',
     expect(menu.add).toBe(false)
   })
 
-  it('local_single: «Главная · Траты · ＋ · Деньги» in the bar, «Статистика» in the header row, «Данные» and «Настройки» behind «Ещё»', () => {
+  it('local_single: «Главная · Траты · Деньги» and «＋» in the bar, «Статистика» in the header row, «Данные» and «Настройки» behind «Ещё»', () => {
     const menu = menuItems(local, catalog)
     expect(menu.primary.map((item) => [item.label, item.to])).toEqual([['Главная', '/'], ['Траты', '/receipts'], ['Деньги', '/money']])
     expect(menu.header.map((item) => [item.label, item.to])).toEqual([['Статистика', '/stats']])
     expect(menu.add).toBe(true)
-    expect(ADD_AFTER).toBe(2)
+    expect(BAR_SLOTS).toBe(4)
     expect(menu.groups.map((group) => [group.title, group.items.map((item) => [item.label, item.to])])).toEqual([
       ['Данные', [['Загрузить чек', '/receipts/upload'], ['Загрузить выписку', '/statements/new'], ['Каталог', '/catalog'], ['Магазины', '/stores'], ['Правила выписок', '/statements/rules'], ['Обработка чеков', '/recognition/jobs'], ['Выгрузка', '/export']]],
       ['Настройки', [['Состояние сервисов', '/health']]],

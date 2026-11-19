@@ -10,7 +10,13 @@ export interface NavigationEnvironment {
   listenPopState(listener: () => void): () => void
   /** `history.back()`; absent in a port that cannot step back (then «назад» navigates to its fallback). */
   back?(): void
+  /** Draws a change of the page as a move (View Transitions, browser.ts): `update` tells the listeners and must run
+   * exactly once, at once or later. Absent (tests, Node): the listeners hear the change at once. */
+  transition?(direction: NavigationDirection, update: () => void): void
 }
+
+/** How a change of the page moves: deeper into the app, or back to where the person came from. */
+export type NavigationDirection = 'forward' | 'back'
 
 export interface NavigationSnapshot {
   href: string
@@ -51,6 +57,25 @@ function listContext(value: unknown, origin: string, detail: Route): string | un
 
 const pathOf = (href: string) => href.split(/[?#]/)[0]
 
+/** The place of an entry in the history of the tab, kept in its state (`checkistIndex`): a step back in the history
+ * lands on a lower one. Only the direction of a move is read from it. */
+function indexOf(state: unknown): number {
+  return state !== null && typeof state === 'object' && 'checkistIndex' in state && typeof state.checkistIndex === 'number'
+    ? state.checkistIndex : 0
+}
+
+/**
+ * Whether a change of the page is drawn as a move and which way. Only another page moves: a filter, a tab of the same
+ * address and a replaced entry (a tab of a section, a redirect) change in place, and so does a page of the menu — a
+ * section is not deeper than another one. A step in the history moves by the place of the entries.
+ */
+export function moveOf(previous: string, next: string, kind: 'push' | 'root' | 'replace' | 'pop', from = 0, to = 0): NavigationDirection | undefined {
+  if (pathOf(previous) === pathOf(next)) return undefined
+  if (kind === 'push') return 'forward'
+  if (kind === 'pop') return to < from ? 'back' : 'forward'
+  return undefined
+}
+
 /**
  * Whether «назад» is one step back in the history: a page of the app lies behind this one and it is another page.
  * A push of the same page with another query (a filter, a mode of a chart) is not a place to come back to — then
@@ -77,11 +102,18 @@ export function createNavigation(environment: NavigationEnvironment) {
     return { href: `${url.pathname}${url.search}${url.hash}`, route, ...(returnTo && { returnTo }), ...(depth > 0 && { depth }), ...(from && { from }) }
   }
   let snapshot = read()
-  const refresh = () => {
+  let index = indexOf(environment.getState())
+  const refresh = (kind: 'push' | 'root' | 'replace' | 'pop' = 'pop') => {
     const next = read()
+    const previousIndex = index
+    index = indexOf(environment.getState())
     if (next.href === snapshot.href && next.returnTo === snapshot.returnTo && next.depth === snapshot.depth && next.from === snapshot.from) return
+    const direction = moveOf(snapshot.href, next.href, kind, previousIndex, index)
+    // The snapshot is new at once (a second move in a row counts from it); only the drawing may wait for the move.
     snapshot = next
-    listeners.forEach((listener) => listener())
+    const update = () => listeners.forEach((listener) => listener())
+    if (direction && environment.transition) environment.transition(direction, update)
+    else update()
   }
 
   const navigate = (target: NavigationTarget, options: NavigateOptions = {}) => {
@@ -98,12 +130,14 @@ export function createNavigation(environment: NavigationEnvironment) {
     // A push puts one more page of the app behind the new one; a replacement keeps what lay behind the old one.
     const depth = options.root ? 0 : options.replace ? snapshot.depth ?? 0 : (snapshot.depth ?? 0) + 1
     const from = options.root ? undefined : options.replace ? snapshot.from : snapshot.href
-    const state = returnTo || depth > 0
-      ? { ...(returnTo && { checkistReturnTo: returnTo }), ...(depth > 0 && { checkistDepth: depth, checkistFrom: from }) } : null
+    // A push takes the next place in the history; a replacement keeps the place of the entry it replaces.
+    const place = options.replace ? index : index + 1
+    const state = returnTo || depth > 0 || place > 0
+      ? { ...(returnTo && { checkistReturnTo: returnTo }), ...(depth > 0 && { checkistDepth: depth, checkistFrom: from }), ...(place > 0 && { checkistIndex: place }) } : null
     if (options.replace) environment.replaceState(state, href)
     else environment.pushState(state, href)
     // pushState/replaceState do not fire popstate.
-    refresh()
+    refresh(options.replace ? 'replace' : options.root ? 'root' : 'push')
   }
   const hrefOf = (target: NavigationTarget) => {
     const url = new URL(typeof target === 'string' ? target : buildRoute(target), environment.getHref())
@@ -115,8 +149,8 @@ export function createNavigation(environment: NavigationEnvironment) {
     subscribe(listener: () => void) {
       // Refresh after an unsubscribed interval (including StrictMode's cleanup).
       if (listeners.size === 0) {
-        unlisten = environment.listenPopState(refresh)
-        refresh()
+        unlisten = environment.listenPopState(() => refresh('pop'))
+        refresh('pop')
       }
       listeners.add(listener)
       return () => {

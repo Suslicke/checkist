@@ -1,3 +1,3 @@
-/* Способ оплаты (feature/payment-method): чипы .ck-chip переносятся в строки, выбранный — залит цветом выбранного чипа. */
-.ck-method-chips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.ck-method-chips > .ck-chip { padding-inline: 14px; font-size: var(--ck-text-sm); font-weight: 700; }
+/* Способ оплаты (feature/payment-method) — Чекист 2.0: the chips of the system (.ck-chip, components/ChipScroller.css)
+   wrap into rows; the chosen one is ink, on Android with its check. The look is the shared chip's, only the wrap is here. */
+.ck-method-chips { display: flex; flex-wrap: wrap; gap: var(--ck-space-2); min-width: 0; }

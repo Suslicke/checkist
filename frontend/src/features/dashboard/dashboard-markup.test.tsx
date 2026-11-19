@@ -14,6 +14,9 @@ const view = (data: Dashboard = dashboardFixture(), today = '2026-10', date = '2
 const between = (html: string, start: string, end: string) => html.slice(html.indexOf(start), html.indexOf(end, html.indexOf(start)))
 /** The pictures (components/Icon) are left out where an expectation reads the words. */
 const noIcons = (html: string) => html.replace(/<svg\b.*?<\/svg>/g, '')
+/** An amount as `Money` draws it: groups and the sign apart by U+202F. */
+const money = (int: string, frac = '', sign = '₸') => `<span class="ck-money-int">${int.replaceAll(' ', '\u202f')}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f${sign}</span>`
+const inline = (int: string, frac = '', sign = '₸') => `<span class="ck-money ck-money--inline">${money(int, frac, sign)}</span>`
 
 describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)', () => {
   it('fills the header row of the shell: «‹ ›» after the month while a later month is past, and the family (in place without a shell)', () => {
@@ -24,8 +27,8 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
     // Both steps stand after the heading (2026-10-26), before the family.
     expect(html.indexOf('dash-month-steps')).toBeLessThan(html.indexOf('dash-family'))
     expect(html).toContain('<ul class="dash-family" aria-label="Семья">')
-    expect(html).toContain('<li class="dash-avatar dash-cat-1" title="andrey"><span aria-hidden="true">A</span><span class="dash-visually-hidden">andrey</span></li>')
-    expect(html).toContain('<li class="dash-avatar dash-cat-2" title="liza"><span aria-hidden="true">L</span><span class="dash-visually-hidden">liza</span></li>')
+    expect(html).toContain('<li class="dash-avatar ck-tone-1" title="andrey"><span aria-hidden="true">A</span><span class="ck-visually-hidden">andrey</span></li>')
+    expect(html).toContain('<li class="dash-avatar ck-tone-2" title="liza"><span aria-hidden="true">L</span><span class="ck-visually-hidden">liza</span></li>')
     expect(noIcons(view(dashboardFixture(), '2026-11'))).toContain('<a class="ck-round dash-month-step" aria-label="Следующий месяц" href="/?month=2026-11"></a>')
     // The month is the heading of the page (usePageTitle): no second heading in the screen.
     expect(html).not.toMatch(/<h[12][^>]*>Октябрь/)
@@ -42,19 +45,20 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
       ] },
     ] }
     const html = between(view({ ...data, currencies: [{ ...data.currencies[0], categories: [home, ...data.currencies[0].categories] }] }), 'dash-limits"', '</section>')
-    const row = between(html, 'dash-cat-4', 'dash-cat-3')
+    const row = noIcons(between(html, 'dash-limit ck-tone-4', 'dash-limit ck-tone-3'))
     // The top-level row without its own limit but with a limited sub-category: what was spent, no bar.
-    expect(row).toContain(`<span class="dash-limit-name">Жильё</span><span class="dash-limit-value ck-figures">${nb('250 000 ₸')}</span></a><button type="button" class="dash-sub-toggle" aria-expanded="true" aria-controls="dash-sub-KZT-10">`)
+    expect(row).toContain(`<span class="dash-limit-name">Жильё</span><span class="dash-limit-value">${inline('250 000')}</span></a><button type="button" class="dash-sub-toggle" aria-expanded="true" aria-controls="dash-sub-KZT-10">`)
     // Open by itself: «Электричество» two levels down is over its limit; the list is not hidden.
     expect(row).toContain('<ul class="dash-sublimit-list" id="dash-sub-KZT-10" aria-label="Жильё: подкатегории"><li')
     expect(row).not.toContain('aria-label="Жильё: потрачено')
-    expect(row).toContain(`<li class="dash-sublimit"><a class="dash-limit-head dash-limit-link" href="/spends/category/17?month=2026-10"><span class="dash-sublimit-name">Аренда</span><span class="dash-limit-value dash-sublimit-value ck-figures">${nb('100 %')} · ${nb('200 000')} из ${nb('200 000 ₸')}</span></a><div class="dash-bar dash-bar-small" role="progressbar" aria-label="Аренда: потрачено 100% лимита"`)
+    expect(row).toContain(`<li class="dash-sublimit"><a class="dash-limit-head dash-limit-link" href="/spends/category/17?month=2026-10"><span class="dash-sublimit-name">Аренда</span><span class="dash-limit-value dash-sublimit-value">${inline('200 000')} из ${inline('200 000')}</span></a><div class="ck-bar dash-bar dash-bar-small is-near" role="progressbar" aria-label="Аренда: потрачено 100% лимита, лимит исчерпан"`)
+    expect(row).toContain(`<p class="dash-limit-note is-over" aria-hidden="true">${nb('100 %')}, лимит исчерпан</p>`)
     // An ancestor of a limited one: its spends, no bar, its own nested list.
-    expect(row).toContain(`<span class="dash-sublimit-name">Коммунальные услуги</span><span class="dash-limit-value dash-sublimit-value ck-figures">${nb('50 000 ₸')}</span></a><button type="button" class="dash-sub-toggle" aria-expanded="true" aria-controls="dash-sub-KZT-21">`)
-    expect(row).toContain('<div class="dash-bar dash-bar-small dash-bar-over" role="progressbar" aria-label="Электричество: потрачено 100% лимита"')
-    expect(row).toContain(`<span class="dash-limit-value dash-sublimit-value dash-limit-spent-over ck-figures">${nb('120 %')} · ${nb('18 000')} из ${nb('15 000 ₸')}</span>`)
+    expect(row).toContain(`<span class="dash-sublimit-name">Коммунальные услуги</span><span class="dash-limit-value dash-sublimit-value">${inline('50 000')}</span></a><button type="button" class="dash-sub-toggle" aria-expanded="true" aria-controls="dash-sub-KZT-21">`)
+    expect(row).toContain('<div class="ck-bar dash-bar dash-bar-small is-over" role="progressbar" aria-label="Электричество: потрачено 100% лимита, сверх лимита"')
+    expect(row).toContain(`<p class="dash-limit-note is-over" aria-hidden="true">${inline('3 000')} сверх лимита</p>`)
     // An older server sends no `children`: the row is as before.
-    expect(between(between(view(), 'dash-limits"', '</section>'), 'dash-cat-3', '</li>')).not.toContain('dash-sublimit')
+    expect(between(between(view(), 'dash-limits"', '</section>'), 'dash-limit ck-tone-3', '</li>')).not.toContain('dash-sublimit')
   })
   it('folds the sub-categories by default: top-level rows only, a button with the count beside the row link', () => {
     const data = dashboardFixture()
@@ -65,11 +69,11 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
     ] }
     const render = (expanded?: Record<string, boolean>, row = home) => noIcons(between(between(
       renderToStaticMarkup(<DashboardView data={{ ...data, currencies: [{ ...data.currencies[0], categories: [row, ...data.currencies[0].categories] }] }} today="2026-10" expanded={expanded} />),
-      'dash-limits"', '</section>'), 'dash-cat-4', 'dash-cat-3'))
+      'dash-limits"', '</section>'), 'dash-limit ck-tone-4', 'dash-limit ck-tone-3'))
     const row = render()
     // The row link still opens «Траты категории»; the button is a sibling after it, never inside it.
     expect(row).toContain('<a class="dash-limit-head dash-limit-link" href="/spends/category/10?month=2026-10">')
-    expect(row).toContain(`</div><button type="button" class="dash-sub-toggle" aria-expanded="false" aria-controls="dash-sub-KZT-10"><span class="dash-sub-text"><span class="dash-visually-hidden">Жильё: </span><span class="dash-sub-count">${nb('6 подкатегорий')}</span><span class="dash-sub-hint ck-figures">Аренда ${nb('220 000')} / ${nb('220 000')}</span></span></button>`)
+    expect(row).toContain(`</p><button type="button" class="dash-sub-toggle" aria-expanded="false" aria-controls="dash-sub-KZT-10"><span class="dash-sub-text"><span class="ck-visually-hidden">Жильё: </span><span class="dash-sub-count">${nb('6 подкатегорий')}</span><span class="dash-sub-hint">Аренда ${nb('220 000')} / ${nb('220 000')}</span></span></button>`)
     expect(row).toContain('<ul class="dash-sublimit-list" id="dash-sub-KZT-10" aria-label="Жильё: подкатегории" hidden="">')
     expect(row.match(/<a /g)).toHaveLength(7)
     // Opened by the person (or from this browser): the same list, shown, no hint.
@@ -82,7 +86,7 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
     expect(two).toContain(`<span class="dash-sub-count">${nb('2 подкатегории')}</span></span></button>`)
     expect(two).not.toContain('dash-sub-hint')
     // A row without sub-categories has no button.
-    expect(between(between(view(), 'dash-limits"', '</section>'), 'dash-cat-3', '</li>')).not.toContain('dash-sub-toggle')
+    expect(between(between(view(), 'dash-limits"', '</section>'), 'dash-limit ck-tone-3', '</li>')).not.toContain('dash-sub-toggle')
   })
   it('draws the picture of the category by default and how the spend came in by the choice of the device', () => {
     const data = dashboardFixture()
@@ -99,28 +103,30 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
     } finally {
       setListIcons('category')
     }
-    expect(view(data, '2026-11', '2026-11-20')).toContain(`andrey · ${nb('1 октября')} · Выписка Kaspi Gold`)
+    // The stamp names the source; the bank of a statement stands in the meta line.
+    expect(view(data, '2026-11', '2026-11-20')).toContain(`<span class="ck-stamp">Выписка</span><span class="dash-recent-meta-text">andrey · ${nb('1 октября')} · Kaspi Gold</span>`)
   })
   it('shows the names of the family and of who added a spend, the usernames without them', () => {
     const data = { ...dashboardFixture(), people: [{ username: 'andrey', display_name: 'Андрей' }, { username: 'liza', display_name: 'Лиза' }] }
     data.recent = data.recent.map((item) => ({ ...item, owner_name: item.owner === 'liza' ? 'Лиза' : 'Андрей' }))
     const html = view(data)
-    expect(html).toContain('<li class="dash-avatar dash-cat-1" title="Андрей"><span aria-hidden="true">А</span><span class="dash-visually-hidden">Андрей</span></li>')
-    expect(html).toContain('<li class="dash-avatar dash-cat-2" title="Лиза"><span aria-hidden="true">Л</span><span class="dash-visually-hidden">Лиза</span></li>')
-    expect(renderToStaticMarkup(<DashboardView data={data} today="2026-10" date="2026-10-12" />)).toContain(`<span class="ck-row-meta">Лиза · сегодня · ${nb('23 позиции')}</span>`)
+    expect(html).toContain('<li class="dash-avatar ck-tone-1" title="Андрей"><span aria-hidden="true">А</span><span class="ck-visually-hidden">Андрей</span></li>')
+    expect(html).toContain('<li class="dash-avatar ck-tone-2" title="Лиза"><span aria-hidden="true">Л</span><span class="ck-visually-hidden">Лиза</span></li>')
+    expect(renderToStaticMarkup(<DashboardView data={data} today="2026-10" date="2026-10-12" />)).toContain(`<span class="ck-row-meta dash-recent-meta"><span class="ck-stamp">Фото</span><span class="dash-recent-meta-text">Лиза · сегодня · ${nb('23 позиции')}</span></span>`)
     expect(html).not.toContain('liza')
   })
   it('lists the spends of today and yesterday as rows of the list brick, linked to their receipts, with a tinted badge', () => {
     // The 12th of October: «Magnum» of today and the taxi of yesterday; the coffee of the 1st is not in the card.
     const recent = between(renderToStaticMarkup(<DashboardView data={dashboardFixture()} today="2026-10" date="2026-10-12" />), 'dash-recent"', '</section>')
     expect(recent).toContain('<div class="ck-panel-head"><h2 id="dash-recent-heading">Сегодня и вчера</h2><a class="dash-card-link" href="/receipts">Все траты</a></div>')
-    expect(noIcons(recent)).toContain(`<li><a class="ck-row dash-recent-item" href="/receipts/12"><span class="ck-row-badge dash-badge dash-cat-3" data-icon="tag" aria-hidden="true"></span><span class="ck-row-main"><span class="ck-row-title dash-recent-title">Magnum</span><span class="ck-row-meta">liza · сегодня · ${nb('23 позиции')}</span></span><span class="ck-row-amount ck-figures">${nb('18 940 ₸')}</span></a></li>`)
-    expect(recent).toContain('andrey · вчера · вручную')
+    expect(noIcons(recent)).toContain(`<li><a class="ck-row dash-recent-item" href="/receipts/12"><span class="ck-row-badge dash-badge ck-tone-3" data-icon="tag" aria-hidden="true"></span><span class="ck-row-main"><span class="ck-row-title dash-recent-title">Magnum</span><span class="ck-row-meta dash-recent-meta"><span class="ck-stamp">Фото</span><span class="dash-recent-meta-text">liza · сегодня · ${nb('23 позиции')}</span></span></span><span class="ck-row-amount dash-recent-amount"><span class="ck-money ck-money--row">${money('18 940')}</span></span></a></li>`)
+    expect(recent).toContain('<span class="ck-stamp">Вручную</span><span class="dash-recent-meta-text">andrey · вчера</span>')
     expect(recent).not.toContain('Кофейня')
     // A past month shows its last spends, the dates in words.
     const past = between(renderToStaticMarkup(<DashboardView data={dashboardFixture()} today="2026-11" date="2026-11-20" />), 'dash-recent"', '</section>')
     expect(past).toContain(`andrey · ${nb('1 октября')} · ${nb('1 позиция')}`)
-    expect(past).toMatch(/<span class="ck-row-badge dash-badge dash-cat-0" data-icon="tag" aria-hidden="true"><svg class="ck-icon"[^>]*>.*?<\/svg><\/span>/)
+    // A spend without a category: the neutral tile.
+    expect(past).toMatch(/<span class="ck-row-badge dash-badge" data-icon="tag" aria-hidden="true"><svg class="ck-icon"[^>]*>.*?<\/svg><\/span>/)
   })
   it('says so for a month without spends and offers the limits as one link', () => {
     const empty = { ...dashboardFixture(), currencies: [], recent: [] }
@@ -131,9 +137,10 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
     expect(html).not.toContain('dash-hero')
     expect(view(empty, '2026-12')).toContain(`${nb('В октябре')} трат не было`)
     // The empty month offers its action right there.
-    expect(between(html, 'dash-empty', '</section>')).toContain('<a class="dash-empty-action" href="/receipts/new">Добавить трату</a>')
+    // A tonal action: the «＋» of the bar is the one seal of the screen.
+    expect(between(html, 'dash-empty', '</section>')).toContain('<a class="action-link dash-empty-action" href="/receipts/new">Добавить трату</a>')
     expect(html).toContain('dash-limits-empty')
-    expect(html).not.toContain('ck-hero-figure')
+    expect(html).not.toContain('ck-money--hero')
   })
   it('slides another month in from its side', () => {
     expect(renderToStaticMarkup(<DashboardView data={dashboardFixture()} today="2026-10" slide="forward" />)).toContain('<div class="dash dash-slide-forward">')
@@ -152,12 +159,13 @@ describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)'
       categories: [{ category_id: 3, name: 'Продукты', spent: '120.00', limit: null, limit_id: null }] }
     const html = view({ ...data, members: ['andrey'], currencies: [data.currencies[0], euro] })
     expect(html).toContain('<ul class="dash-family" aria-label="Кто тратит">')
-    // One ring on the screen: the second currency is a row of «Другие валюты».
+    // One main number and one ring on the screen: the second currency is a row of «Другие валюты».
+    expect(html.match(/ck-money--hero/g)).toHaveLength(1)
     expect(html.match(/ck-ring-centre/g)).toHaveLength(1)
-    expect(html).toContain('<span class="dash-ring-label">Потрачено</span>')
+    expect(html).toContain('<span id="dash-hero-label" class="dash-hero-label">Потрачено в\u00a0октябре</span>')
     const others = between(html, 'dash-others', '</section>')
     expect(others).toContain('<h2 id="dash-others-heading">Другие валюты</h2>')
-    expect(others).toContain(`<li class="ck-row dash-other" aria-label="Потрачено, EUR"><span class="ck-row-badge dash-currency-badge" aria-hidden="true">€</span><span class="ck-row-main"><span class="ck-row-title">Евро</span></span><span class="ck-row-amount ck-figures dash-other-amount">${nb('120 €')}</span></li>`)
+    expect(others).toContain(`<li class="ck-row dash-other" aria-label="Потрачено, EUR"><span class="ck-row-badge dash-currency-badge" aria-hidden="true">€</span><span class="ck-row-main"><span class="ck-row-title">Евро</span></span><span class="ck-money ck-money--row ck-row-amount">${money('120', '', '€')}</span></li>`)
     // Another currency without limits gets no limits card of its own: its spends are already in «Другие валюты».
     expect(html).not.toContain('Лимиты<span class="dash-currency"> · €</span>')
     const limited = view({ ...data, currencies: [data.currencies[0], { ...euro, limit_total: '200.00' }] })
@@ -196,10 +204,10 @@ describe('«Лимиты» as a tree of categories', () => {
   it('shows every level with an amount field, indented, the colour of its top-level category', () => {
     const html = view({ limits: [limitFixture({ id: 30, category_id: 22, category_name: 'Электричество', amount: '15000.00' })] })
     expect(noIcons(html)).toContain('aria-expanded="true" aria-label="Скрыть подкатегории «Жильё»">Скрыть 3\u00a0подкатегории</button>')
-    expect(html).toContain('<li class="limits-row limits-row-sub dash-cat-4" style="--limits-depth:1">')
-    expect(html).toContain('<li class="limits-row limits-row-sub dash-cat-4" style="--limits-depth:2">')
+    expect(html).toContain('<li class="limits-row limits-row-sub ck-tone-4" style="--limits-depth:1">')
+    expect(html).toContain('<li class="limits-row limits-row-sub ck-tone-4" style="--limits-depth:2">')
     // The path is read out before the name: «Жильё › Коммунальные услуги › Электричество».
-    expect(html).toContain('<label class="limits-name" for="limit-22"><span class="dash-visually-hidden">Жильё › Коммунальные услуги › </span>Электричество</label>')
+    expect(html).toContain('<label class="limits-name" for="limit-22"><span class="ck-visually-hidden">Жильё › Коммунальные услуги › </span>Электричество</label>')
     expect(html).toContain('<input id="limit-22" inputMode="decimal" autoComplete="off" enterKeyHint="done" placeholder="Сумма в месяц" aria-invalid="false" value="15000"/>')
     expect(html).toContain('<input id="limit-17" inputMode="decimal"')
     expect(html).toContain('aria-label="Удалить лимит «Электричество»"')
@@ -215,21 +223,22 @@ describe('«Лимиты» markup (Vitest/SSR, not browser visual acceptance)', 
   it('lists top-level categories with an amount field per row', () => {
     const html = limits()
     expect(html).toContain('Лимиты общие: их видят и меняют все члены семьи.')
-    expect(html).toContain('<button type="button" class="dash-chip" aria-pressed="true">KZT</button>')
-    expect(html).toContain('<button type="button" class="dash-chip" aria-pressed="false">USD</button>')
+    expect(html).toContain('<button type="button" class="ck-chip" aria-pressed="true">KZT</button>')
+    expect(html).toContain('<button type="button" class="ck-chip" aria-pressed="false">USD</button>')
     expect(html).toContain('<label class="limits-name" for="limit-3">Продукты</label>')
-    expect(html).toContain(`<span class="limits-current ck-figures">${nb('120 000 ₸')}</span>`)
+    expect(html).toContain(`<span class="limits-current">${inline('120 000')}</span>`)
     // The field names its currency by the sign; the chips choose it by the code.
     expect(html).toContain('<span class="limits-input-currency" aria-hidden="true">₸</span>')
     expect(html).toContain('<input id="limit-3" inputMode="decimal" autoComplete="off" enterKeyHint="done" placeholder="Сумма в месяц" aria-invalid="false" value="120000"/>')
-    expect(html).toContain('<span class="limits-current ck-figures">без лимита</span>')
+    expect(html).toContain('<span class="limits-current">без лимита</span>')
     expect(html).toContain('<input id="limit-8" inputMode="decimal" autoComplete="off" enterKeyHint="done" placeholder="Сумма в месяц" aria-invalid="false" value=""/>')
     // One bar saves every changed row: nothing to save until an amount changes; only an existing limit can be deleted.
     expect(html).toContain('<div class="limits-savebar ck-action-bar"><button type="button" class="limits-save" disabled="">Сохранить</button></div>')
     expect(html.match(/limits-save/g)).toHaveLength(2)
-    expect(html.match(/Удалить<\/button>/g)).toHaveLength(1)
+    // «Удалить» is a round button with a bin, named for a screen reader by the limit it removes.
+    expect(html.match(/class="ck-icon-button limits-delete"/g)).toHaveLength(1)
     expect(html).toContain('aria-label="Удалить лимит «Продукты»"')
-    expect(html).toContain('<li class="limits-row dash-cat-3">')
+    expect(html).toContain('<li class="limits-row ck-tone-3">')
     expect(html).toContain('<a class="dash-link" href="/">На главную</a>')
     expect(html).not.toContain('<table')
   })
@@ -250,7 +259,7 @@ describe('«Лимиты» markup (Vitest/SSR, not browser visual acceptance)', 
     const html = limits({ drafts: { '3:KZT': '1' }, statuses: { '3:KZT': { kind: 'busy' } } })
     expect(html).toContain('<form class="limits-form" noValidate="" aria-busy="true">')
     expect(html).toContain('<button type="button" class="limits-save" disabled="">Сохраняем…</button>')
-    expect(html).toContain('class="ck-button-danger limits-delete" disabled="" aria-label="Удалить лимит «Продукты»"')
+    expect(html).toContain('class="ck-icon-button limits-delete" disabled="" aria-label="Удалить лимит «Продукты»"')
   })
   it('speaks to one person without a family and offers the catalog without categories', () => {
     const html = limits({ family: false, categories: [] })

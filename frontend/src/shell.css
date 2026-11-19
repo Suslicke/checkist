@@ -1,0 +1,315 @@
+/* Чекист 2.0 — the shell (App.tsx, menu/MainMenu.tsx): the header of a wide screen, the top bar and the bottom bar of a
+   phone, «назад», the «＋» sheet, the sections of a part, the footer and the move between pages.
+
+   One markup for both platforms; the look comes from `<html data-platform="ios|android">` (the inline script of
+   index.html; a computer takes the Android grammar, so Android rules are written `:root:not([data-platform="ios"])` and
+   hold without the attribute too). docs/design-system/platforms.md is the authority:
+   - iOS: a floating glass capsule of the four sections and a round «＋» beside it; a large title at the root of a
+     section that turns into a short centered title on glass when it scrolls under the bar; «‹ Траты» on a nested page.
+   - Android: the Material 3 navigation bar with the pill of the current section and the FAB «＋» over it; the top app
+     bar with «←» and the title on the left, filled with `--ck-nav-android` once the page lies under it.
+   - From 541 px: no bottom bar — a header on the surface with the menu as pills, «Данные ▾» and «Настройки ▾» as
+     popovers, and the heading of the page as a large title in the content.
+
+   Colours, sizes and layers are tokens only (theme/tokens.css). This file comes BEFORE App.css in the cascade
+   (styles.ts): where App.css styles the same element (`.page`, `body`), the rule here is written heavier. Motion only
+   under `prefers-reduced-motion: no-preference`; the layout tokens `--ck-bottom-nav-height` and `--ck-top-bar-height`
+   are set here only, in the block of the bottom bar. */
+
+/* ---- Every width ---- */
+
+/* Hidden from the eye, read by the screen reader: «Назад: » before the name of the screen in «назад». */
+.ck-shell-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.skip-link { position: absolute; top: var(--ck-space-2); left: var(--ck-space-2); z-index: var(--ck-z-skip-link); display: inline-flex; align-items: center; min-height: var(--ck-tap); padding: 0 var(--ck-space-4); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-field); background: var(--ck-surface); color: var(--ck-ink); box-shadow: var(--ck-shadow-float); font-weight: 600; transform: translateY(-200%); }
+/* Below the status bar of an installed app on iPhone (black-translucent). */
+.skip-link:focus { transform: translateY(env(safe-area-inset-top, 0px)); }
+
+/* The header of a wide screen: the surface with a hairline under it, the logo, the menu and the actions in one row. Its
+   side padding keeps the content on the vertical of .page (App.css: max-width 1200 px, padding 36 px). */
+.brand-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ck-space-2) var(--ck-space-4); padding: max(var(--ck-space-3), env(safe-area-inset-top, 0px)) max(36px, calc(50% - 564px)) var(--ck-space-3); border-bottom: 1px solid var(--ck-line); background: var(--ck-surface); color: var(--ck-ink); overflow-wrap: anywhere; }
+.brand { display: inline-flex; flex: none; align-items: center; gap: var(--ck-space-2); min-height: var(--ck-tap); border-radius: var(--ck-radius-field); color: var(--ck-ink); font-family: var(--ck-font-display); font-size: var(--ck-text-heading); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; text-decoration: none; }
+/* The emblem file is transparent: it lies straight on the header, with no backing and no rounded corners. */
+.brand-mark { flex: none; width: 40px; height: 40px; }
+.brand-actions { display: flex; flex: none; align-items: center; gap: var(--ck-space-2); margin-left: auto; }
+
+/* «Чат с ИИ» from every screen (2026-10-26): the voice of the assistant — gold on its soft plate. A 44/48 px target
+   around a smaller disc: the plate is clipped to the content box. */
+.ck-chat-link { display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--ck-tap); height: var(--ck-tap); min-height: var(--ck-tap); padding: var(--ck-space-1); border-radius: 50%; background: var(--ck-gold-soft); background-clip: content-box; color: var(--ck-gold-ink); text-decoration: none; }
+.ck-chat-link:where(:hover) { background-color: color-mix(in oklab, var(--ck-gold-ink) 16%, var(--ck-gold-soft)); }
+/* On a wide screen the mark stands in the header; the twin at the end of the header row belongs to a phone. */
+.intro > .ck-chat-link-page { display: none; }
+
+/* The menu of the header: words as Material 3 pills. The current section — the soft brand plate with the brand ink and a
+   dot before the word: not by colour alone. */
+.main-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ck-space-1); }
+.main-navigation a { display: inline-flex; align-items: center; min-height: var(--ck-tap); padding: 0 var(--ck-space-3); border-radius: var(--ck-radius-pill); color: var(--ck-ink); font-size: var(--ck-text-body); font-weight: 500; text-decoration: none; }
+.main-navigation a:where(:hover) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
+.main-navigation a[aria-current] { background: var(--ck-seal-soft); color: var(--ck-seal-ink); font-weight: 700; }
+.main-navigation a[aria-current]::before { content: ""; flex: none; width: 0.4em; height: 0.4em; margin-right: var(--ck-space-2); border-radius: 50%; background: currentColor; }
+.brand-bar .main-navigation { flex: 1 1 auto; min-width: 0; }
+/* «Ещё» belongs to the bottom bar of a phone. Anywhere else its wrappers are not boxes at all: the links behind it stand
+   in the row of the menu like the others, and its link is not drawn. */
+.main-more, .main-more-list { display: contents; }
+.main-navigation .main-more-toggle { display: none; }
+/* The sections behind «Ещё» (2026-10-13): no boxes either, their words not drawn — the narrow strip of a tiny or low
+   window keeps one row of links; a wide screen draws them as popovers (the block below). */
+.main-more-tiles, .main-group, .main-group-list { display: contents; }
+.main-group-toggle { display: none; }
+/* The pictures of the menu belong to the bottom bar of a phone: the header row is words. */
+.main-navigation .ck-icon { display: none; }
+/* «＋» belongs to the bottom bar of a phone only; a computer picks a photo and a statement from «Данные». */
+.main-add { display: none; }
+.account-link { max-width: 100%; font-weight: 600; overflow-wrap: anywhere; }
+
+/* The «＋» sheet (components/Sheet; it lies in the body, outside of the bar): «Снять чек» — the one main action across
+   the sheet; the other ways in are tonal tiles two in a row. */
+.main-add-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ck-space-2); padding-top: var(--ck-space-1); }
+.main-add-action { display: grid; align-content: start; gap: var(--ck-space-2); min-width: 0; min-height: calc(2 * var(--ck-tap)); margin: 0; padding: var(--ck-space-3); border: 0; border-radius: var(--ck-radius-button); background: var(--ck-surface-2); color: var(--ck-ink); font-family: var(--ck-font-ui); text-align: left; text-decoration: none; }
+.main-add-action:where(:hover) { background: color-mix(in oklab, var(--ck-ink) 6%, var(--ck-surface-2)); }
+.main-add-icon { display: inline-flex; color: var(--ck-ink); }
+.main-add-text { display: grid; gap: 2px; min-width: 0; }
+.main-add-title { font-size: var(--ck-text-body); font-weight: 600; line-height: 1.25; }
+.main-add-note { color: var(--ck-ink-2); font-size: var(--ck-text-caption); font-weight: 500; line-height: 1.35; }
+.main-add-primary { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: var(--ck-space-3); min-height: 52px; padding: var(--ck-space-2) var(--ck-space-4); border-radius: 16px; background: var(--ck-seal); color: var(--ck-on-seal); text-align: left; }
+.main-add-primary:where(:hover) { background: var(--ck-seal-press); }
+.main-add-primary .main-add-icon, .main-add-primary .main-add-note { color: inherit; }
+
+/* The sections of a part (Траты · Средний чек · Динамика · Доходы, the catalog): the segments of the platform. iOS (and
+   the default) — a track of surface-2 and a raised current segment; Android — Material 3 segmented buttons in one
+   outline, the current one tinted with a check. A part wider than the window scrolls sideways inside it. */
+.section-navigation { display: flex; flex-wrap: nowrap; gap: 3px; width: fit-content; max-width: 100%; margin-bottom: var(--ck-space-3); padding: 3px; border-radius: var(--ck-radius-field); background: var(--ck-surface-2); overflow-x: auto; scrollbar-width: none; }
+.section-navigation a { display: inline-flex; flex: 1 1 auto; align-items: center; justify-content: center; gap: var(--ck-space-1); min-height: 32px; padding: 0 var(--ck-space-4); border-radius: 9px; color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.section-navigation a:where(:hover) { color: var(--ck-ink); }
+.section-navigation a[aria-current] { background: var(--ck-surface); color: var(--ck-ink); box-shadow: var(--ck-shadow-sm); }
+:root:not([data-platform="ios"]) .section-navigation { gap: 0; padding: 0; border-radius: var(--ck-radius-pill); background: none; }
+:root:not([data-platform="ios"]) .section-navigation a { min-height: 40px; margin-left: -1px; border: 1px solid var(--ck-ink-2); border-radius: 0; color: var(--ck-ink); }
+:root:not([data-platform="ios"]) .section-navigation a:first-child { margin-left: 0; border-radius: var(--ck-radius-pill) 0 0 var(--ck-radius-pill); }
+:root:not([data-platform="ios"]) .section-navigation a:last-child { border-radius: 0 var(--ck-radius-pill) var(--ck-radius-pill) 0; }
+:root:not([data-platform="ios"]) .section-navigation a:where(:hover) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
+:root:not([data-platform="ios"]) .section-navigation a[aria-current] { background: color-mix(in oklab, var(--ck-ink) 12%, var(--ck-surface)); box-shadow: none; }
+:root:not([data-platform="ios"]) .section-navigation a[aria-current]::before { content: ""; flex: none; width: 16px; height: 16px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center / 16px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center / 16px no-repeat; }
+
+/* The header row of a page (wide screen): the heading as the large title of the content. The slots of a page
+   (components/PageHeader.tsx) have no box of their own: their parts stand in the row. */
+.intro { display: flex; align-items: center; gap: var(--ck-space-3); min-width: 0; padding: var(--ck-space-8) 0 var(--ck-space-6); }
+.intro h1 { flex: 0 1 auto; min-width: 0; margin: 0; color: var(--ck-ink); font-family: var(--ck-font-display); font-size: var(--ck-text-title-large); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: break-word; text-wrap: balance; }
+.intro-slot { display: contents; }
+/* A part of the slot that belongs on the right edge takes `margin-left: auto` itself; after it the chat follows it. */
+.intro > .intro-slot:not(:empty) + .ck-chat-link-page { margin-left: 0; }
+/* The note of a page stands under its heading, outside of the bar that a phone pins to the top. */
+.intro-note { max-width: 540px; margin-top: var(--ck-space-3); color: var(--ck-ink-2); }
+.intro-note-after { margin: calc(-1 * var(--ck-space-4)) 0 var(--ck-space-8); }
+/* The short bar of an iOS section root and the mark under the header row: only a phone draws the bar; the mark is 1 px
+   that takes no room (menu/top-bar.ts watches it). */
+.ck-topbar { display: none; }
+.ck-scroll-mark { height: 1px; margin-bottom: -1px; }
+
+/* A round control of a page: the steps of a month on «Главная» — a 44/48 px circle with a hairline on the surface. */
+.ck-round { display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--ck-tap); height: var(--ck-tap); min-height: var(--ck-tap); padding: 0; border: 1px solid var(--ck-line); border-radius: 50%; background: var(--ck-surface); color: var(--ck-ink); text-decoration: none; }
+.ck-round:where(:hover) { background: var(--ck-surface-2); }
+/* «✕» of a focus screen (a new or changed spend) at the right edge of the row. */
+.ck-close { display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--ck-tap); height: var(--ck-tap); min-height: var(--ck-tap); margin-left: auto; padding: 0; border: 1px solid var(--ck-line); border-radius: 50%; background: var(--ck-surface); color: var(--ck-ink); text-decoration: none; }
+.ck-close:where(:hover) { background: var(--ck-surface-2); }
+/* «Назад» of the top bar belongs to a phone; a wide screen leads back by the links of the page itself. */
+.ck-back { display: none; }
+
+/* A quiet line: the old jokes of the brand live here, in the background. */
+footer { padding: var(--ck-space-5) 0 var(--ck-space-8); border-top: 1px solid var(--ck-line); color: var(--ck-ink-2); font-size: var(--ck-text-caption); }
+
+/* ---- A wide screen: «Данные» and «Настройки» are a word with ▾ and a popover under it (menu/more-menu.ts) ---- */
+@media (min-width: 541px) {
+  .brand-bar .main-group { display: block; position: relative; }
+  .brand-bar .main-group-toggle { display: inline-flex; align-items: center; gap: var(--ck-space-1); min-height: var(--ck-tap); padding: 0 var(--ck-space-2) 0 var(--ck-space-3); border: 0; border-radius: var(--ck-radius-pill); background: none; color: var(--ck-ink); font: inherit; font-size: var(--ck-text-body); font-weight: 500; cursor: pointer; }
+  .brand-bar .main-group-toggle .ck-icon { display: block; flex: none; }
+  .brand-bar .main-group-toggle:where(:hover) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
+  .brand-bar .main-group-toggle[aria-expanded="true"] { background: var(--ck-surface-2); }
+  /* A section of the list is open: the word is marked like a current link, with the dot. */
+  .brand-bar .main-group-toggle[data-current] { background: var(--ck-seal-soft); color: var(--ck-seal-ink); font-weight: 700; }
+  .brand-bar .main-group-toggle[data-current]::before { content: ""; flex: none; width: 0.4em; height: 0.4em; margin-right: var(--ck-space-1); border-radius: 50%; background: currentColor; }
+  .brand-bar .main-group-list { display: none; }
+  .brand-bar .main-group[data-open] .main-group-list { position: absolute; top: 100%; right: 0; z-index: var(--ck-z-menu-sheet); display: flex; flex-direction: column; gap: 2px; min-width: 260px; margin-top: var(--ck-space-2); padding: var(--ck-space-2); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface); color: var(--ck-ink); box-shadow: var(--ck-shadow-float); }
+  .brand-bar .main-group-list a { border-radius: var(--ck-radius-field); }
+  .brand-bar .main-group-list a:where(:hover) { background: var(--ck-surface-2); }
+}
+
+/* ---- A phone: the header strip of a tiny or low window, and «назад» of the platform ---- */
+@media (max-width: 540px) {
+  .brand-bar { padding: max(var(--ck-space-2), env(safe-area-inset-top, 0px)) var(--ck-space-4) var(--ck-space-1); gap: var(--ck-space-1) var(--ck-space-3); }
+  .brand { font-size: var(--ck-text-title); }
+  .brand-mark { width: 32px; height: 32px; }
+  /* The label stays the name of the theme switch; only the icon is shown. */
+  .ck-theme-toggle-header .ck-theme-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* The menu is one row under the logo, scrolled sideways; the padding leaves room for the focus ring. */
+  .brand-bar .main-navigation { order: 3; flex: 1 0 100%; flex-wrap: nowrap; margin: 0 calc(-1 * var(--ck-space-4)); padding: var(--ck-space-1) var(--ck-space-4); overflow-x: auto; scrollbar-width: none; }
+  .brand-bar .main-navigation a { flex: none; white-space: nowrap; }
+  .section-navigation a { padding: 0 var(--ck-space-3); }
+  .intro { gap: var(--ck-space-2); min-height: 56px; padding: var(--ck-space-2) 0; }
+  .intro h1 { font-size: var(--ck-text-heading); font-weight: 600; letter-spacing: 0; line-height: 1.25; }
+  .intro-note-after { margin: 0 0 var(--ck-space-4); }
+  footer { padding: var(--ck-space-6) 0 var(--ck-space-5); border-top: 0; text-align: center; }
+
+  /* «Назад»: iOS — the chevron and the name of the screen it leads to in the brand ink («‹ Траты»); Android — «←» as an
+     icon button. The name stays the text of the link on both: the screen reader says «Назад: Траты». */
+  .ck-back { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: var(--ck-tap); min-height: var(--ck-tap); margin: 0; padding: 0; border: 0; border-radius: var(--ck-radius-pill); background: none; color: var(--ck-ink); text-decoration: none; }
+  .ck-back-chevron, .ck-back-text { display: none; }
+  :root:not([data-platform="ios"]) .ck-back { width: 48px; height: 48px; border-radius: 50%; }
+  :root:not([data-platform="ios"]) .ck-back:where(:hover) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
+  :root[data-platform="ios"] .ck-back { justify-content: flex-start; max-width: 40%; padding-right: var(--ck-space-2); color: var(--ck-seal-ink); font-size: var(--ck-text-title); font-weight: 400; white-space: nowrap; }
+  :root[data-platform="ios"] .ck-back-arrow { display: none; }
+  :root[data-platform="ios"] .ck-back-chevron { display: block; flex: none; margin-right: -2px; stroke-width: 2.4; }
+  :root[data-platform="ios"] .ck-back-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+  /* «✕» of a focus screen: iOS — a small circle of surface-2 inside the 44 px target; Android — an icon button. */
+  :root[data-platform="ios"] .ck-close { padding: 7px; border: 0; background: var(--ck-surface-2); background-clip: content-box; }
+  :root:not([data-platform="ios"]) .ck-close { border: 0; background: none; }
+  :root:not([data-platform="ios"]) .ck-close:where(:hover) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
+}
+
+/* ---- A phone held upright: the top bar pinned to the top, the bottom bar pinned to the bottom ----
+   A window narrower than 340 px or lower than 480 px (200 % zoom, a phone on its side, the keyboard of Android) has no
+   room for them and keeps the header strip of the block above. */
+@media (max-width: 540px) and (min-width: 340px) and (min-height: 480px) {
+  /* The heights of the bars: the action bars (ActionBar.css), the snackbar and the room under the page count from them.
+     iOS: the capsule and the 8 px under it; Android: the navigation bar. A focus screen has no bar. tokens.css comes
+     after this file and sets the defaults on :root: these rules weigh more than :root. */
+  :root:not([data-platform="ios"]) { --ck-bottom-nav-height: var(--ck-navbar-android); --ck-top-bar-height: calc(var(--ck-topbar-android) + env(safe-area-inset-top, 0px)); }
+  :root[data-platform="ios"] { --ck-bottom-nav-height: calc(var(--ck-tabbar-ios) + var(--ck-space-2)); --ck-top-bar-height: calc(var(--ck-topbar-ios) + env(safe-area-inset-top, 0px)); }
+  :root.ck-focus-mode { --ck-bottom-nav-height: 0px; }
+  html body { padding-inline: 0; }
+  /* The header strip is gone: the logo and the actions are not drawn (the theme and the chat live elsewhere), the menu
+     inside it is pinned to the bottom. */
+  .brand-bar { display: contents; }
+  .brand-bar > .brand, .brand-bar > .brand-actions { display: none; }
+  /* The end of the page stays above the bar; on Android above the FAB as well. */
+  body .page { padding: 0 max(var(--ck-space-4), env(safe-area-inset-right, 0px)) var(--ck-bottom-occupied) max(var(--ck-space-4), env(safe-area-inset-left, 0px)); }
+  :root:not([data-platform="ios"]):not(.ck-focus-mode) body .page { padding-bottom: calc(var(--ck-bottom-occupied) + var(--ck-fab-android) + var(--ck-space-4)); }
+  /* A focus screen ends with its own save bar: the footer line and the room under the page would stand under it. */
+  .ck-focus-mode footer { display: none; }
+  .ck-focus-mode main { padding-bottom: 0; }
+
+  /* The top bar: the header row of the page pinned to the top, edge to edge, under the status bar. */
+  .intro { position: sticky; top: 0; z-index: var(--ck-z-top-bar); gap: var(--ck-space-1); min-height: var(--ck-top-bar-height); margin-inline: calc(-1 * max(var(--ck-space-4), env(safe-area-inset-left, 0px))) calc(-1 * max(var(--ck-space-4), env(safe-area-inset-right, 0px))); padding: env(safe-area-inset-top, 0px) max(var(--ck-space-2), env(safe-area-inset-right, 0px)) 0 max(var(--ck-space-4), env(safe-area-inset-left, 0px)); background: var(--ck-paper); }
+  .intro[data-nav="nested"] { padding-left: max(var(--ck-space-1), env(safe-area-inset-left, 0px)); }
+  .intro > .ck-chat-link-page { display: inline-flex; margin-left: auto; }
+  /* Android: the title on the left in the heading style, two lines at most. */
+  .intro h1 { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  /* iOS, a nested page and a focus screen: the 44 px bar, the short title in the middle. */
+  :root[data-platform="ios"] .intro h1 { position: absolute; top: env(safe-area-inset-top, 0px); left: 50%; display: block; max-width: calc(100% - 13rem); height: var(--ck-topbar-ios); overflow: hidden; transform: translateX(-50%); font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; line-height: var(--ck-topbar-ios); text-align: center; text-overflow: ellipsis; white-space: nowrap; -webkit-line-clamp: none; }
+  /* iOS, the root of a section: the short bar pinned above, the large title under it in the flow of the page. */
+  :root[data-platform="ios"] .ck-topbar[data-nav="root"] { position: sticky; top: 0; z-index: var(--ck-z-top-bar); display: flex; align-items: center; justify-content: center; height: var(--ck-top-bar-height); margin-inline: calc(-1 * max(var(--ck-space-4), env(safe-area-inset-left, 0px))) calc(-1 * max(var(--ck-space-4), env(safe-area-inset-right, 0px))); padding: env(safe-area-inset-top, 0px) var(--ck-space-12) 0; background: var(--ck-paper); }
+  .ck-topbar-title { overflow: hidden; color: var(--ck-ink); font-size: var(--ck-text-title); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; opacity: 0; }
+  :root[data-platform="ios"] .intro[data-nav="root"] { position: static; min-height: 0; margin-inline: 0; padding: 0 0 var(--ck-space-3); background: none; }
+  :root[data-platform="ios"] .intro[data-nav="root"] h1 { position: static; display: block; max-width: none; height: auto; overflow: visible; transform: none; font-family: var(--ck-font-display); font-size: var(--ck-text-title-large); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; text-align: left; white-space: normal; }
+  /* Under the bar: iOS — glass with a hairline and the short title; Android — the bar fills, without a shadow. */
+  :root[data-platform="ios"] main[data-scrolled] > .ck-topbar, :root[data-platform="ios"] main[data-scrolled] > .intro:not([data-nav="root"]) { background: var(--ck-material); box-shadow: 0 1px 0 var(--ck-material-line); -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); }
+  main[data-scrolled] > .ck-topbar .ck-topbar-title { opacity: 1; }
+  :root:not([data-platform="ios"]) main[data-scrolled] > .intro { background: var(--ck-nav-android); }
+
+  /* The bottom bar: the same nav of the header, pinned to the bottom of the window. */
+  .brand-bar .main-navigation { position: fixed; z-index: var(--ck-z-bottom-nav); display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; align-items: stretch; gap: 0; width: auto; margin: 0; overflow: visible; color: var(--ck-ink-2); }
+  .ck-focus-mode .brand-bar .main-navigation { display: none; }
+  .brand-bar .main-navigation :focus-visible { outline-color: var(--ck-focus); outline-offset: -2px; }
+  /* A picture over a word; the hover and the dot of the header row do not belong to the bar. */
+  .brand-bar .main-navigation > a, .brand-bar .main-more-toggle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: var(--ck-tap); margin: 0; padding: 0 2px; border: 0; border-radius: var(--ck-radius-pill); background: none; color: var(--ck-ink-2); font-size: calc(var(--ck-text-caption) * 11 / 12); font-weight: 600; line-height: 1.1; text-decoration: none; white-space: nowrap; }
+  .brand-bar .main-navigation .ck-icon { display: block; flex: none; }
+  .brand-bar .main-add-toggle .ck-icon { width: 26px; height: 26px; stroke-width: 2.2; }
+  .brand-bar .main-navigation > a:hover, .brand-bar .main-more > a:hover { background: none; }
+  .brand-bar .main-navigation > a[aria-current]::before, .brand-bar a.main-more-toggle[aria-current]::before { content: none; }
+  /* «Ещё» is a link to its screen (/more, features/more): the lists of the header row are never drawn in the bar. */
+  .brand-bar .main-more-list { display: none; }
+  .brand-bar .main-add { display: flex; align-items: center; justify-content: center; }
+  .brand-bar .main-add-toggle { display: inline-flex; align-items: center; justify-content: center; margin: 0; padding: 0; border: 0; background: var(--ck-seal); color: var(--ck-on-seal); box-shadow: var(--ck-shadow-float); outline-offset: 3px; }
+  .brand-bar .main-add-toggle:hover { background: var(--ck-seal-press); }
+
+  /* iOS: a glass capsule of the four sections 10 px from the edges and 8 px over the home indicator, and the round «＋»
+     of the same height beside it. The glass is a picture under the links (::before), so the links stay its children. */
+  :root[data-platform="ios"] .brand-bar .main-navigation { right: max(10px, env(safe-area-inset-right, 0px)); bottom: calc(var(--ck-space-2) + var(--ck-safe-bottom)); left: max(10px, env(safe-area-inset-left, 0px)); height: var(--ck-tabbar-ios); padding: var(--ck-space-1); }
+  :root[data-platform="ios"] .brand-bar .main-navigation:has(> .main-add) { padding-right: calc(var(--ck-tabbar-ios) + var(--ck-space-2) + var(--ck-space-1)); }
+  :root[data-platform="ios"] .brand-bar .main-navigation::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 1px solid var(--ck-material-line); border-radius: var(--ck-radius-pill); background: var(--ck-material); box-shadow: var(--ck-shadow-float); -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); }
+  :root[data-platform="ios"] .brand-bar .main-navigation:has(> .main-add)::before { right: calc(var(--ck-tabbar-ios) + var(--ck-space-2)); }
+  :root[data-platform="ios"] .brand-bar .main-navigation > a .ck-icon, :root[data-platform="ios"] .brand-bar .main-more-toggle .ck-icon { width: 22px; height: 22px; }
+  /* The current section: the brand ink and a heavier word on a light pad — not by colour alone. */
+  :root[data-platform="ios"] .brand-bar .main-navigation > a[aria-current], :root[data-platform="ios"] .brand-bar .main-more-toggle[data-current], :root[data-platform="ios"] .brand-bar a.main-more-toggle[aria-current] { background: color-mix(in oklab, var(--ck-ink) 7%, transparent); color: var(--ck-seal-ink); font-weight: 700; }
+  :root[data-platform="ios"] .brand-bar .main-add { position: absolute; top: 0; right: 0; }
+  :root[data-platform="ios"] .brand-bar .main-add-toggle { width: var(--ck-tabbar-ios); height: var(--ck-tabbar-ios); min-height: var(--ck-tabbar-ios); border-radius: 50%; }
+
+  /* Android: the Material 3 navigation bar edge to edge, under the gesture strip; the current section — the pill of the
+     soft brand behind its picture and a heavier word. «＋» is the FAB over the bar, at the right. */
+  :root:not([data-platform="ios"]) .brand-bar .main-navigation { inset: auto 0 0; min-height: calc(var(--ck-navbar-android) + var(--ck-safe-bottom)); padding: 0 max(var(--ck-space-2), env(safe-area-inset-right, 0px)) var(--ck-safe-bottom) max(var(--ck-space-2), env(safe-area-inset-left, 0px)); background: var(--ck-nav-android); }
+  :root:not([data-platform="ios"]) .brand-bar .main-navigation > a, :root:not([data-platform="ios"]) .brand-bar .main-more-toggle { gap: var(--ck-space-1); min-height: var(--ck-navbar-android); border-radius: 0; font-size: var(--ck-text-caption); font-weight: 500; }
+  :root:not([data-platform="ios"]) .brand-bar .main-navigation > a .ck-icon, :root:not([data-platform="ios"]) .brand-bar .main-more-toggle .ck-icon { box-sizing: content-box; width: 24px; height: 24px; padding: var(--ck-space-1) var(--ck-space-4); border-radius: var(--ck-radius-pill); }
+  :root:not([data-platform="ios"]) .brand-bar .main-navigation > a:where(:hover) .ck-icon, :root:not([data-platform="ios"]) .brand-bar .main-more-toggle:where(:hover) .ck-icon { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
+  :root:not([data-platform="ios"]) .brand-bar .main-navigation > a[aria-current], :root:not([data-platform="ios"]) .brand-bar .main-more-toggle[data-current], :root:not([data-platform="ios"]) .brand-bar a.main-more-toggle[aria-current] { color: var(--ck-ink); font-weight: 700; }
+  :root:not([data-platform="ios"]) .brand-bar .main-navigation > a[aria-current] .ck-icon, :root:not([data-platform="ios"]) .brand-bar .main-more-toggle[data-current] .ck-icon, :root:not([data-platform="ios"]) .brand-bar a.main-more-toggle[aria-current] .ck-icon { background: var(--ck-seal-soft); color: var(--ck-seal-ink); }
+  :root:not([data-platform="ios"]) .brand-bar .main-add { position: fixed; right: calc(var(--ck-space-4) + env(safe-area-inset-right, 0px)); bottom: calc(var(--ck-bottom-occupied) + var(--ck-space-4)); }
+  :root:not([data-platform="ios"]) .brand-bar .main-add-toggle { width: var(--ck-fab-android); height: var(--ck-fab-android); min-height: var(--ck-fab-android); border-radius: var(--ck-radius-fab); }
+  /* The FAB rises over a pinned action bar of a form and over a snackbar, never covering their buttons. */
+  :root:not([data-platform="ios"]):has(main .ck-action-bar) .brand-bar .main-add { bottom: calc(var(--ck-bottom-occupied) + var(--ck-action-bar-room) + var(--ck-space-2)); }
+  /* A page with its own control pinned to the bottom (the composer of the chat: `ck-own-bottom`) — the FAB steps aside
+     instead of covering «Отправить»; the bar keeps every section. */
+  :root:not([data-platform="ios"]):has(main .ck-own-bottom) .brand-bar .main-add { display: none; }
+  :root:not([data-platform="ios"]):has(.ck-snackbar) .brand-bar .main-add { bottom: calc(var(--ck-bottom-occupied) + var(--ck-space-2) + var(--ck-tap) + var(--ck-space-4)); }
+}
+
+/* Glass only where the browser draws it and the person has not asked for less transparency: elsewhere the solid
+   surface. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-platform="ios"] .brand-bar .main-navigation::before { background: var(--ck-surface); }
+  :root[data-platform="ios"] main[data-scrolled] > .ck-topbar, :root[data-platform="ios"] main[data-scrolled] > .intro:not([data-nav="root"]) { background: var(--ck-surface); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-platform="ios"] .brand-bar .main-navigation::before { background: var(--ck-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  :root[data-platform="ios"] main[data-scrolled] > .ck-topbar, :root[data-platform="ios"] main[data-scrolled] > .intro:not([data-nav="root"]) { background: var(--ck-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ---- Motion: only for a person who has not asked the system for less ----
+   The bars change their state in 180 ms; «＋» is pressed to 97 %. A change of the page is a View Transition
+   (navigation/browser.ts sets `data-nav-direction` on <html> for its time): only the page moves — the bars stay —
+   iOS 350 ms, the new page in from the right and the old one 30 % to the left (back: the other way round); Android
+   300 ms, the shared X axis of Material 3: 30 px and a cross-fade. */
+@media (prefers-reduced-motion: no-preference) {
+  .intro, .ck-topbar { transition: background-color var(--ck-dur-state) var(--ck-ease-out), box-shadow var(--ck-dur-state) var(--ck-ease-out); }
+  .ck-topbar-title { transition: opacity var(--ck-dur-state) var(--ck-ease-out); }
+  .brand-bar .main-add-toggle { transition: transform var(--ck-dur-press) var(--ck-ease-out), background-color var(--ck-dur-state) var(--ck-ease-out); }
+  .brand-bar .main-add-toggle:active { transform: scale(0.97); }
+  .brand-bar .main-add { transition: bottom var(--ck-dur-state) var(--ck-ease-out); }
+
+  :root[data-nav-direction] .page { view-transition-name: ck-page; }
+  /* The rest of the window (the bars, the background) changes at once: the old picture of it is not shown at all, so
+     nothing of the two is blended. */
+  :root[data-nav-direction]::view-transition-old(root) { animation: none; opacity: 0; }
+  :root[data-nav-direction]::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+  :root[data-nav-direction]::view-transition-group(ck-page) { animation-duration: 300ms; animation-timing-function: var(--ck-ease-out); }
+  :root[data-nav-direction]::view-transition-old(ck-page), :root[data-nav-direction]::view-transition-new(ck-page) { mix-blend-mode: normal; animation-duration: 300ms; animation-timing-function: var(--ck-ease-out); animation-fill-mode: both; }
+  :root[data-platform="ios"][data-nav-direction]::view-transition-group(ck-page), :root[data-platform="ios"][data-nav-direction]::view-transition-old(ck-page), :root[data-platform="ios"][data-nav-direction]::view-transition-new(ck-page) { animation-duration: 350ms; }
+  :root[data-platform="ios"][data-nav-direction="forward"]::view-transition-old(ck-page) { animation-name: ck-nav-to-left; }
+  :root[data-platform="ios"][data-nav-direction="forward"]::view-transition-new(ck-page) { animation-name: ck-nav-from-right; }
+  :root[data-platform="ios"][data-nav-direction="back"]::view-transition-old(ck-page) { z-index: 1; animation-name: ck-nav-to-right; }
+  :root[data-platform="ios"][data-nav-direction="back"]::view-transition-new(ck-page) { animation-name: ck-nav-from-left; }
+  :root:not([data-platform="ios"])[data-nav-direction="forward"]::view-transition-old(ck-page) { animation-name: ck-axis-out-left; }
+  :root:not([data-platform="ios"])[data-nav-direction="forward"]::view-transition-new(ck-page) { animation-name: ck-axis-in-right; }
+  :root:not([data-platform="ios"])[data-nav-direction="back"]::view-transition-old(ck-page) { animation-name: ck-axis-out-right; }
+  :root:not([data-platform="ios"])[data-nav-direction="back"]::view-transition-new(ck-page) { animation-name: ck-axis-in-left; }
+  @keyframes ck-nav-from-right { from { transform: translateX(100%); } }
+  @keyframes ck-nav-to-left { to { transform: translateX(-30%); } }
+  @keyframes ck-nav-to-right { to { transform: translateX(100%); } }
+  @keyframes ck-nav-from-left { from { transform: translateX(-30%); } }
+  @keyframes ck-axis-out-left { to { opacity: 0; transform: translateX(-30px); } }
+  @keyframes ck-axis-in-right { from { opacity: 0; transform: translateX(30px); } }
+  @keyframes ck-axis-out-right { to { opacity: 0; transform: translateX(30px); } }
+  @keyframes ck-axis-in-left { from { opacity: 0; transform: translateX(-30px); } }
+}
+
+@media (forced-colors: active) {
+  .brand-bar { border-bottom-color: CanvasText; }
+  .main-navigation a[aria-current], .section-navigation a[aria-current] { text-decoration: underline; text-decoration-thickness: 3px; }
+  .main-navigation a[aria-current]::before { background: LinkText; forced-color-adjust: none; }
+  .main-more-toggle[data-current], .main-group-toggle[data-current] { text-decoration: underline; text-decoration-thickness: 3px; }
+  .ck-round, .ck-close { border-color: ButtonText; }
+  .brand-bar .main-navigation::before { border-color: CanvasText; }
+}
+/* The bottom bar of Android loses its own background there: a line keeps it apart from the page. */
+@media (forced-colors: active) and (max-width: 540px) and (min-width: 340px) and (min-height: 480px) {
+  :root:not([data-platform="ios"]) .brand-bar .main-navigation { border-top: 1px solid CanvasText; }
+}

@@ -3,7 +3,9 @@ import type { FormEvent } from 'react'
 import { getPush, savePush, subscribePush, testPush, unsubscribePush, pushKinds } from '../../api/push'
 import type { PushKind, PushState, PushSubscriptionBody } from '../../api/push'
 import type { LocalApiResult } from '../../api/types'
+import Icon from '../../components/Icon'
 import { formatMoney } from '../../lib/money'
+import { nativeSwitch } from '../auth/switch'
 import { DeviceRefusal, deviceSubscription, pushSupport, readDevice, subscribeDevice, unsubscribeDevice } from './push-device'
 import type { PushSupport } from './push-device'
 import { pushTexts } from './push-texts'
@@ -54,33 +56,36 @@ export function PushView({ state, onDevice, onKind, onThreshold, onTest }: PushV
       {ready && !ready.push.configured && <p className="ck-auth-hint" data-push-off>{pushTexts.notConfigured}</p>}
       {ready && ready.push.configured && <>
         <div className="push-device">
-          <div className="ck-row-main">
-            <span className="ck-row-title">{pushTexts.device}</span>
-            <span className="ck-row-meta" data-push-device={ready.device ? 'on' : 'off'}>{deviceMeta(ready)}</span>
+          <div className="ck-row push-device-row">
+            <span className="ck-row-badge push-device-badge" aria-hidden="true"><Icon name="phone" size={20} /></span>
+            <span className="ck-row-main">
+              <span className="ck-row-title">{pushTexts.device}</span>
+              <span className="ck-row-meta" data-push-device={ready.device ? 'on' : 'off'}>{deviceMeta(ready)}</span>
+            </span>
           </div>
           {ready.support === 'install' && <p className="ck-auth-notice" data-push-install>{pushTexts.install}</p>}
           {ready.denied && !ready.device && <p className="ck-auth-hint" data-push-denied>{pushTexts.denied}</p>}
           {ready.support === 'ready' && (ready.device
-            ? <button type="button" className="ck-button-secondary" aria-disabled={busy || undefined}
+            ? <button type="button" className="ck-auth-secondary" aria-disabled={busy || undefined}
               onClick={busy ? undefined : () => onDevice(false)} data-push-disable>{pushTexts.disable}</button>
-            : <button type="button" aria-disabled={busy || undefined}
+            : <button type="button" className="ck-auth-secondary" aria-disabled={busy || undefined}
               onClick={busy ? undefined : () => onDevice(true)} data-push-enable>{pushTexts.enable}</button>)}
           {ready.push.devices > 0 && <p className="ck-auth-hint">{pushTexts.devices(ready.push.devices)}</p>}
         </div>
-        <ul className="ck-list" aria-label="Поводы">
+        <ul className="ck-list push-kinds" aria-label="Поводы">
           {pushKinds.map((kind) => {
             const [title, meta] = kindTexts[kind]
             const on = ready.push.settings[kind]
             return <li key={kind}>
-              <div className="ck-row">
-                <div className="ck-row-main">
+              <label className="ck-switch-row push-kind" htmlFor={`push-${kind}-switch`}>
+                <span className="ck-row-main">
                   <span className="ck-row-title" id={`push-${kind}`}>{title}</span>
                   <span className="ck-row-meta" id={`push-${kind}-meta`}>{meta(ready.push)}</span>
-                </div>
-                <button type="button" role="switch" className="push-switch" aria-checked={on} aria-labelledby={`push-${kind}`}
-                  aria-describedby={`push-${kind}-meta`} aria-disabled={busy || undefined} data-push-kind={kind}
-                  onClick={busy ? undefined : () => onKind(kind, !on)}><span className="push-switch-thumb" /></button>
-              </div>
+                </span>
+                <input id={`push-${kind}-switch`} type="checkbox" role="switch" className="ck-switch" {...nativeSwitch} checked={on}
+                  aria-labelledby={`push-${kind}`} aria-describedby={`push-${kind}-meta`} aria-disabled={busy || undefined} data-push-kind={kind}
+                  onChange={() => { if (!busy) onKind(kind, !on) }} />
+              </label>
               {kind === 'large' && on && (
                 <form className="push-threshold" noValidate onSubmit={submit}>
                   <div className="ck-auth-field">
@@ -89,14 +94,14 @@ export function PushView({ state, onDevice, onKind, onThreshold, onTest }: PushV
                       value={threshold ?? ready.push.settings.large_threshold.replace(/\.00$/, '')}
                       onChange={(event) => setThreshold(event.target.value)} />
                   </div>
-                  <button type="submit" className="ck-button-secondary" aria-disabled={busy || undefined}>{pushTexts.thresholdSave}</button>
+                  <button type="submit" className="ck-auth-secondary" aria-disabled={busy || undefined}>{pushTexts.thresholdSave}</button>
                 </form>
               )}
             </li>
           })}
         </ul>
         <p className="ck-auth-hint">{pushTexts.quiet}</p>
-        <button type="button" className="ck-button-secondary" aria-disabled={busy || undefined}
+        <button type="button" className="ck-auth-secondary" aria-disabled={busy || undefined}
           onClick={busy ? undefined : onTest} data-push-test>{pushTexts.test}</button>
       </>}
       <p className={ready?.notice?.kind === 'failed' ? 'ck-auth-error' : 'ck-auth-done'} role="status" data-push-notice={ready?.notice?.kind}>

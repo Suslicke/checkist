@@ -23,9 +23,9 @@ describe('upload stylesheet guards (text of the rules, not rendering)', () => {
       // Nothing else of the sheet touches the button.
       expect(everywhere.filter((item) => item.selector.includes(selector.slice(8)))).toHaveLength(2)
     }
-    // Besides the pointer, only the phone block: it never shows or hides anything.
-    expect(media.map((block) => block.query)).toEqual(['(pointer: coarse)', '(max-width: 540px)'])
-    expect(media[1].rules.filter((item) => /display|visibility/.test(item.body))).toEqual([])
+    // Besides the pointers, the hover states and the phone block: none of them shows or hides anything.
+    expect(media.map((block) => block.query)).toEqual(['(pointer: coarse)', '(pointer: fine)', '(hover: hover)', '(max-width: 540px)'])
+    for (const block of media.slice(1)) expect(block.rules.filter((item) => /display|visibility/.test(item.body))).toEqual([])
     expect(page).toMatch(/className=\{`ck-upload-camera ck-upload-big[^\n]*>\{cameraIcon\}\{uploadLabels\.camera\}<\/button>/)
     expect(page).toMatch(/className="ck-upload-gallery ck-upload-big ck-upload-secondary"[^\n]*>\{galleryIcon\}\{uploadLabels\.gallery\}<\/button>/)
   })
@@ -36,16 +36,18 @@ describe('upload stylesheet guards (text of the rules, not rendering)', () => {
     // A column: the buttons do not grow into the height of the group.
     expect(value(bigButton, 'flex')).toBe('none')
     expect(value(rule('.ck-upload-pick'), 'flex-direction')).toBe('column')
-    const phone = media[1].rules
+    const phone = media.find((block) => block.query === '(max-width: 540px)')?.rules ?? []
     expect(value(rule('.ck-rec-image.ck-upload-preview img', phone), 'height')).toBe('auto')
   })
 
   it('takes every colour from the theme tokens', () => {
     expect(css.match(/#[0-9a-f]{3,8}\b|(?:rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\(/gi)).toBeNull()
     const coloured = everywhere.flatMap((item) => ['color', 'background', 'border-color', 'accent-color', 'border']
-      .map((property) => value(item.body, property)).filter((found) => found !== undefined && found !== '0'))
+      .map((property) => value(item.body, property)).filter((found) => found !== undefined && found !== '0' && found !== 'transparent'))
     expect(coloured.length).toBeGreaterThan(0)
-    for (const found of coloured) expect(found).toMatch(/var\(--ck-[a-z-]+\)$/)
+    for (const found of coloured) expect(found).toMatch(/var\(--ck-[a-z0-9-]+\)$/)
+    // Чекист 2.0 names only: no alias of 1.x is read.
+    expect(css).not.toMatch(/--ck-(bg|text|text-muted|accent[a-z-]*|primary[a-z-]*|link[a-z-]*|border[a-z-]*|divider|neutral-[a-z]+|success-[a-z]+|warning-[a-z]+|disabled-[a-z]+|surface-raised|card-shadow|radius|radius-sm|text-(xs|sm|base|lg|xl|hero|2xs))\)/)
   })
 
   it('keeps a value on one line and lets the file name wrap', () => {
@@ -62,12 +64,14 @@ describe('upload stylesheet guards (text of the rules, not rendering)', () => {
     expect(hidden).not.toMatch(/display|visibility/)
   })
 
-  it('sizes text by the scale only, adds no motion or fixed width, and gives the outline button its own states', () => {
+  it('sizes text by the scale only, adds no motion or fixed width, and gives the tonal button its own states', () => {
     const sizes = [...css.matchAll(/font-size\s*:\s*([^;]+);/g)].map((match) => match[1].trim())
     expect(sizes.length).toBeGreaterThan(0)
-    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl|hero)\)$/)
+    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading)\)$/)
     expect(css).not.toMatch(/transition|animation|min-width:\s*[1-9]/)
-    for (const state of [':hover:not(:disabled)', ':disabled']) expect(rule(`.ck-rec .ck-upload-secondary${state}`)).not.toBe('')
+    for (const state of [':hover:not(:disabled)', ':active:not(:disabled)', ':disabled']) expect(rule(`.ck-rec .ck-upload-secondary${state}`, everywhere)).not.toBe('')
+    // Hover only where a pointer hovers: a finger leaves no sticky hover.
+    expect(outside.filter((item) => item.selector.includes(':hover'))).toEqual([])
     expect(value(rule('.ck-upload-progress progress'), 'width')).toBe('100%')
   })
 

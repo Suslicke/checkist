@@ -31,12 +31,16 @@ describe('ИИ of the family', () => {
   it('gives the head a switch with the note and the requests of today', () => {
     const html = view(family())
     expect(html).toContain('data-family-ai="on"')
-    expect(html).toMatch(/<button type="button" role="switch" class="family-switch" aria-checked="true" aria-labelledby="family-ai-heading"/)
+    // The switch of 2.0: a checkbox with the role of a switch, named by the heading and described by the note.
+    const toggle = html.match(/<input[^>]*data-family-ai-switch[^>]*>/)?.[0] ?? ''
+    for (const part of ['type="checkbox"', 'role="switch"', 'class="ck-switch family-switch"', 'checked=""', 'aria-labelledby="family-ai-heading"', 'aria-describedby="family-ai-note"']) expect(toggle).toContain(part)
     expect(html).toContain('Распознавание и подсказки ИИ')
     expect(html).toContain(familyTexts.aiNote)
     expect(html).toContain(`Сегодня использовано 12${NBSP}из${NBSP}50`)
     expect(html).toContain('style="width:24%"')
-    expect(view(family({ ai: { ...ai, enabled: false } }))).toMatch(/role="switch" class="family-switch" aria-checked="false"/)
+    expect(view(family({ ai: { ...ai, enabled: false } })).match(/<input[^>]*data-family-ai-switch[^>]*>/)?.[0]).not.toContain('checked')
+    // The assistant speaks in gold: its mark stands before the heading.
+    expect(html).toContain('<h2 id="family-ai-heading"><span class="family-ai-mark" aria-hidden="true">')
   })
 
   it('shows only the count of today for a family without a limit', () => {

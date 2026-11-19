@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import logo640 from '../../assets/brand/logo-640.webp'
-import logo1280 from '../../assets/brand/logo-1280.webp'
 import { checkFamilyInvite, createFamilyAccount, logout } from '../../api/session'
 import { Link, navigate } from '../../navigation'
 import { applyMe, useSession } from '../../session'
 import { ThemeToggle } from '../../theme'
-import { FormMessage } from '../auth/LoginPage'
+import { FormMessage, LoginBrand } from '../auth/LoginPage'
 import { useAuthForm } from '../auth/auth-state'
 import type { FormState } from '../auth/auth-state'
 import { logoutRefusal, passwordRules, waitText } from '../auth/labels'
@@ -38,7 +36,7 @@ const fields: { name: keyof NewFamilyValues; label: string; type?: string; autoC
   { name: 'password', label: 'Пароль', type: 'password', autoComplete: 'new-password', maxLength: 4096 },
 ]
 
-/** The invite of a new family on the whole screen, like the sign-in: the logo above a card, the form in it. A real form:
+/** The invite of a new family on the whole screen, like the sign-in: the emblem and «Чекист» above a panel, the form in it. A real form:
  * a password manager offers to save the new login. The order in the markup is the Tab order. */
 export function NewFamilyView({ check, state, values, onChange, onSubmit, onRetry, heading }: NewFamilyViewProps) {
   const pending = state.kind === 'pending'
@@ -79,16 +77,9 @@ export function NewFamilyView({ check, state, values, onChange, onSubmit, onRetr
   return (
     <main id="main" className="ck-login">
       <div className="ck-login-layout">
-        <div className="ck-login-board">
-          <span className="ck-login-rays" aria-hidden="true" />
-          <img className="ck-login-logo" src={logo640} srcSet={`${logo640} 640w, ${logo1280} 1280w`}
-            sizes="(min-width: 720px) min(50vw, 520px), 152px" width="640" height="640" alt="Чекист — продуктовая разведка" />
-        </div>
+        <LoginBrand subtitle="Приглашение в Чекист" />
         <div className="ck-login-panel">
-          <div className="ck-login-title">
-            {heading}
-            <p className="ck-login-subtitle">Приглашение в Чекист</p>
-          </div>
+          <div className="ck-login-title">{heading}</div>
           <section className="ck-auth" aria-labelledby="page-heading">{body}</section>
           <p className="ck-login-note">Уже есть учётная запись? <Link to="/login">Войти</Link></p>
         </div>

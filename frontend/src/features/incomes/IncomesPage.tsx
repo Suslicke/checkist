@@ -3,8 +3,10 @@ import type { FormEvent } from 'react'
 import { createIncomeCategory, getIncomeCategories, getIncomes } from '../../api/incomes'
 import type { IncomeCategory, IncomeMonth } from '../../api/incomes'
 import Icon from '../../components/Icon'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
-import { baseTwin, formatMoney } from '../../lib/money'
+import { categoryTone } from '../../lib/category-tone'
+import { baseTwin } from '../../lib/money'
 import { Link } from '../../navigation'
 import { dashboardErrorMessage, dayAndMonth, monthTitle, shiftMonth } from '../dashboard/dashboard-state'
 import { rememberIncomeMonth, sessionIncomeMonth, takeIncomeNotice } from './incomes-state'
@@ -27,8 +29,8 @@ export function IncomesView({ data, categories, notice = null, busy = false, fai
     if (!busy && name.trim()) onAddCategory(name.trim())
   }
   return <div className="inc-page ck-stack">
-    {notice && <p className="inc-notice" role="status">{notice}</p>}
-    <section className="ck-panel" aria-labelledby="inc-month-heading">
+    {notice && <p className="inc-notice" role="status"><Icon name="check" size={18} className="ck-icon inc-notice-mark" /><span>{notice}</span></p>}
+    <section className="ck-panel inc-month" aria-labelledby="inc-month-heading">
       <div className="ck-panel-head">
         <h2 id="inc-month-heading">{monthTitle(data.month)}</h2>
         <nav className="inc-months" aria-label="Месяц">
@@ -37,21 +39,23 @@ export function IncomesView({ data, categories, notice = null, busy = false, fai
         </nav>
       </div>
       <p className="inc-total"><span>Доход семьи</span>
-        <strong className="ck-figures">{data.family_total === null ? 'не внесён' : formatMoney(data.family_total, data.base_currency)}</strong></p>
+        {data.family_total === null
+          ? <strong className="inc-total-missing">не внесён</strong>
+          : <Money value={data.family_total} currency={data.base_currency} size="display" tone="in" sign="plus" />}</p>
       {data.results.length > 0
-        ? <ul className="ck-list">{data.results.map((row) => {
+        ? <ul className="ck-list inc-list">{data.results.map((row) => {
           const twin = baseTwin(row.currency, row.base_amount, data.base_currency)
           return <li key={row.id}><Link className="ck-row" to={`/incomes/${row.id}/edit`}>
-            <span className="ck-row-badge inc-day" aria-hidden="true">{Number(row.received_on.slice(8, 10))}</span>
+            <span className={`ck-row-badge ck-tone-${categoryTone(row.category.id) || 1}`} aria-hidden="true"><Icon name="income" size={20} /></span>
             <span className="ck-row-main">
               <span className="ck-row-title">{row.category.name}</span>
               <span className="ck-row-meta">{[dayAndMonth(row.received_on), row.owner_name, twin, row.note].filter(Boolean).join(' · ')}</span>
             </span>
-            <span className="ck-row-amount ck-figures inc-amount">{formatMoney(row.amount, row.currency)}</span>
+            <span className="ck-row-amount"><Money value={row.amount} currency={row.currency} size="row" tone="in" sign="plus" /></span>
           </Link></li>
         })}</ul>
         : <p className="inc-note">{data.family_total === null ? 'Доходов за месяц пока нет.' : 'Ваших записей за месяц нет.'}</p>}
-      <Link className="inc-add" to="/receipts/new?kind=income">Добавить доход</Link>
+      <Link className="inc-add" to="/receipts/new?kind=income"><Icon name="plus" size={20} />Добавить доход</Link>
       <p className="inc-note">Записи видят тот, кто внёс, и главный в семье; общий доход месяца — вся семья.</p>
     </section>
     <section className="ck-panel" aria-labelledby="inc-categories-heading">
@@ -62,7 +66,7 @@ export function IncomesView({ data, categories, notice = null, busy = false, fai
         <div className="inc-category-row">
           <input id="inc-category-name" value={name} maxLength={60} autoComplete="off" placeholder="Аренда гаража"
             onChange={(event) => setName(event.target.value)} />
-          <button type="submit" aria-disabled={busy || undefined}>Добавить</button>
+          <button type="submit" className="ck-button-secondary" aria-disabled={busy || undefined}>Добавить</button>
         </div>
         {failure && <p className="inc-failure" role="alert">{failure}</p>}
       </form>

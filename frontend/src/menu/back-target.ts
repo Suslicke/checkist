@@ -83,13 +83,65 @@ export function backTarget({ route, returnTo }: Pick<NavigationSnapshot, 'route'
   }
 }
 
+/** The short name of a screen, as «назад» of iOS shows where it leads: «‹ Траты» (Чекист 2.0, platforms.md). */
+const screenNames: Partial<Record<Route['kind'], string>> = {
+  dashboard: 'Главная',
+  limits: 'Лимиты',
+  'category-spends': 'Категория',
+  catalog: 'Каталог',
+  category: 'Категория',
+  product: 'Товар',
+  spending: 'Статистика',
+  'receipts-stats': 'Средний чек',
+  trends: 'Динамика',
+  'stats-incomes': 'Доходы',
+  health: 'Сервисы',
+  receipts: 'Траты',
+  upload: 'Загрузка',
+  'expense-new': 'Новая трата',
+  'expense-edit': 'Правка',
+  incomes: 'Доходы',
+  'income-edit': 'Правка',
+  receipt: 'Трата',
+  jobs: 'Обработка',
+  job: 'Задание',
+  merges: 'Дубли',
+  merge: 'Дубли',
+  classification: 'Категории',
+  account: 'Аккаунт',
+  export: 'Выгрузка',
+  more: 'Ещё',
+  money: 'Деньги',
+  family: 'Семья',
+  recurring: 'Платежи',
+  planned: 'Планы',
+  stores: 'Магазины',
+  'statement-new': 'Выписки',
+  statement: 'Выписка',
+  'statement-rules': 'Правила',
+  review: 'Разбор',
+  chat: 'Чат',
+  goals: 'Цели',
+  goal: 'Цель',
+}
+
+/** The name of the screen at an address of the app; «Назад» for anything unknown. */
+export function screenName(href: string): string {
+  try {
+    return screenNames[parseRoute(new URL(href, 'http://checkist.invalid')).kind] ?? 'Назад'
+  } catch {
+    return 'Назад'
+  }
+}
+
 /**
- * The name of «назад» for a screen reader. The control steps back to the screen the person came from
- * (`Link back`); only when that screen is the known list (`returnTo`) or there is nothing behind (`depth` 0, the
- * control leads to the parent page) the name of the parent is true — otherwise it is plain «Назад».
+ * The name of the screen «назад» leads to now: the control steps back to the screen the person came from (`Link back`)
+ * when one lies behind (`from`), otherwise it leads to its own address — the parent or the hub.
  */
-export function backLabel(navigation: Pick<NavigationSnapshot, 'href' | 'depth' | 'from' | 'returnTo'>, label: string): string {
-  return stepsBack(navigation) && !navigation.returnTo ? 'Назад' : label
+export function backName(navigation: Partial<Pick<NavigationSnapshot, 'href' | 'depth' | 'from'>>, action: Pick<HeaderAction, 'to' | 'step'>): string {
+  const { href, depth, from } = navigation
+  const behind = action.step && href !== undefined && from !== undefined && stepsBack({ href, depth, from })
+  return screenName(behind ? from : action.to)
 }
 
 /**

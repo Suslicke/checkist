@@ -246,7 +246,7 @@ export function lineFromBody(line: Pick<ManualLineInput, 'name' | 'amount'> & Pa
 
 /** The row of a folded card on a phone: «Панини», «2 шт × 1 790,00 ₸ − 80 ₸» and the sum «3 500 ₸». `detail` is empty for
  * one piece without a discount. */
-export function lineSummary(line: LineDraft, currency: string): { title: string; detail: string; sum: string } {
+export function lineSummary(line: LineDraft, currency: string): { title: string; detail: string; sum: string; value?: string } {
   const quantity = quantityOf(line)
   const discount = discountOf(line) ?? 0n
   const sum = sumOf(line)
@@ -260,5 +260,7 @@ export function lineSummary(line: LineDraft, currency: string): { title: string;
   return {
     title: line.name.trim() || 'Без названия', detail: parts.join(' · '),
     sum: sum === undefined ? '—' : formatMoney(decimalText(sum, MONEY), currency),
+    // The decimal of the sum for <Money>; `sum` stays the words of a phrase.
+    value: sum === undefined ? undefined : decimalText(sum, MONEY),
   }
 }

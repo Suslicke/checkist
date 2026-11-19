@@ -3,6 +3,7 @@ import { excludedNote } from '../../lib/base-currency'
 import type { MouseEvent } from 'react'
 import type { SpendingCurrency, SpendingGroupBy } from '../../api/stats'
 import { spendingGroupings } from '../../api/stats'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
 import { useLocalRequestFocus } from '../../components/useLocalRequestFocus'
 import { PieChart } from '../../lib/charts'
@@ -82,21 +83,32 @@ function CurrencyBlock({ block, groupBy, query, tail, retryTail, refresh, hero }
       childrenStatus: <TailStatus tail={state} count={item.children?.length ?? 0} failure={failure} retry={retryTail} refresh={refresh} /> })
   }, [view, failure, retryTail, refresh])
   const shownView = useMemo(() => ({ ...view, items }), [view, items])
-  return <SpendingBlock view={shownView} groupBy={groupBy} hero={hero} />
+  return <SpendingBlock view={shownView} groupBy={groupBy} hero={hero} totals={block.totals} />
 }
 
-export function SpendingBlock({ view, groupBy, hero = false }: { view: BlockView; groupBy: SpendingGroupBy; hero?: boolean }) {
+/**
+ * The total of one currency, the donut and its legend. The first block carries the main number of the screen
+ * (`ck-money-display`), another currency a smaller one. `totals` are the wire decimals of the answer: with them the
+ * sums are drawn as `Money`, without them as the text of the view.
+ */
+export function SpendingBlock({ view, groupBy, hero = false, totals }: {
+  view: BlockView; groupBy: SpendingGroupBy; hero?: boolean; totals?: SpendingCurrency['totals']
+}) {
   const heading = useId()
+  const total = totals ? totals.receipts_total ?? totals.lines_paid : undefined
+  const sum = (amount: string | undefined, text: string, size: 'display' | 'title' | 'inline') =>
+    amount === undefined ? text : <Money value={amount} currency={view.currency} size={size} />
   return <section className="spending-currency" aria-labelledby={heading}>
     <div className="spending-summary">
       <h3 id={heading} className="spending-summary-label">{view.total.label}, {currencySymbol(view.currency)}</h3>
-      <p className={hero ? 'spending-total ck-hero-figure' : 'spending-total'}>{view.total.text}</p>
+      <p className={hero ? 'spending-total spending-total-main' : 'spending-total'}>{sum(total, view.total.text, hero ? 'display' : 'title')}</p>
       <p className="spending-summary-meta">
         <span className="spending-figure">{view.receipts}</span>
-        {view.total.text !== view.linesPaid && <> · сумма строк <span className="spending-figure">{view.linesPaid}</span></>}
+        {view.total.text !== view.linesPaid && <> · сумма строк <span className="spending-figure">{sum(totals?.lines_paid, view.linesPaid, 'inline')}</span></>}
       </p>
     </div>
-    <PieChart title={view.title} items={view.items} centerLabel={view.center.label} centerValue={view.center.value}
+    <PieChart title={view.title} items={view.items} centerLabel={view.center.label}
+      centerValue={sum(totals?.lines_paid, view.center.value, 'inline')} currency={totals ? view.currency : undefined}
       headers={{ name: nameHeaders[groupBy], value: 'Сумма', share: 'Доля' }} linkComponent={Link}
       excludedNote="Сумма не положительная: в диаграмму не входит, доля не считается." />
     <p className="spending-note">{view.difference}</p>
@@ -134,8 +146,8 @@ export default function SpendingResults({ query, state, retry, last, genericName
 
   return <section ref={block} className="spending-panel" aria-labelledby={heading} aria-busy={loading}>
     <h2 id={heading} data-request-focus-target tabIndex={-1}>Траты {groupingCaptions[by]}</h2>
-    {/* A low switch on the width of the card, short words: four segments fit a 360 px phone without a cut. */}
-    <nav className="spending-groupings stats-segments" aria-label="Разбивка трат">
+    {/* Segments of 2.0 on the width of the card, short words: four segments fit a 360 px phone without a cut. */}
+    <nav className="spending-groupings stats-segments ck-segments" aria-label="Разбивка трат">
       {spendingGroupings.map((value) => <Link key={value} className="stats-segment" to={groupingHref(query, value)}
         aria-current={value === by ? 'true' : undefined}>{groupingShortLabels[value]}</Link>)}
     </nav>

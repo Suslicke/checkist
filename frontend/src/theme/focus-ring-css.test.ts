@@ -55,8 +55,8 @@ describe('focus ring of the heading of the page (text of the rules and the shell
 })
 
 describe('focus ring of what a person reaches with Tab (text of the rules, not rendering)', () => {
-  it('stays as it was in the general rule', () => {
-    for (const selector of general) expect(rule(selector, app), selector).toBe('outline: 3px solid var(--ck-focus); outline-offset: 4px;')
+  it('is the ring of Чекист 2.0 in the general rule: 2 px of the focus colour, 2 px away', () => {
+    for (const selector of general) expect(rule(selector, app), selector).toBe('outline: 2px solid var(--ck-focus); outline-offset: 2px;')
   })
 
   it('is taken off by the heading of the page alone, in every stylesheet of the client', () => {
@@ -64,7 +64,9 @@ describe('focus ring of what a person reaches with Tab (text of the rules, not r
     // script-only targets other than the heading (a result, a status, the card of a receipt line) keep their ring.
     const off = sheets.flatMap((path) => rules(read(path)).filter((item) => /:focus/.test(item.selector) && removes(item.body))
       .map((item) => `${path}: ${item.selector}`))
-    expect(off).toEqual([`App.css: ${heading}`])
+    // The field of a limit hands its ring to its frame: `.limits-input:has(input:focus-visible)` draws it.
+    expect(off).toEqual([`App.css: ${heading}`, 'features/dashboard/Dashboard.css: .limits-input input:focus-visible'])
+    expect(rule('.limits-input:has(input:focus-visible)', read('features/dashboard/Dashboard.css'))).toBe('outline: 2px solid var(--ck-focus); outline-offset: 2px;')
   })
 
   it('reaches only an h1 with tabindex="-1": no heading of a block, no legend, no status', () => {

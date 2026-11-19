@@ -4,14 +4,17 @@ import { describe, expect, it } from 'vitest'
 import { monthPaymentFixture, recurringFixture } from '../../api/recurring-test-support'
 import type { RecurringYear } from '../../api/recurring'
 import { isRecurringMonth } from '../../api/recurring'
+import { MoneyView } from '../../components/Money'
+import type { MoneyProps } from '../../components/Money'
 import type { PaymentMethodValue } from '../../lib/payment-methods'
 import { RecurringDueView } from './RecurringDue'
 import { PayForm, PaymentYear, PaySection } from './RecurringPay'
 import { methodName, payExpected, payNotice, yearMonthText } from './recurring-state'
 
 const NBSP = String.fromCharCode(0xa0)
-const plain = (text: string) => text.replaceAll(NBSP, ' ')
+const plain = (text: string) => text.replaceAll(NBSP, ' ').replaceAll('\u202f', ' ')
 const html = (node: ReactElement) => plain(renderToStaticMarkup(node).replace(/<svg\b.*?<\/svg>/g, ''))
+const money = (value: string, currency: string, props: Partial<MoneyProps> = {}) => html(<MoneyView value={value} currency={currency} hidden={false} {...props} />)
 const TODAY = '2026-10-13'
 const paid = (purchased_on: string, total: string, payment_method: PaymentMethodValue, source: 'photo' | 'manual' = 'manual') => ({ receipt_id: 100, purchased_on, total, payment_method, source })
 const year: RecurringYear = {
@@ -44,12 +47,12 @@ describe('«Оплатил» and the history of a payment (Vitest/SSR, not brows
   })
   it('shows the year by ways of payment, then a row a month without the months before the payment', () => {
     const page = html(<PaymentYear row={monthPaymentFixture({ year })} today={TODAY} />)
-    expect(page).toContain('За год оплачено <span class="ck-figures rec-sum-value">440 000 ₸</span>')
-    expect(page).toContain('<p class="rec-year-methods"><span class="rec-year-method">Kaspi Gold <span class="ck-figures">220 000 ₸</span></span> · '
-      + '<span class="rec-year-method">без способа <span class="ck-figures">220 000 ₸</span></span></p>')
+    expect(page).toContain(`За год оплачено ${money('440000.00', 'KZT', { className: 'rec-sum-value' })}`)
+    expect(page).toContain(`<p class="rec-year-methods"><span class="rec-year-method">Kaspi Gold ${money('220000.00', 'KZT')}</span> · `
+      + `<span class="rec-year-method">без способа ${money('220000.00', 'KZT')}</span></p>`)
     expect(page).toContain('<span class="ck-row-title">Октябрь 2026</span><span class="ck-row-meta rec-meta-paid">5 октября · Kaspi Gold</span></span>'
-      + '<span class="ck-row-amount ck-figures">220 000 ₸</span>')
-    expect(page).toContain('<span class="ck-row-meta rec-meta-overdue">просрочен</span></span><span class="ck-row-amount ck-figures">—</span>')
+      + `<span class="ck-row-amount">${money('220000.00', 'KZT', { size: 'row' })}</span>`)
+    expect(page).toContain('<span class="ck-row-meta rec-meta-overdue">просрочен</span></span><span class="ck-row-amount">—</span>')
     expect(page.match(/<li[ >]/g)).toHaveLength(5)
     // A paid month opens the page of its spend, whatever its source; «Изменить» is there.
     expect(page.match(/<a class="ck-row rec-year-row rec-year-link" href="\/receipts\/100">/g)).toHaveLength(2)
@@ -78,12 +81,12 @@ describe('«Оплатил» and the history of a payment (Vitest/SSR, not brows
     expect(form).toMatch(/<input id="[^"]+-day" type="date" max="2026-10-13" aria-invalid="false" value="2026-10-13"\/>/)
     expect(form).toMatch(/<span id="([^"]+)-method" class="rec-pay-label">Способ оплаты<\/span><div class="ck-method-chips" role="group" aria-labelledby="\1-method">/)
     expect(form).toContain('aria-pressed="false">Kaspi Gold</button>')
-    expect(form).toContain('<button type="submit" class="rec-save">Сохранить · 220 000 ₸</button><button type="button" class="ck-button-secondary">Отмена</button>')
+    expect(form).toContain(`<button type="submit" class="rec-save">Сохранить · ${money('220000.00', 'KZT')}</button><button type="button" class="ck-button-ghost rec-cancel">Отмена</button>`)
   })
   it('puts «Оплатил» under the amount of an open payment on «Главная», up to the current month only', () => {
     const data = recurringFixture()
     const page = html(<RecurringDueView data={data} onPay={() => {}} />)
-    expect(page).toContain('<span class="rec-row-end"><span class="ck-row-amount ck-figures">6 700 ₸</span><button type="button" class="rec-pay-open" '
+    expect(page).toContain(`<span class="rec-row-end"><span class="ck-row-amount">${money('6700.00', 'KZT', { size: 'row' })}</span><button type="button" class="ck-button-secondary rec-pay-open" `
       + 'aria-haspopup="dialog">Оплатил<span class="rec-visually-hidden"> «Интернет»</span></button></span>')
     // Two open ones get it; the paid one, folded under them, does not.
     expect(page.match(/rec-pay-open/g)).toHaveLength(2)

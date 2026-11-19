@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { getIncomeStats } from '../../api/incomes'
 import type { IncomeStats } from '../../api/incomes'
 import { getTrendsRange } from '../../api/trends'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
 import { formatMoney } from '../../lib/money'
 import { Link, statsIncomesHref } from '../../navigation'
@@ -37,14 +38,15 @@ export function IncomeStatsBlocks({ state, onRetry }: { state: StatsRequestState
   if (rows.length === 0) {
     categories = <RequestState kind="empty" message={own ? 'Ваших записей дохода за период нет.' : 'Доходов за период нет.'} action={addIncome} />
   } else {
+    // An income is the income tone with «+» (Чекист 2.0), the bar compares the categories in their own colours.
     categories = <ul className="trends-rows">
-      {rows.map((row) => <li key={row.id} className={`trends-row trends-cat-${row.tone}`}>
+      {rows.map((row, index) => <li key={row.id} className={`trends-row trends-cat-${row.tone}`}>
         <span className="trends-dot" aria-hidden="true" />
         <span className="trends-row-main">
           <span className="trends-row-name">{row.label}</span>
           {row.bar > 0 && <span className="trends-row-bar" aria-hidden="true"><span style={{ width: `${row.bar}%` }} /></span>}
         </span>
-        <span className="trends-value">{row.amount}</span>
+        <span className="trends-value"><Money value={data.categories[index].total} currency={data.base_currency} size="row" sign="plus" tone="in" /></span>
       </li>)}
     </ul>
   }
@@ -52,11 +54,17 @@ export function IncomeStatsBlocks({ state, onRetry }: { state: StatsRequestState
   return <>
     <Panel title="Итог за период" state={state}
       note={`Доход всей семьи и траты видимых чеков в основной валюте по курсу дня.${excluded ? ` Нет курса Нацбанка — не вошли: ${excluded}.` : ''}`}>
-      {parts ? <dl className="inc-summary-list">
-        {parts.map((part) => <div key={part.label} className="inc-summary-item">
-          <dt>{part.label}</dt>
-          <dd className="ck-figures">{part.value}{part.note && <span className="inc-summary-note"> ({part.note})</span>}</dd>
-        </div>)}
+      {/* The income of the period is the main number of the screen, in the income tone with «+»; spent and saved under it. */}
+      {parts && data.income !== null && data.saved !== null ? <dl className="stats-inc-figures">
+        {parts.map((part, index) => {
+          const value = index === 0 ? data.income : index === 1 ? data.spent : data.saved?.replace(/^-/, '')
+          return <div key={part.label} className={index === 0 ? 'stats-inc-figure stats-inc-main' : 'stats-inc-figure'}>
+            <dt>{part.label}</dt>
+            <dd><Money value={value} currency={data.base_currency} size={index === 0 ? 'display' : 'title'}
+              {...(index === 0 && { sign: 'plus' as const, tone: 'in' as const })} />
+              {part.note && <span className="stats-inc-note"> ({part.note})</span>}</dd>
+          </div>
+        })}
       </dl> : <RequestState kind="empty" message="За период доход не внесён: отложенное считать не из чего." action={addIncome} />}
     </Panel>
     <Panel title="Доход по категориям" state={state}>

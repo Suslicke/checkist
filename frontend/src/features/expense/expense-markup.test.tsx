@@ -33,7 +33,7 @@ const pageOf = <T,>(results: T[]): Page<T> => ({ count: results.length, page: 1,
 describe('«Добавить трату» form (Vitest/SSR, not browser visual acceptance)', () => {
   it('offers «＋ Обслуживание %» under the positions until there is one; its line has a percent, not a price', () => {
     const plainForm = form(emptyDraft('KZT', '2026-10-12'))
-    expect(plainForm).toContain('<button type="button" class="expense-add-line expense-add-service"><span aria-hidden="true">+</span> Обслуживание %</button>')
+    expect(plainForm).toMatch(/<button type="button" class="ck-button-ghost expense-add-line expense-add-service"><svg[^>]*aria-hidden="true"[^>]*>.*?<\/svg>Обслуживание %<\/button>/)
     const served = form({ ...emptyDraft('KZT', '2026-10-12'), lines: [{ ...newLine(), name: 'Паста', amount: '3580' }, { ...serviceLine(null), amount: '358' }] })
     expect(served).not.toContain('expense-add-service')
     expect(served).toContain('<span class="expense-line-label">Процент</span>')
@@ -44,41 +44,44 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
     expect(spendAsLine({ ...emptyDraft('KZT', '2026-10-12'), amount: '1200+350' })).toMatchObject({ name: 'Счёт', amount: '1550' })
     expect(spendAsLine(emptyDraft('KZT', '2026-10-12'))).toBeUndefined()
   })
-  it('opens on a big decimal amount in a card, the currency pill, wrapping chips, today and the save bar', () => {
+  it('opens on the hero amount on the paper, the currency pill, wrapping chips, today and the save bar', () => {
     const html = form(emptyDraft('KZT', '2026-10-12'))
-    expect(html).toContain('<section class="expense-card expense-amount"><label for="expense-amount" class="expense-label">Сумма</label>')
-    expect(html).toContain('id="expense-amount" class="expense-amount-input ck-hero-figure" inputMode="decimal"')
+    // Чекист 2.0: the amount is the hero of the focus screen — on the paper, not in a panel.
+    expect(html).toContain('<section class="expense-amount"><label for="expense-amount" class="expense-label">Сумма</label>')
+    expect(html).toContain('id="expense-amount" class="expense-amount-input" inputMode="decimal"')
     // «₸ KZT»: the sign is a picture, the field keeps the code and its name.
-    expect(html).toContain('<label class="expense-currency expense-currency-signed"><span class="expense-currency-sign" aria-hidden="true">₸</span><span class="expense-visually-hidden">Валюта</span>')
+    expect(html).toContain('<label class="expense-currency expense-currency-signed"><span class="expense-currency-sign" aria-hidden="true">₸</span><span class="ck-visually-hidden">Валюта</span>')
     expect(html).toContain('value="KZT"')
     expect(html).toMatch(/<input id="expense-date" type="date"[^>]* value="2026-10-12"\/>/)
-    // Three category chips and the two date chips; the chips wrap (no scroller).
-    expect(html.match(/class="expense-chip"/g)).toHaveLength(3)
-    expect(html.match(/class="expense-chip expense-day"/g)).toHaveLength(2)
+    // Three category chips of the system and the two date chips; the chips wrap (no scroller).
+    expect(html.match(/class="ck-chip expense-chip"/g)).toHaveLength(3)
+    expect(html.match(/class="ck-chip expense-day"/g)).toHaveLength(2)
     expect(html).toContain('<div class="expense-chips">')
     expect(html).not.toContain('ck-chip-scroller')
-    expect(html).toContain('class="expense-dot" style="--expense-tone:var(--ck-cat-2)" aria-hidden="true"></span><span class="expense-chip-name">Кафе</span></button>')
+    // The dot carries the tone of the family (--ck-tone, the bricks of tokens.css).
+    expect(html).toContain('class="expense-dot" style="--ck-tone:var(--ck-cat-2)" aria-hidden="true"></span><span class="expense-chip-name">Кафе</span></button>')
     expect(html).toContain('aria-pressed="false"')
     expect(html).toContain('class="expense-actions ck-action-bar"')
-    expect(html).toContain('<button type="submit" class="expense-save">Сохранить</button>')
+    // The one seal of the screen, across the width.
+    expect(html).toContain('<button type="submit" class="ck-btn-block expense-save">Сохранить</button>')
     // The ✕ of the header closes the form: no «Отмена» of its own.
     expect(html).not.toContain('Отмена')
     expect(html).not.toContain('Удалить трату')
     expect(html).toContain('<span class="expense-row-label">Где</span><input id="expense-place" class="expense-row-input"')
     expect(html).toContain('placeholder="Без места"')
     expect(html).toContain('<textarea id="expense-note" class="expense-row-input" rows="1" placeholder="Необязательно"')
-    expect(html).toContain('<span aria-hidden="true">+</span> Добавить<span class="expense-visually-hidden"> позицию</span></button>')
+    expect(html).toMatch(/<button type="button" class="ck-button-ghost expense-add-line"><svg[^>]*aria-hidden="true"[^>]*>.*?<\/svg>Добавить<span class="ck-visually-hidden"> позицию<\/span><\/button>/)
     expect(html).not.toContain('<table')
   })
   it('names a nested category by itself, with its parent for a screen reader and the colour of its root', () => {
     const nested: Category = { ...category(5, 'Кафе'), parent_id: 1, depth: 1, path: [{ id: 1, name: 'Еда' }, { id: 5, name: 'Кафе' }] }
     const html = renderToStaticMarkup(<ExpenseForm draft={emptyDraft('KZT', '2026-10-12')} chips={[nested]} errors={{}} saving={false} onChange={noop} onSubmit={noop} />)
-    expect(html).toContain('title="Еда › Кафе"><span class="expense-dot" style="--expense-tone:var(--ck-cat-1)" aria-hidden="true"></span>'
-      + '<span class="expense-visually-hidden">Еда › </span><span class="expense-chip-name">Кафе</span></button>')
+    expect(html).toContain('title="Еда › Кафе"><span class="expense-dot" style="--ck-tone:var(--ck-cat-1)" aria-hidden="true"></span>'
+      + '<span class="ck-visually-hidden">Еда › </span><span class="expense-chip-name">Кафе</span></button>')
   })
   it('a code without a common sign is the pill alone', () => {
     const html = form(emptyDraft('UZS', '2026-10-12'))
-    expect(html).toContain('<label class="expense-currency"><span class="expense-visually-hidden">Валюта</span>')
+    expect(html).toContain('<label class="expense-currency"><span class="ck-visually-hidden">Валюта</span>')
     expect(html).not.toContain('expense-currency-sign')
   })
   it('marks the chosen chip and shows errors at their fields', () => {
@@ -105,14 +108,16 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
       expect(html).toContain(`<span class="expense-line-label">${label}</span>`)
     }
     expect(html).toContain('<option value="kg">кг</option>')
-    // The exact sum stays in the field; the summary next to it shows it exactly, kopecks when there are any.
-    expect(html).toContain('<button type="submit" class="expense-save">Сохранить · 350,50\u00a0₸</button>')
+    // The exact sum stays in the field; the save button names it exactly by <Money>, kopecks when there are any.
+    expect(html).toContain('<button type="submit" class="ck-btn-block expense-save">Сохранить · <span class="ck-money ck-money--inline">'
+      + '<span class="ck-money-int">350</span><span class="ck-money-frac">,50</span><span class="ck-money-cur">\u202f₸</span></span></button>')
   })
   it('folds every line into a card on a phone and unfolds a line with a message', () => {
     const panini = { ...newLine(), name: 'Панини', quantity: '2', price: '1790', amount: '3580' }
     const draft = { ...emptyDraft('KZT', '2026-10-12'), lines: [panini, { ...newLine(), name: 'Сок', amount: 'x' }] }
     const html = form(draft, { narrow: true, errors: { 'lines.1.amount': messages.lineAmount } }).replace(/[\u00a0\u202f]/g, ' ')
-    expect(html).toContain('<span class="expense-line-title">Панини</span><span class="expense-line-detail">2 шт × 1 790,00 ₸</span></span><span class="expense-line-sum">3 580 ₸</span>')
+    expect(html).toContain('<span class="expense-line-title">Панини</span><span class="expense-line-detail">2 шт × 1 790,00 ₸</span></span>'
+      + '<span class="expense-line-sum"><span class="ck-money ck-money--row"><span class="ck-money-int">3 580</span><span class="ck-money-cur"> ₸</span></span></span>')
     expect(html).toMatch(/<button type="button" class="expense-line-summary" aria-expanded="false" aria-controls="expense-line-\d+-fields">/)
     expect(html).not.toContain(`id="expense-line-${panini.key}-name"`)
     // The line with a message is open, its field marked.
@@ -125,21 +130,22 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
     const html = form(photo, { receiptId: 7, media: { thumb: '/media/crops/7/thumb-400-v1.webp', image: '/media/crops/7/crop.png' } })
       .replace(/[\u00a0\u202f]/g, ' ')
     expect(html).toContain('<a class="expense-source-photo" href="/media/crops/7/crop.png" target="_blank" rel="noreferrer"><img src="/media/crops/7/thumb-400-v1.webp" alt="Фото чека"')
-    expect(html).toContain('href="/receipts/7">Открыть чек с фото</a>')
+    expect(html).toMatch(/<a class="expense-source-link" href="\/receipts\/7">Открыть чек с фото<svg[^>]*aria-hidden="true"/)
     expect(html).toContain('Скидка на весь чек: −50 ₸, уже вычтена из итога.')
     expect(html).toMatch(/<option value=""[^>]*>Как у товара<\/option>/)
-    expect(html).toContain('Сохранить · 850 ₸')
+    expect(html).toContain('Сохранить · <span class="ck-money ck-money--inline"><span class="ck-money-int">850</span><span class="ck-money-cur"> ₸</span></span>')
     const statement = form({ ...emptyDraft('KZT', '2026-10-12'), amount: '1800', category: 1, method: 'kaspi_gold', statement: 'Выписка Kaspi Gold' })
-    expect(statement).toContain('<p class="expense-source-mark" role="note">Из выписки: Kaspi Gold</p>')
+    expect(statement).toMatch(/<p class="expense-source-mark" role="note"><svg[^>]*aria-hidden="true"[^>]*>.*?<\/svg>Из выписки: Kaspi Gold<\/p>/)
     expect(statement).toContain('<p class="expense-method-fixed">Kaspi Gold — банк выписки</p>')
   })
   it('names the exact amount on the save button, chooses the date by chips and keeps the calendar', () => {
     const html = form({ ...emptyDraft('KZT', '2026-10-11'), amount: '4500,40' }, { today: '2026-10-12' })
-    expect(html).toContain('<button type="submit" class="expense-save">Сохранить · 4\u00a0500,40\u00a0₸</button>')
-    expect(html).toContain('<button type="button" class="expense-chip expense-day" aria-pressed="false">Сегодня</button>')
-    expect(html).toContain('<button type="button" class="expense-chip expense-day" aria-pressed="true">Вчера</button>')
+    expect(html).toContain('<button type="submit" class="ck-btn-block expense-save">Сохранить · <span class="ck-money ck-money--inline">'
+      + '<span class="ck-money-int">4\u202f500</span><span class="ck-money-frac">,40</span><span class="ck-money-cur">\u202f₸</span></span></button>')
+    expect(html).toContain('<button type="button" class="ck-chip expense-day" aria-pressed="false">Сегодня</button>')
+    expect(html).toContain('<button type="button" class="ck-chip expense-day" aria-pressed="true">Вчера</button>')
     expect(html).toContain('<div class="expense-row" role="group" aria-labelledby="expense-when-label"><span id="expense-when-label" class="expense-row-label">Когда</span>')
-    expect(html).toMatch(/<label class="expense-date-pick"><svg[^>]*>.*?<\/svg><span class="expense-visually-hidden">Дата покупки<\/span><input id="expense-date" type="date"/)
+    expect(html).toMatch(/<label class="expense-date-pick"><svg[^>]*>.*?<\/svg><span class="ck-visually-hidden">Дата покупки<\/span><input id="expense-date" type="date"/)
     const other = form(emptyDraft('KZT', '2026-09-01'), { today: '2026-10-12' })
     expect(other).toContain('expense-date-pick expense-date-pick-chosen')
     expect(other).toContain('<time dateTime="2026-09-01">01.09</time>')
@@ -147,7 +153,7 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
   })
   it('opens all categories with a search in a sheet', () => {
     const html = form(emptyDraft('KZT', '2026-10-12'))
-    expect(html).toContain('<button type="button" class="expense-chip expense-more" aria-haspopup="dialog" aria-expanded="false">Все категории…</button>')
+    expect(html).toContain('<button type="button" class="ck-chip expense-chip expense-more" aria-haspopup="dialog" aria-expanded="false">Все категории…</button>')
     expect(html).not.toContain('ck-sheet')
     const open = form({ ...emptyDraft('KZT', '2026-10-12'), category: 2 }, { initialSheet: true })
     expect(open).toContain('Все категории</h2>')
@@ -162,18 +168,26 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
   })
   it('ends an edit with a quiet «Удалить трату» before the save bar', () => {
     const html = form(emptyDraft('KZT', '2026-10-12'), { receiptId: 90, saving: true })
-    expect(html).toContain('<div class="expense-delete"><button type="button" class="expense-danger expense-delete-button">Удалить трату</button></div>')
+    expect(html).toMatch(/<div class="expense-delete"><button type="button" class="ck-button-danger expense-delete-button"><svg[^>]*aria-hidden="true"[^>]*>.*?<\/svg>Удалить трату<\/button><\/div>/)
     expect(html.indexOf('expense-delete-button')).toBeLessThan(html.indexOf('expense-actions'))
-    expect(html).toContain('<button type="submit" class="expense-save" disabled="">Сохраняем…</button>')
+    expect(html).toContain('<button type="submit" class="ck-btn-block expense-save" disabled="">Сохраняем…</button>')
     expect(html).not.toContain('href="/receipts/90"')
   })
-  it('asks before deleting from the form: inline on a wide screen, in a sheet on a phone', () => {
-    const wide = renderToStaticMarkup(<DeleteSpend receiptId={90} initial={{ kind: 'confirm' }} />)
-    expect(wide).toContain('Удалить эту трату? Отменить удаление нельзя.')
-    expect(wide).not.toContain('expense-delete-button')
-    const phone = renderToStaticMarkup(<DeleteSpend receiptId={90} narrow initial={{ kind: 'confirm' }} />)
-    expect(phone).toContain('class="expense-danger expense-delete-button">Удалить трату</button>')
-    expect(phone).toContain('Удалить трату?</h2>')
+  it('asks before deleting from the form in the confirmation dialog, on every width', () => {
+    // Чекист 2.0: deleting cannot be undone — the shared ConfirmDialog asks (an alertdialog, «Отмена» and the danger action).
+    for (const narrow of [false, true]) {
+      const asking = renderToStaticMarkup(<DeleteSpend receiptId={90} narrow={narrow} initial={{ kind: 'confirm' }} />)
+      expect(asking).toContain('role="alertdialog"')
+      expect(asking).toContain('Удалить трату?</h2>')
+      expect(asking).toContain('Трата исчезнет из списка и сумм. Отменить удаление нельзя.')
+      expect(asking).toContain('class="ck-confirm-action ck-confirm-danger">Удалить трату</button>')
+      expect(asking).toContain('>Отмена</button>')
+      // The button that opened it stays in its place under the dialog.
+      expect(asking).toContain('expense-delete-button')
+    }
+    expect(renderToStaticMarkup(<DeleteSpend receiptId={90} />)).not.toContain('alertdialog')
+    expect(renderToStaticMarkup(<DeleteSpend receiptId={90} income initial={{ kind: 'confirm' }} />)).toContain('Удалить доход?</h2>')
+    expect(renderToStaticMarkup(<DeleteSpend receiptId={90} initial={{ kind: 'deleting' }} />)).toContain('>Удаляем…</button>')
     expect(renderToStaticMarkup(<DeleteSpend receiptId={90} initial={{ kind: 'failed', message: 'Сбой.' }} />)).toContain('role="alert">Сбой.</p>')
   })
 })
@@ -214,19 +228,19 @@ describe('a manual spend on the receipt screens', () => {
     expect(html).toContain('<dt>Адрес</dt>')
     expect(html).not.toContain('вручную')
   })
-  it('asks inline before deleting, without a browser dialog', () => {
+  it('asks in the confirmation dialog before deleting, without a browser dialog', () => {
     const html = renderToStaticMarkup(<ManualSpendActions receiptId={90} initial={{ kind: 'confirm' }} />)
-    expect(html).toContain('Удалить эту трату? Отменить удаление нельзя.')
+    expect(html).toContain('role="alertdialog"')
+    expect(html).toContain('Трата исчезнет из списка и сумм. Отменить удаление нельзя.')
     expect(html).toContain('>Удалить трату</button>')
     expect(html).toContain('>Отмена</button>')
-    expect(html).not.toContain('Изменить')
     expect(renderToStaticMarkup(<ManualSpendActions receiptId={90} initial={{ kind: 'failed', message: 'Сбой.' }} />)).toContain('role="alert">Сбой.</p>')
   })
-  it('asks in a sheet over the bottom bar on a phone', () => {
+  it('keeps its bottom bar under the dialog on a phone', () => {
     const html = renderToStaticMarkup(<ManualSpendActions receiptId={90} narrow initial={{ kind: 'confirm' }} />)
     expect(html.startsWith('<div class="receipt-actions expense-manual-actions ck-action-bar">')).toBe(true)
+    expect(html).toContain('href="/receipts/90/edit">Изменить</a>')
     expect(html).toContain('Удалить трату?</h2>')
-    expect(html).toContain('Удалить эту трату? Отменить удаление нельзя.')
-    expect(renderToStaticMarkup(<ManualSpendActions receiptId={90} narrow />)).not.toContain('ck-sheet')
+    expect(renderToStaticMarkup(<ManualSpendActions receiptId={90} narrow />)).not.toContain('alertdialog')
   })
 })

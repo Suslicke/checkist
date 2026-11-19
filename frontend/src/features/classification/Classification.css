@@ -1,87 +1,107 @@
-/* «Категории товаров» in the language of the artifact (docs/plans/2026-10-13-artifact-mobile-design.md): cards of 20 px
-   on the page background, headings of 18 px / 800, a group of one suggestion on the tint of the page inside its card,
-   its products as rows with dividers, marks as pills. Colours are tokens only, sizes from the text scale. */
-.ck-class { display: grid; gap: 16px; min-width: 0; overflow-wrap: anywhere; }
+/* «Категории товаров» in Чекист 2.0 (docs/design-system): panels of the surface with a line frame and the corner of a
+   card, no shadow; one suggestion of the model is a block on surface-2 with the gold line of the assistant, its products
+   as rows parted by a line; states as calm stamps with words — waiting in the over tone, confirmed in the income tone,
+   rejected and replaced in ink-2. The gold and the gold ink belong to the assistant only: what the model suggested and
+   what it is doing now. Colours are 2.0 tokens only, sizes from the 2.0 text scale. */
+.ck-class { display: grid; gap: var(--ck-space-3); min-width: 0; overflow-wrap: anywhere; }
 /* A child of the grid is never wider than the screen: the row of filter chips scrolls inside itself. */
 .ck-class > * { min-width: 0; }
-.ck-class-panel { display: grid; gap: 16px; min-width: 0; padding: 20px; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
-.ck-class-panel > h2 { font-size: var(--ck-text-lg); font-weight: 800; line-height: 1.3; }
+.ck-class-panel { display: grid; gap: var(--ck-space-4); min-width: 0; padding: var(--ck-space-4); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface); }
+.ck-class-panel > h2 { font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; line-height: 1.3; letter-spacing: 0; }
 .ck-class-panel > *, .ck-class-list > *, .ck-class-area > * { min-width: 0; max-width: 100%; }
 .ck-class p { margin: 0; }
-.ck-class-list, .ck-class-run-actions { display: grid; gap: 16px; min-width: 0; }
-.ck-class-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.ck-class-list, .ck-class-run-actions { display: grid; gap: var(--ck-space-4); min-width: 0; }
+.ck-class-actions { display: flex; flex-wrap: wrap; gap: var(--ck-space-2); align-items: center; }
 .ck-class-actions > * { max-width: 100%; }
-.ck-class-secondary { background: var(--ck-surface); border: 1.5px solid var(--ck-link); color: var(--ck-link); }
-.ck-class-secondary:hover:not(:disabled) { background: var(--ck-surface-raised); border-color: var(--ck-link-hover); color: var(--ck-link-hover); }
-.ck-class-note { color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
-.ck-class-subtext { display: block; color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 400; margin-top: 2px; }
-.ck-class-counters { font-weight: 700; }
-.ck-class-run { padding: 12px 14px; border-radius: var(--ck-radius-sm); background: var(--ck-bg); color: var(--ck-text); font-size: var(--ck-text-sm); }
-.ck-class-warning { display: grid; gap: 12px; justify-items: start; color: var(--ck-warning-text); background: var(--ck-warning-bg); border: 1px solid var(--ck-warning-border); padding: 14px; border-radius: var(--ck-radius-sm); font-size: var(--ck-text-sm); }
-.ck-class-error { color: var(--ck-error-text); }
+/* A second action is tonal: the seal belongs to the one main action of a block. */
+.ck-class-secondary { border-color: transparent; background: var(--ck-surface-2); color: var(--ck-ink); }
+/* Inside a suggestion (surface-2) a second action is a surface button in a line frame, and a decision about one record
+   or one group is the tonal seal — the full seal stays with «Предложить категории», the main action of the screen. */
+.ck-class-group .ck-class-secondary:not(:disabled) { border-color: var(--ck-line); background: var(--ck-surface); }
+.ck-class-group .ck-class-actions > button:not(.ck-class-secondary):not(:disabled) { border-color: transparent; background: var(--ck-seal-soft); color: var(--ck-seal-ink); }
+.ck-class-note { color: var(--ck-ink-2); font-size: var(--ck-text-label); line-height: 1.4; }
+.ck-class-subtext { display: block; margin-top: 2px; color: var(--ck-ink-2); font-size: var(--ck-text-caption); font-weight: 400; }
+.ck-class-counters { font-size: var(--ck-text-body); font-weight: 500; font-variant-numeric: tabular-nums; }
+/* The run of the model: the voice of the assistant on its gold tint. */
+.ck-class-run { padding: var(--ck-space-3) var(--ck-space-4); border-radius: var(--ck-radius-field); background: var(--ck-gold-soft); color: var(--ck-gold-ink); font-size: var(--ck-text-label); font-weight: 500; }
+/* A warning says why in words: the over tone on its soft fill, the text in ink. */
+.ck-class-warning { display: grid; gap: var(--ck-space-3); justify-items: start; padding: var(--ck-space-3) var(--ck-space-4); border: 1px solid color-mix(in srgb, var(--ck-over) 35%, transparent); border-radius: var(--ck-radius-field); background: var(--ck-over-soft); color: var(--ck-ink); font-size: var(--ck-text-label); }
+.ck-class-error { color: var(--ck-error); font-size: var(--ck-text-label); font-weight: 500; }
 /* Empty live regions stay in the accessibility tree and take no room. */
 .ck-class-result:empty, .ck-class-error:empty, .ck-class-result-bar:not(.ck-class-result-shown) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.ck-class-result-bar.ck-class-result-shown { position: sticky; top: 8px; z-index: 1; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--ck-popover-border); border-radius: var(--ck-radius-sm); background: var(--ck-surface-raised); box-shadow: 0 2px 8px var(--ck-popover-shadow); }
-.ck-class-result-bar p { flex: 1 1 240px; font-weight: 600; }
-.ck-class-new { display: inline-block; padding: 2px 10px; border-radius: var(--ck-radius-pill); background: var(--ck-warning-bg); color: var(--ck-warning-text); font-size: var(--ck-text-xs); font-weight: 700; vertical-align: middle; white-space: nowrap; }
-.ck-class-filter ul { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
-.ck-class-filter a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border: 1px solid var(--ck-border-field); border-radius: var(--ck-radius-sm); background: var(--ck-surface); color: var(--ck-link); text-underline-offset: 3px; }
-.ck-class-filter a[aria-current] { background: var(--ck-accent-bg); border-color: var(--ck-accent-text); color: var(--ck-accent-text); font-weight: 600; }
-.ck-class-groups, .ck-class-records, .ck-class-aliases { display: grid; gap: 16px; padding: 0; margin: 0; list-style: none; min-width: 0; }
-/* One suggested generic product: a block on the tint of the page inside the card, its products as rows. */
-.ck-class-group { min-width: 0; padding: 16px; border-radius: var(--ck-radius-button); background: var(--ck-bg); }
-.ck-class-group > section { display: grid; gap: 10px; min-width: 0; }
-.ck-class h3 { margin: 0; font-size: var(--ck-text-base); font-weight: 800; }
-.ck-class-path { font-size: var(--ck-text-sm); }
-.ck-class-path { color: var(--ck-text); }
+.ck-class-result-bar.ck-class-result-shown { position: sticky; top: var(--ck-space-2); z-index: 1; display: flex; flex-wrap: wrap; gap: var(--ck-space-3); align-items: center; padding: var(--ck-space-3) var(--ck-space-4); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-field); background: var(--ck-surface-2); box-shadow: var(--ck-shadow-sm); }
+.ck-class-result-bar p { flex: 1 1 240px; font-size: var(--ck-text-label); font-weight: 600; }
+/* «новый» / «новая»: made by the model — a small gold stamp. */
+.ck-class-new { display: inline-block; padding: 1px var(--ck-space-2); border-radius: 6px; background: var(--ck-gold-soft); color: var(--ck-gold-ink); font-family: var(--ck-font-ui); font-size: var(--ck-text-caption); font-weight: 600; line-height: 1.4; vertical-align: middle; white-space: nowrap; }
+/* The states of the records: chips (a choice is ink); a phone scrolls them in one row (ChipScroller). */
+.ck-class-filter ul { display: flex; flex-wrap: wrap; gap: var(--ck-space-2); padding: 0; margin: 0; list-style: none; }
+.ck-class-filter ul a { position: relative; display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border: 1px solid var(--ck-line); border-radius: var(--ck-radius-pill); background: var(--ck-surface); color: var(--ck-ink); font-size: var(--ck-text-label); font-weight: 500; text-decoration: none; white-space: nowrap; }
+.ck-class-filter ul a::before { content: ""; position: absolute; inset: -5px 0; }
+.ck-class .ck-class-filter a:not(.action-link):not([aria-current]) { color: var(--ck-ink); }
+.ck-class-filter ul a[aria-current] { border-color: var(--ck-ink); background: var(--ck-ink); color: var(--ck-paper); font-weight: 600; }
+.ck-class-groups, .ck-class-records, .ck-class-aliases { display: grid; gap: var(--ck-space-3); padding: 0; margin: 0; list-style: none; min-width: 0; }
+/* One suggested generic product: a block on surface-2 inside the panel with the gold line of the assistant, its products
+   as rows. */
+.ck-class-group { min-width: 0; padding: var(--ck-space-4); border-radius: var(--ck-radius-button); background: var(--ck-surface-2); box-shadow: inset 3px 0 0 var(--ck-gold); }
+.ck-class-group > section { display: grid; gap: var(--ck-space-2); min-width: 0; }
+.ck-class h3 { margin: 0; font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; line-height: 1.3; }
+.ck-class-path { color: var(--ck-ink); font-size: var(--ck-text-label); font-weight: 500; }
 .ck-class-groups .ck-class-records { gap: 0; }
-.ck-class-record { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 20px; align-items: start; min-width: 0; padding-block: 14px; border-top: 1px solid var(--ck-divider); }
+.ck-class-record { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--ck-space-3) var(--ck-space-5); align-items: start; min-width: 0; padding-block: var(--ck-space-3); border-top: 1px solid var(--ck-line); }
 .ck-class-groups .ck-class-record:last-child { padding-bottom: 0; }
 .ck-class-record > * { min-width: 0; }
-.ck-class-record-main { display: grid; gap: 4px; }
+.ck-class-record-main { display: grid; gap: var(--ck-space-1); }
 .ck-class-record > .ck-class-area, .ck-class-flat > p { grid-column: 1 / -1; }
-.ck-class-product { font-weight: 700; }
-.ck-class a:not(.action-link):not([aria-current]) { color: var(--ck-link); text-underline-offset: 3px; }
-.ck-class-record a { display: inline-flex; align-items: center; min-height: 44px; }
+.ck-class-product { font-size: var(--ck-text-body); font-weight: 600; }
+.ck-class a:not(.action-link):not([aria-current]) { color: var(--ck-seal-ink); text-underline-offset: 3px; }
+.ck-class-record a { display: inline-flex; align-items: center; min-height: var(--ck-tap); }
 .ck-class-product a { text-decoration: none; }
+/* The name of a product reads as the title of its row: ink, not the colour of a link. */
+.ck-class .ck-class-product a:not(.action-link):not([aria-current]) { color: var(--ck-ink); }
 .ck-class-product a:hover { text-decoration: underline; }
-.ck-class-aliases { gap: 6px; font-size: var(--ck-text-sm); }
+.ck-class-aliases { gap: var(--ck-space-1); color: var(--ck-ink); font-size: var(--ck-text-label); }
 /* A mark is read as a whole: it wraps between its words only. */
-.ck-class-state { justify-self: start; overflow-wrap: normal; padding: 4px 12px; border-radius: var(--ck-radius-pill); background: var(--ck-warning-bg); color: var(--ck-warning-text); font-size: var(--ck-text-xs); font-weight: 700; }
-.ck-class-state-confirmed { background: var(--ck-success-bg); color: var(--ck-success-text); }
-.ck-class-state-rejected, .ck-class-state-superseded { background: var(--ck-neutral-bg); color: var(--ck-neutral-text); }
-.ck-class-facts { display: grid; gap: 10px; margin: 0; }
-.ck-class-facts dt { color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
-.ck-class-facts dd { margin: 2px 0 0; }
-.ck-class-area { display: grid; gap: 14px; min-width: 0; padding: 14px; border-radius: var(--ck-radius-button); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
+.ck-class-state { justify-self: start; overflow-wrap: normal; padding: 2px var(--ck-space-2); border: 1px solid color-mix(in srgb, var(--ck-over) 40%, transparent); border-radius: var(--ck-radius-pill); background: var(--ck-over-soft); color: var(--ck-over); font-size: var(--ck-text-caption); font-weight: 600; line-height: 1.4; }
+.ck-class-state-confirmed { border-color: color-mix(in srgb, var(--ck-income) 40%, transparent); background: var(--ck-income-soft); color: var(--ck-income); }
+.ck-class-state-rejected, .ck-class-state-superseded { border-color: var(--ck-line); background: var(--ck-surface-2); color: var(--ck-ink-2); }
+.ck-class-facts { display: grid; gap: 0; margin: 0; }
+.ck-class-facts > div { padding-block: var(--ck-space-2); border-top: 1px solid var(--ck-line); }
+.ck-class-facts > div:first-child { border-top: 0; padding-top: 0; }
+.ck-class-facts dt { color: var(--ck-ink-2); font-size: var(--ck-text-caption); }
+.ck-class-facts dd { margin: 2px 0 0; font-size: var(--ck-text-label); }
+/* An open area under a record (reject, choose another, confirm a group): a panel of its own on the surface. */
+.ck-class-area { display: grid; gap: var(--ck-space-3); min-width: 0; padding: var(--ck-space-4); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-button); background: var(--ck-surface); }
 .ck-class-area-title { font-weight: 600; }
-.ck-class-field { display: grid; gap: 6px; min-width: 0; }
-.ck-class-field label, .ck-class legend { font-weight: 600; }
-.ck-class-field input { width: 100%; min-width: 0; min-height: 48px; padding: 10px 14px; border: 1px solid var(--ck-border-field); border-radius: var(--ck-radius-sm); background: var(--ck-surface); color: var(--ck-text); font: inherit; }
-.ck-class-options { display: grid; gap: 12px; justify-items: start; min-width: 0; }
-.ck-class fieldset { width: 100%; min-width: 0; max-height: 320px; margin: 0; padding: 8px 14px; overflow-y: auto; border: 1px solid var(--ck-border); border-radius: var(--ck-radius-sm); background: var(--ck-surface); }
+.ck-class-field { display: grid; gap: var(--ck-space-2); min-width: 0; }
+.ck-class-field label, .ck-class legend { font-size: var(--ck-text-label); font-weight: 600; }
+.ck-class-field input { width: 100%; min-width: 0; min-height: var(--ck-tap); padding: 10px 14px; border: 1px solid var(--ck-line-strong); border-radius: var(--ck-radius-field); background: var(--ck-surface); color: var(--ck-ink); font-size: var(--ck-text-field); }
+.ck-class-options { display: grid; gap: var(--ck-space-3); justify-items: start; min-width: 0; }
+.ck-class fieldset { width: 100%; min-width: 0; max-height: 320px; margin: 0; padding: var(--ck-space-2) var(--ck-space-4); overflow-y: auto; border: 1px solid var(--ck-line); border-radius: var(--ck-radius-field); background: var(--ck-surface); }
 .ck-class legend { padding: 0 6px; }
-.ck-class-choice { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding-block: 8px; cursor: pointer; }
-.ck-class-choice input { flex: 0 0 auto; width: 20px; height: 20px; min-height: 0; margin: 2px 0 0; accent-color: var(--ck-primary); }
+.ck-class-choice { display: flex; align-items: flex-start; gap: 10px; min-height: var(--ck-tap); padding-block: var(--ck-space-2); cursor: pointer; }
+.ck-class-choice + .ck-class-choice { border-top: 1px solid var(--ck-line); }
+.ck-class-choice input { flex: 0 0 auto; width: 20px; height: 20px; min-height: 0; margin: 2px 0 0; accent-color: var(--ck-ink); }
 .ck-class-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ck-class .pagination { padding: 0; }
-/* Marks outside the screen: the catalog list and the product card. */
-.ck-class-badge { margin-top: 8px; }
-.ck-class-badge a, .ck-class-badge span { display: inline-flex; align-items: center; overflow-wrap: normal; min-height: 32px; padding: 4px 12px; border-radius: var(--ck-radius-pill); background: var(--ck-warning-bg); color: var(--ck-warning-text); font-size: var(--ck-text-xs); font-weight: 700; text-decoration: none; }
-/* The link of the mark keeps a target of 44 px: the pill is drawn smaller, the tap area is not. */
+/* Marks outside the screen: the catalog list (a stamp of the over tone with words, «требует подтверждения») and the
+   product card (the explanation of the assistant on its gold tint). */
+.ck-class-badge { margin-top: 6px; }
+.ck-class-badge a, .ck-class-badge span { display: inline-flex; align-items: center; overflow-wrap: normal; min-height: 24px; padding: 2px var(--ck-space-2); border: 1px solid color-mix(in srgb, var(--ck-over) 40%, transparent); border-radius: 6px; background: var(--ck-over-soft); color: var(--ck-over); font-size: var(--ck-text-caption); font-weight: 600; line-height: 1.35; text-decoration: none; }
+/* The link of the mark keeps a target of a tap: the stamp is drawn smaller, the tap area is not. */
 .ck-class-badge a { position: relative; }
-.ck-class-badge a::after { content: ""; position: absolute; inset: -6px 0; }
+.ck-class-badge a::after { content: ""; position: absolute; inset: -10px 0; }
 .ck-class-badge a:hover { text-decoration: underline; }
-.ck-class-notice { margin: 16px 0; overflow-wrap: anywhere; }
+.ck-class-notice { margin: var(--ck-space-4) 0; overflow-wrap: anywhere; }
+.ck-class-warning.ck-class-notice { border-color: color-mix(in srgb, var(--ck-gold) 45%, transparent); background: var(--ck-gold-soft); }
 .ck-class-notice p { margin: 0; }
 @media (max-width: 720px) {
   .ck-class-record { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 540px) {
-  .ck-class-group { padding: 12px; }
+  .ck-class-group { padding: var(--ck-space-3) var(--ck-space-3) var(--ck-space-3) var(--ck-space-4); }
   /* The main action takes its own row; the others share the next one. */
-  .ck-class-actions button, .ck-class-actions .action-link { flex: 1 1 120px; padding-inline: 8px; }
-  .ck-class-actions .ck-class-secondary { font-size: var(--ck-text-sm); }
+  .ck-class-actions button, .ck-class-actions .action-link { flex: 1 1 120px; padding-inline: var(--ck-space-2); }
+  .ck-class-actions .ck-class-secondary { font-size: var(--ck-text-label); }
   .ck-class-actions > button:first-child:not(.ck-class-secondary) { flex-basis: 100%; }
   .ck-class fieldset { max-height: none; }
 }

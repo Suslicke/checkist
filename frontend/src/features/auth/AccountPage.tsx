@@ -4,9 +4,7 @@ import { changePassword, logout } from '../../api/session'
 import { initials } from '../../lib/people'
 import { Link } from '../../navigation'
 import { applyMe, isHead, useSession } from '../../session'
-import { useTheme } from '../../theme'
-import type { Theme } from '../../theme'
-import { listIconsNames, setListIcons, useListIcons } from '../../lib/list-icons'
+import AppearanceSection from './AppearanceSection'
 import SettingsSection from './SettingsSection'
 import PushSection from '../push/PushSection'
 import McpSection from './McpSection'
@@ -31,8 +29,10 @@ export type AccountViewProps = {
   onPassword: () => void
   signOut: FormState
   onSignOut: () => void
-  /** «Настройки» under the person; the page passes the live section. */
+  /** «Настройки» under the person (the main currency); the page passes the live section. */
   settings?: ReactNode
+  /** The sections after «Оформление»: notifications, Pocket ID, MCP; the page passes the live ones. */
+  connections?: ReactNode
 }
 
 /** A chevron at the end of a row that leads to another page. */
@@ -40,27 +40,9 @@ export function Chevron() {
   return <svg className="ck-auth-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg>
 }
 
-const themeNames: [Theme, string][] = [['light', 'Светлая'], ['dark', 'Тёмная']]
-
-/** The theme as two segments: the chosen one is pressed. The same choice as the switch of the header. */
-function ThemeChoice() {
-  const { theme, setTheme } = useTheme()
-  return <div className="ck-auth-segments" role="group" aria-labelledby="account-theme-label">
-    {themeNames.map(([value, name]) => <button key={value} type="button" className="ck-auth-segment" aria-pressed={theme === value}
-      onClick={() => setTheme(value)}>{name}</button>)}
-  </div>
-}
-
-/** What the squares of the spends show, in the same segments: the category or how the spend came in (lib/list-icons). */
-function ListIconsChoice() {
-  const mode = useListIcons()
-  return <div className="ck-auth-segments" role="group" aria-labelledby="account-icons-label">
-    {listIconsNames.map(([value, name]) => <button key={value} type="button" className="ck-auth-segment" aria-pressed={mode === value}
-      onClick={() => setListIcons(value)}>{name}</button>)}
-  </div>
-}
-
-export function AccountView({ username, displayName, family, password, values, onChange, onPassword, signOut, onSignOut, settings }: AccountViewProps) {
+/** «Аккаунт» (Чекист 2.0): the person, the settings of the family and of this device, the ways to the family and the
+ * export, the connections, the password and the sign-out at the end — panels of rows, one main action (the password). */
+export function AccountView({ username, displayName, family, password, values, onChange, onPassword, signOut, onSignOut, settings, connections }: AccountViewProps) {
   const saving = password.kind === 'pending'
   const leaving = signOut.kind === 'pending'
   const name = displayName?.trim() || username
@@ -75,6 +57,8 @@ export function AccountView({ username, displayName, family, password, values, o
   )
   return (
     <div className="ck-auth" data-account>
+      {/* Two columns on a computer (theme/desktop.css); no box below 960 px, so a phone reads one column in this order. */}
+      <div className="ck-auth-col">
       <section className="ck-auth-panel" aria-labelledby="account-user-heading">
         <div className="ck-auth-profile">
           <span className="ck-auth-avatar" aria-hidden="true">{initials(name)}</span>
@@ -87,16 +71,9 @@ export function AccountView({ username, displayName, family, password, values, o
         </div>
       </section>
       {settings}
-      <section className="ck-auth-panel ck-auth-list" aria-label="Оформление и данные">
+      <AppearanceSection id="account-appearance" />
+      <section className="ck-auth-panel ck-auth-list" aria-label="Семья и данные">
         <ul className="ck-auth-rows">
-          <li className="ck-auth-row">
-            <span id="account-theme-label" className="ck-auth-row-label">Тема</span>
-            <ThemeChoice />
-          </li>
-          <li className="ck-auth-row">
-            <span id="account-icons-label" className="ck-auth-row-label">Значки</span>
-            <ListIconsChoice />
-          </li>
           <li>
             <Link className="ck-auth-row" to="/family" data-auth-family>
               <span className="ck-auth-row-text"><span className="ck-auth-row-label">Семья</span>
@@ -113,6 +90,9 @@ export function AccountView({ username, displayName, family, password, values, o
           </li>
         </ul>
       </section>
+      </div>
+      <div className="ck-auth-col">
+      {connections}
       <section aria-labelledby="account-password-heading">
         <form className="ck-auth-panel" method="post" noValidate onSubmit={submit}>
           <h2 id="account-password-heading">Смена пароля</h2>
@@ -131,9 +111,10 @@ export function AccountView({ username, displayName, family, password, values, o
         </form>
       </section>
       <div className="ck-auth-actions">
-        <button type="button" className="ck-auth-danger" data-auth-logout aria-disabled={leaving || undefined} aria-describedby="logout-message"
+        <button type="button" className="ck-auth-danger ck-auth-signout" data-auth-logout aria-disabled={leaving || undefined} aria-describedby="logout-message"
           onClick={leaving ? undefined : onSignOut}>{leaving ? 'Выходим…' : 'Выйти из аккаунта'}</button>
         <FormMessage state={signOut} id="logout-message" />
+      </div>
       </div>
     </div>
   )
@@ -157,7 +138,8 @@ export default function AccountPage({ username }: { username: string }) {
   const session = useSession()
   const displayName = session.kind === 'user' ? session.user.display_name || username : username
   const family = session.kind === 'user' && session.household ? { name: session.household.name, head: isHead(session) } : null
-  return <AccountView username={username} displayName={displayName} family={family} settings={<><SettingsSection /><PushSection />{session.kind === 'user' && session.mode === 'accounts' && <><PocketIdSection /><McpSection /></>}</>} password={password.state} values={values}
+  return <AccountView username={username} displayName={displayName} family={family} settings={<SettingsSection />}
+    connections={<><PushSection />{session.kind === 'user' && session.mode === 'accounts' && <><PocketIdSection /><McpSection /></>}</>} password={password.state} values={values}
     onChange={setValues} onPassword={() => { void password.run(values) }}
     signOut={signOut.state} onSignOut={() => { void signOut.run(null) }} />
 }

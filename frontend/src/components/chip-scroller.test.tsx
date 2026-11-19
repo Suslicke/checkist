@@ -55,11 +55,18 @@ describe('ChipScroller.css (text of the rules, not rendering)', () => {
     expect(css).toMatch(/\n\s*mask-image: linear-gradient\(/)
   })
 
-  it('keeps a chip a 44 px target that never wraps, the selected one in the chip tokens', () => {
+  it('keeps a chip low (32 px, 34 px on iOS) but a tap-tall target that never wraps, the selected one filled with ink', () => {
     const chip = /\.ck-chip \{([^}]*)\}/.exec(css)?.[1] ?? ''
-    expect(chip).toContain('min-height: 44px;')
+    expect(chip).toContain('position: relative;')
+    expect(chip).toContain('min-height: 32px;')
     expect(chip).toContain('white-space: nowrap;')
-    expect(css).toContain('background: var(--ck-chip-selected-bg); color: var(--ck-chip-selected-text);')
+    expect(chip).toContain('font-size: var(--ck-text-label);')
+    // The touch target: the ::before reaches above and below the chip to a tap (48 px, 44 px on iOS).
+    expect(css).toContain('.ck-chip::before { content: ""; position: absolute; inset: min(0px, calc((100% - var(--ck-tap)) / 2)) 0; }')
+    expect(css).toContain(':where(:root[data-platform="ios"]) .ck-chip { min-height: 34px;')
+    // Selected — ink, the text paper (the choice is ink, the action is seal); Android adds a check mark.
+    expect(css).toContain('.ck-chip[aria-pressed="true"], .ck-chip[aria-current]:not([aria-current="false"]), .ck-chip[aria-checked="true"] { border-color: var(--ck-ink); background: var(--ck-ink); color: var(--ck-paper); }')
+    expect(css).toContain(':where(:root:not([data-platform="ios"])) .ck-chip[aria-pressed="true"]::after')
   })
 
   it('writes no colour and reads only tokens that the theme defines', () => {
@@ -68,6 +75,10 @@ describe('ChipScroller.css (text of the rules, not rendering)', () => {
     const local = new Set(['--ck-chip-fade-start', '--ck-chip-fade-end'])
     const used = [...new Set([...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((match) => match[1]))]
     expect(used.filter((name) => !defined.has(name) && !local.has(name))).toEqual([])
-    expect(css).not.toMatch(/font-size|transition|animation/)
+    // Text sizes only by the scale; a change of state only under reduced motion: no-preference; no animation.
+    for (const [, size] of css.matchAll(/font-size:\s*([^;]+);/g)) expect(size).toMatch(/^var\(--ck-text-[a-z-]+\)$/)
+    expect(css).not.toMatch(/animation|@keyframes/)
+    const motion = '@media (prefers-reduced-motion: no-preference) {'
+    expect(css.slice(0, css.indexOf(motion))).not.toContain('transition')
   })
 })

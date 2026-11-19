@@ -46,7 +46,7 @@ describe('family screen', () => {
     const html = view({ household: { id: 1, name: 'Демо-семья', members: members.map((m) => ({ ...m, is_me: !m.is_me })) }, is_head: false, invites: [] })
     expect(html).toContain('data-family="member"')
     expect(html).toContain('Выйти из семьи')
-    expect(html).toContain('<button type="button" class="ck-auth-danger" data-family-leave="true">Выйти из семьи</button>')
+    expect(html).toContain('<button type="button" class="ck-auth-danger family-leave" data-family-leave="true">Выйти из семьи</button>')
     expect(html).not.toContain('Добавить человека')
     expect(html).not.toContain('data-family-manage')
     expect(html).not.toContain('Переименовать')

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createNavigation, stepsBack } from './controller'
+import { createNavigation, moveOf, stepsBack } from './controller'
+import type { NavigationDirection } from './controller'
 
 function memoryHistory(initial = '/catalog') {
   const entries: { href: string; state: unknown }[] = [{ href: new URL(initial, 'http://localhost').href, state: null }]
@@ -224,6 +225,60 @@ describe('navigation without a browser', () => {
     expect(navigation.getSnapshot()).toMatchObject({ href: '/stats/trends', depth: 1, from: '/receipts' })
     navigation.back('/')
     expect(navigation.getSnapshot().href).toBe('/receipts')
+    unsubscribe()
+  })
+
+  it('draws another page as a move: forward on a push, back on a step back in the history, in place otherwise', () => {
+    const history = memoryHistory('/')
+    const moves: NavigationDirection[] = []
+    const heard: string[] = []
+    const navigation = createNavigation({ ...history.environment, transition: (direction, update) => { moves.push(direction); update() } })
+    const unsubscribe = navigation.subscribe(() => heard.push(navigation.getSnapshot().href))
+    navigation.navigate('/recurring')  // a link of «Главная»: deeper
+    navigation.navigate('/receipts/71')
+    navigation.navigate('/receipts/71?tab=lines', { replace: true })  // the same page: in place
+    navigation.back('/receipts')  // «назад»: a step back in the history
+    navigation.navigate('/receipts', { root: true })  // the menu: a section is not deeper than another one
+    navigation.navigate('/receipts?page=2')  // a filter of the same page
+    history.go(-1)  // the system «назад» of Android to the same page without the filter: in place
+    history.go(-1)  // and once more, to «Платежи»
+    expect(moves).toEqual(['forward', 'forward', 'back', 'back'])
+    // Every change is heard exactly once, moved or not.
+    expect(heard).toEqual(['/recurring', '/receipts/71', '/receipts/71?tab=lines', '/recurring', '/receipts', '/receipts?page=2', '/receipts', '/recurring'])
+    unsubscribe()
+  })
+
+  it('tells the direction by the place of the entries, whatever the depth of «назад» says', () => {
+    expect(moveOf('/receipts', '/receipts/7', 'push')).toBe('forward')
+    expect(moveOf('/receipts', '/receipts?page=2', 'push')).toBeUndefined()
+    expect(moveOf('/receipts', '/stats', 'root')).toBeUndefined()
+    expect(moveOf('/stats', '/stats/trends', 'replace')).toBeUndefined()
+    expect(moveOf('/receipts/7', '/receipts', 'pop', 3, 2)).toBe('back')
+    expect(moveOf('/receipts', '/receipts/7', 'pop', 2, 3)).toBe('forward')
+    // A page of the menu has depth 0 but a later place: a step back from it is still a step back.
+    const history = memoryHistory('/')
+    const moves: NavigationDirection[] = []
+    const navigation = createNavigation({ ...history.environment, transition: (direction, update) => { moves.push(direction); update() } })
+    const unsubscribe = navigation.subscribe(() => {})
+    navigation.navigate('/recurring')
+    navigation.navigate('/receipts', { root: true })
+    history.go(-1)
+    history.go(1)
+    expect(moves).toEqual(['forward', 'back', 'forward'])
+    unsubscribe()
+  })
+
+  it('tells nothing to the listeners until the move draws the new page, and keeps the snapshot new at once', () => {
+    const history = memoryHistory('/')
+    let pending: (() => void) | undefined
+    const navigation = createNavigation({ ...history.environment, transition: (_direction, update) => { pending = update } })
+    const heard = vi.fn()
+    const unsubscribe = navigation.subscribe(heard)
+    navigation.navigate('/recurring')
+    expect(navigation.getSnapshot().href).toBe('/recurring')
+    expect(heard).not.toHaveBeenCalled()
+    pending?.()
+    expect(heard).toHaveBeenCalledTimes(1)
     unsubscribe()
   })
 })

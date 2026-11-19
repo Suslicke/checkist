@@ -81,23 +81,26 @@ describe('sign-in form (Node server markup, not browser behavior)', () => {
     expect(html.startsWith('<main id="main" class="ck-login">')).toBe(true)
     expect(html.endsWith('</main>')).toBe(true)
     expect(html.match(/<main\b/g)).toHaveLength(1)
-    expect(html).toContain('<div class="ck-login-panel"><div class="ck-login-title"><h1 id="page-heading" tabindex="-1">Вход</h1><p class="ck-login-subtitle">')
+    expect(html).toContain('<div class="ck-login-panel"><div class="ck-login-title"><h1 id="page-heading" tabindex="-1">Вход</h1></div>')
     expect(html).toContain('<section class="ck-auth" aria-labelledby="page-heading">')
     expect(html).not.toMatch(/<header\b|<nav\b|<footer\b|<a\b/)
   })
-  it('shows the logo in two sizes with its text alternative, before the form', () => {
+  it('shows the emblem in two sizes on the paper and the name of the brand in words, before the form', () => {
     const html = loginHtml()
     const image = html.match(/<img[^>]*>/)?.[0] ?? ''
     expect(html.match(/<img\b/g)).toHaveLength(1)
     expect(image).toContain('class="ck-login-logo"')
-    expect(image).toContain('alt="Чекист — продуктовая разведка"')
-    expect(image).toMatch(/src="[^"]*logo-640[^"]*\.webp"/)
-    expect(image).toMatch(/srcSet="[^"]*logo-640[^"]*\.webp 640w, [^"]*logo-1280[^"]*\.webp 1280w"/)
-    expect(image).toContain('sizes="(min-width: 720px) min(50vw, 520px), 152px"')
-    expect(image).toContain('width="640"')
-    expect(image).toContain('height="640"')
-    // One column on a phone follows the markup: the board first, the form under it.
-    expect(html.indexOf('class="ck-login-board"')).toBeLessThan(html.indexOf('class="ck-login-panel"'))
+    // The emblem is a decoration: the name «Чекист» beside it is text.
+    expect(image).toContain('alt=""')
+    expect(image).toMatch(/src="[^"]*emblem-192[^"]*\.webp"/)
+    expect(image).toMatch(/srcSet="[^"]*emblem-96[^"]*\.webp 96w, [^"]*emblem-192[^"]*\.webp 192w"/)
+    expect(image).toContain('sizes="88px"')
+    expect(image).toContain('width="88"')
+    expect(image).toContain('height="88"')
+    expect(html).not.toContain('logo-640')
+    expect(html).toContain('<p class="ck-login-name">Чекист</p>')
+    // One column follows the markup: the emblem and the name first, the panel with the form under them.
+    expect(html.indexOf('class="ck-login-brand"')).toBeLessThan(html.indexOf('class="ck-login-panel"'))
     expect(html.indexOf('<img')).toBeLessThan(html.indexOf('<form'))
   })
   it('words the screen: the motto over the form and the note under it, no joke on the card', () => {
@@ -114,7 +117,8 @@ describe('sign-in form (Node server markup, not browser behavior)', () => {
   })
   it('hides the decoration from assistive technology', () => {
     const html = loginHtml()
-    expect(html).toContain('<span class="ck-login-rays" aria-hidden="true"></span>')
+    expect(html).not.toContain('ck-login-rays')
+    expect(html.match(/<img[^>]*>/)?.[0]).toContain('alt=""')
     for (const svg of html.match(/<svg[^>]*>/g) ?? []) expect(svg).toContain('aria-hidden="true"')
   })
   it('keeps the Tab order: name, password, «Войти», theme switch', () => {
@@ -148,17 +152,27 @@ describe('account page (Node server markup, not browser behavior)', () => {
   it('shows who is signed in as text and offers the sign-out', () => {
     const html = accountHtml({ username: '<b>synthetic</b>' })
     expect(html).toContain('<p class="ck-auth-username" data-auth-username="true">&lt;b&gt;synthetic&lt;/b&gt;</p>')
-    expect(html).toContain('<button type="button" class="ck-auth-danger" data-auth-logout="true" aria-describedby="logout-message">Выйти из аккаунта</button>')
+    // The sign-out is the last row of the page, an error word: never the seal of a main action.
+    expect(html).toContain('<button type="button" class="ck-auth-danger ck-auth-signout" data-auth-logout="true" aria-describedby="logout-message">Выйти из аккаунта</button>')
   })
-  it('shows the person with initials, the theme as two segments and the rows to «Семья» and «Выгрузка»', () => {
+  it('shows the person with initials, «Оформление» with the theme, the squares, «Скрывать суммы» and the main number, and the rows to «Семья» and «Выгрузка»', () => {
     const html = accountHtml({ displayName: 'Андрей', family: { name: 'Семья Пустовых', head: true } })
     expect(html).toContain('<span class="ck-auth-avatar" aria-hidden="true">А</span>')
     expect(html).toContain('<h2 id="account-user-heading" class="ck-auth-profile-name">Андрей</h2>')
     expect(html).toContain('<p class="ck-auth-hint" data-auth-family-name="true">Семья Пустовых · главный</p>')
-    // A server render sees the dark theme.
-    expect(html).toContain('<div class="ck-auth-segments" role="group" aria-labelledby="account-theme-label"><button type="button" class="ck-auth-segment" aria-pressed="false">Светлая</button><button type="button" class="ck-auth-segment" aria-pressed="true">Тёмная</button></div>')
+    expect(html).toContain('<h2 id="account-appearance-heading">Оформление</h2>')
+    // A server render sees the dark theme; the theme is the shared segments of 2.0.
+    expect(html).toContain('<div class="ck-segments" role="group" aria-labelledby="account-appearance-theme-label"><button type="button" aria-pressed="false">Светлая</button><button type="button" aria-pressed="true">Тёмная</button></div>')
     // What the squares of the spends show, in the same segments: the category by default (lib/list-icons).
-    expect(html).toContain('<li class="ck-auth-row"><span id="account-icons-label" class="ck-auth-row-label">Значки</span><div class="ck-auth-segments" role="group" aria-labelledby="account-icons-label"><button type="button" class="ck-auth-segment" aria-pressed="true">Категория</button><button type="button" class="ck-auth-segment" aria-pressed="false">Как внесена</button></div></li>')
+    expect(html).toContain('<li class="ck-auth-row"><span id="account-appearance-icons-label" class="ck-auth-row-label">Значки</span><div class="ck-segments" role="group" aria-labelledby="account-appearance-icons-label"><button type="button" aria-pressed="true">Категория</button><button type="button" aria-pressed="false">Как внесена</button></div></li>')
+    // «Скрывать суммы»: a switch of 2.0, the whole row its label, off on a server render.
+    const privacy = (html.match(/<input[^>]*id="account-appearance-privacy"[^>]*>/)?.[0] ?? '').toLowerCase()
+    for (const part of ['type="checkbox"', 'role="switch"', 'class="ck-switch"', 'switch=""', 'aria-describedby="account-appearance-privacy-meta"']) expect(privacy).toContain(part)
+    expect(privacy).not.toContain('checked')
+    expect(html).toContain('<label class="ck-switch-row" for="account-appearance-privacy">')
+    // «Главное число на Главной» (features/dashboard HomeFigureSetting): four options, «Потрачено» by default.
+    expect(html).toContain('Главное число на Главной')
+    expect(html.match(/class="home-figure-radio"/g)).toHaveLength(4)
     expect(html).toMatch(/<a [^>]*href="\/family"[^>]*>/)
     expect(accountHtml()).not.toContain('data-auth-family-name')
   })

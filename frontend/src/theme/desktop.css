@@ -40,24 +40,24 @@
   .spends-row-main { display: contents; }
   .spends-row-amount { justify-self: end; text-align: right; }
 
-  /* The page of a receipt (features/receipts ReceiptPage.tsx): the header beside its images, the lines table across the
-     whole width (no scroll from 1024 px, WRAP_ACCEPTANCE step 5), discounts beside taxes; a spend by hand (no
-     #receipt-images) keeps one header at the 760 px cap of the narrower screen. Sparse auto-placement: the hero (column 1)
-     and the images (column 2, next in DOM) share a row, so do discounts and taxes; everything else spans both columns.
-     Weights: > * (0,1,0) < > .receipt-hero (0,2,0) < > #receipt-images (1,1,0) < :not(:has()) hero (1,2,0). The action
-     tiles become pills — icon before the word, 44 px — by repeating the selectors of Receipts.css verbatim: the same
-     weight, this sheet comes later; the four-tile rule of a manual spend with «Скрыть» is lifted the same way. The notes
-     and the inline confirmation (flex: 1 1 100%) are not matched and keep the whole width. */
-  .receipt-screen { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  /* The page of a receipt (features/receipts ReceiptPage.tsx, Чекист 2.0): the facts and the paper slip in the first
+     column (.receipt-main), the photos of the receipt beside them — the photo beside the slip — at the height of a
+     screen; a spend by hand (no #receipt-images) keeps one column at the 760 px cap of the narrower screen. The slip
+     stands at the start of its column, under the facts. Weights: > * (0,1,0) < > .receipt-main (0,2,0) <
+     > #receipt-images (1,1,0) < :not(:has()) main (1,2,0). The action tiles become pills — icon before the word, 44 px —
+     by repeating the selectors of Receipts.css verbatim: the same weight, this sheet comes later; the narrow padding of
+     four tiles of a phone is lifted the same way. The notes and the choice of a deletion (flex: 1 1 100%) are not
+     matched and keep the whole width. */
+  .receipt-screen { max-width: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; column-gap: 24px; }
   .receipt-screen > * { grid-column: 1 / -1; }
-  .receipt-screen > .receipt-hero { grid-column: 1; }
+  .receipt-screen > .receipt-main { grid-column: 1; }
   .receipt-screen > #receipt-images { grid-column: 2; }
-  .receipt-screen:not(:has(> #receipt-images)) > .receipt-hero { grid-column: 1 / -1; max-width: 760px; }
-  .receipt-screen > #receipt-discounts { grid-column: 1; }
-  .receipt-screen > #receipt-taxes { grid-column: 2; }
+  .receipt-screen:not(:has(> #receipt-images)) > .receipt-main { grid-column: 1 / -1; max-width: 760px; }
+  .receipt-screen .receipt-slip-wrap { justify-self: start; }
   .receipt-screen #receipt-images .receipt-images { grid-template-columns: minmax(0, 1fr); }
+  .receipt-screen #receipt-images .receipt-media img { height: min(70vh, 640px); }
   .receipt-toolbar > .receipt-actions > a, .receipt-toolbar > .receipt-actions > button { flex: 0 1 auto; flex-direction: row; gap: 8px; min-height: 44px; padding: 0 16px; }
-  .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > a, .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > button { flex-basis: auto; }
+  .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > a, .receipt-toolbar:has(.expense-repeat):has([data-receipt-hide]) > .receipt-actions > button { padding-inline: 16px; }
 
   /* «Новая трата» (features/expense ExpensePage.tsx): the form at the left (two thirds), «Скажите словами — заполню форму»
      pinned at the right; without the hint (editing a spend or an income) one column at the 760 px cap of the receipt
@@ -85,23 +85,21 @@
      needs ≥ 30 % (175 − 32 of padding = 143), «Последняя покупка» ≈ 127 px needs ≥ 28 % (163 − 32 = 131). The headers
      are not nowrap: a browser that draws them a pixel wider wraps the second word instead of running into the next
      heading. The rail's search controls go one under the other inside the 280 px card. */
-  .ck-catalog { grid-template-columns: 280px minmax(0, 1fr); gap: 20px 24px; align-items: start; }
-  .ck-catalog-side, .ck-catalog-main { display: grid; gap: 20px; min-width: 0; }
+  .ck-catalog { grid-template-columns: 280px minmax(0, 1fr); gap: 16px 24px; align-items: start; }
+  .ck-catalog-side, .ck-catalog-main { display: grid; gap: 16px; min-width: 0; }
   .ck-catalog-side { grid-column: 1; }
   .ck-catalog-main { grid-column: 2; }
   .ck-catalog-main ~ .ck-catalog-side { grid-row: 1 / span 2; }
   .ck-catalog > .ck-catalog-main:only-child { grid-column: 1 / -1; }
   .ck-catalog-side .ck-catalog-search-controls { grid-template-columns: minmax(0, 1fr); }
-  .ck-catalog-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
+  /* The look of the table (the panel frame, the quiet headings, the lines between rows) is in Catalog.css: the table is
+     drawn only here, from 960 px. */
+  .ck-catalog-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
   .ck-catalog-col-name { width: 42%; }
   .ck-catalog-col-generic { width: 30%; }
   .ck-catalog-col-last { width: 28%; }
   .ck-catalog-table th, .ck-catalog-table td { padding: 12px 16px; text-align: left; vertical-align: top; }
-  .ck-catalog-table thead th { color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; }
-  .ck-catalog-table tbody th, .ck-catalog-table tbody td { border-top: 1px solid var(--ck-divider); }
   .ck-catalog-table th[scope="row"] { font-weight: 400; }
-  .ck-catalog-table h3 a { display: inline-block; min-height: 44px; padding-block: 6px; color: var(--ck-link); text-decoration: none; }
-  .ck-catalog-table h3 a:hover { text-decoration: underline; }
   .ck-catalog-table-last ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
   .ck-catalog-table-last li { display: grid; gap: 2px; }
 
@@ -112,7 +110,7 @@
      width: 100 % inside their cards. */
   .rec-page { max-width: none; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
   .rec-page > .rec-intro { grid-column: 1 / -1; max-width: 760px; }
-  .rec-main, .rec-side { display: grid; gap: 16px; min-width: 0; }
+  .rec-main, .rec-side { display: grid; gap: var(--ck-space-3); min-width: 0; }
   .rec-main { grid-column: 1; }
   .rec-side { grid-column: 2; }
 
@@ -145,7 +143,7 @@
      suggestions (a member) the list sits alone in the 60 % column. The intro, the notices and the bar «Склеить выбранные»
      span both columns. The merge sheet is a portal (null when closed), never a grid child. The phone rules of Stores.css
      (the 540 block, the bar's margin-inline) are untouched. */
-  .stores-page { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-auto-flow: row dense; gap: 16px; align-items: start; max-width: none; }
+  .stores-page { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-auto-flow: row dense; gap: 12px; align-items: start; max-width: none; }
   .stores-page > .stores-intro, .stores-page > .stores-notice, .stores-page > .stores-failure, .stores-page > .stores-actions { grid-column: 1 / -1; }
   .stores-page > .stores-intro { max-width: 760px; }
   .stores-page > .stores-suggestions { grid-column: 2; }
@@ -162,4 +160,11 @@
      selector here, later in the cascade, shows it again. The composer is pinned by Chat.css at every width. */
   .chat-page { grid-template-columns: 280px minmax(0, 1fr); align-items: start; max-width: none; }
   .chat-page.chat-open > .chat-side { display: flex; }
+  /* «Аккаунт» and «Семья» (features/auth AccountPage.tsx, features/family FamilyPage.tsx): two columns of panels — the
+     person, the settings and «Оформление» (the members and ИИ) at the left, the connections, the password and the
+     sign-out (the forms of the head) at the right. The .ck-auth-col wrappers have no box below 960 px (Auth.css); a
+     family whose right column is empty stays one column. */
+  .ck-auth:has(> .ck-auth-col + .ck-auth-col:not(:empty)) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; max-width: 1100px; }
+  .ck-auth-col { display: grid; gap: var(--ck-space-3); min-width: 0; }
+  .ck-auth > .family-notice { grid-column: 1 / -1; }
 }

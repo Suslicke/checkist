@@ -217,44 +217,92 @@ describe('theme contract in the files', () => {
     expect(new Set(darkNames).size).toBe(darkNames.length)
     expect(new Set(lightNames).size).toBe(lightNames.length)
     expect(lightNames.filter((name) => !darkNames.includes(name))).toEqual([])
-    // The logo plate, radii and fonts are the same in both themes; the header takes the colours of each theme.
+    // Чекист 2.0: every colour comes again for the light theme; fonts, sizes, spacing, radii, the tap, motion, layout,
+    // layers and the tokens derived from the theme colours (the network track) are written once.
     expect(darkNames.filter((name) => !lightNames.includes(name))).toEqual([
-      '--ck-logo-bg', '--ck-radius-sm', '--ck-radius', '--ck-radius-button', '--ck-radius-pill', '--ck-font-body', '--ck-font-display',
-      // Mobile design 2026-10-12: the fonts of figures, the text scale, the teeth of the tape and the fades of a chip row.
-      '--ck-font-figures', '--ck-font-display-figures',
-      '--ck-text-2xs', '--ck-text-xs', '--ck-text-sm', '--ck-text-base', '--ck-text-lg', '--ck-text-xl', '--ck-text-hero', '--ck-tape-tooth', '--ck-fade-size',
+      '--ck-network-track',
+      '--ck-font-display', '--ck-font-ui', '--ck-font-slip',
+      '--ck-text-caption', '--ck-text-label', '--ck-text-body', '--ck-text-field', '--ck-text-title', '--ck-text-heading',
+      '--ck-text-money-display', '--ck-text-title-large', '--ck-text-money-hero',
+      ...[1, 2, 3, 4, 5, 6, 8, 12].map((step) => `--ck-space-${step}`),
+      '--ck-radius-field', '--ck-radius-button', '--ck-radius-fab', '--ck-radius-card', '--ck-radius-sheet', '--ck-radius-snackbar', '--ck-radius-pill',
+      '--ck-tap', '--ck-tabbar-ios', '--ck-navbar-android', '--ck-topbar-ios', '--ck-topbar-android', '--ck-fab-android',
+      '--ck-dur-press', '--ck-dur-state', '--ck-dur-count', '--ck-dur-sheet', '--ck-ease-out', '--ck-ease-spring',
+      '--ck-tape-tooth', '--ck-fade-size',
       '--ck-bottom-nav-height', '--ck-top-bar-height', '--ck-safe-bottom', '--ck-bottom-occupied', '--ck-action-bar-room',
-      '--ck-z-action-bar', '--ck-z-top-bar', '--ck-z-bottom-nav', '--ck-z-menu-sheet', '--ck-z-sheet', '--ck-z-skip-link',
+      '--ck-z-action-bar', '--ck-z-top-bar', '--ck-z-bottom-nav', '--ck-z-toast', '--ck-z-menu-sheet', '--ck-z-sheet', '--ck-z-network-bar', '--ck-z-skip-link',
     ])
   })
 
-  it('defines every token of the contract', () => {
-    const required = [
-      'bg', 'surface', 'surface-raised', 'text', 'text-muted', 'brand', 'brand-hover', 'brand-active', 'on-brand',
-      'accent', 'on-accent', 'accent-text', 'accent-bg', 'link', 'link-hover', 'border', 'border-field', 'divider', 'focus',
-      ...['error', 'success', 'warning', 'info', 'neutral'].flatMap((state) => [`${state}-text`, `${state}-bg`, `${state}-border`]),
-      'disabled-bg', 'disabled-text', 'disabled-border', 'popover-border', 'popover-shadow', 'panel-shadow',
-      'header-bg', 'header-text', 'header-accent', 'logo-bg', 'radius-sm', 'radius', 'font-body', 'font-display',
+  it('defines every token of the contract of Чекист 2.0 (docs/plans/2026-11-20-design-2.md §1) with the values of tokens.json', () => {
+    const colours = [
+      'paper', 'surface', 'surface-2', 'nav-android', 'line', 'line-strong', 'track', 'bezel', 'ink', 'ink-2',
+      'seal', 'seal-press', 'on-seal', 'seal-soft', 'seal-ink', 'gold', 'gold-ink', 'gold-soft',
+      'income', 'income-soft', 'over', 'over-bar', 'over-soft', 'error', 'error-soft', 'focus', 'inv-action',
+      'material', 'material-line', 'scrim', 'skeleton', 'slip', 'slip-ink', 'slip-ink-2', 'stamp',
+      ...Array.from({ length: 6 }, (_, index) => [`cat-${index + 1}`, `cat-${index + 1}-tint`]).flat(),
       ...Array.from({ length: 8 }, (_, index) => `series-${index + 1}`), 'series-other', 'series-special', 'plot-grid', 'plot-axis',
-      'bottom-nav-height', 'safe-bottom', 'bottom-occupied', 'action-bar-room', 'z-action-bar', 'z-bottom-nav', 'z-menu-sheet', 'z-skip-link',
-      'radius-button', 'radius-pill', 'header-text-muted', 'header-hover-bg', 'header-border', 'header-focus',
+      'shadow-float', 'shadow-sm',
     ]
-    expect(required.filter((name) => !names(dark).includes(`--ck-${name}`))).toEqual([])
-    expect(dark).toContain('--ck-radius-sm: 12px;')
-    expect(dark).toContain('--ck-radius: 20px;')
-    expect(dark).toContain('--ck-radius-button: 16px;')
-    expect(dark).toContain('--ck-radius-pill: 999px;')
-    expect(dark).toContain('--ck-logo-bg: #0f0f0e;')
-    expect(dark).toContain('--ck-font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;')
-    expect(dark).toContain('--ck-font-display: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;')
+    for (const name of colours) {
+      expect(names(dark), name).toContain(`--ck-${name}`)
+      expect(names(light), name).toContain(`--ck-${name}`)
+    }
+    // Values of docs/design-system/tokens.json.
+    const value = (block: string, name: string) => new RegExp(`--ck-${name}: ([^;]+);`).exec(block)?.[1]
+    const pairs: Record<string, [string, string]> = {
+      paper: ['#121012', '#f4f2f2'], surface: ['#1b181a', '#fdfcfc'], 'surface-2': ['#272225', '#ece8e8'], 'nav-android': ['#221e20', '#efe9e9'],
+      line: ['#302a2d', '#e2dcdc'], track: ['#2c2629', '#e6e0e0'], ink: ['#f3eeef', '#1b1517'], 'ink-2': ['#a79da0', '#645b5e'],
+      seal: ['#d42a31', '#c0161d'], 'seal-press': ['#b51f26', '#9f1016'], 'on-seal': ['#ffffff', '#ffffff'], 'seal-soft': ['#3a1a1d', '#f7e4e4'],
+      'seal-ink': ['#ff8a8f', '#9e1218'], gold: ['#f0c24b', '#e9b949'], 'gold-ink': ['#f0c24b', '#7a5500'], income: ['#5bcb92', '#1e7a4c'],
+      over: ['#f59e5b', '#b4530f'], 'over-bar': ['#e07b39', '#d9701e'], error: ['#ff7aa8', '#a3154a'], focus: ['#f0c24b', '#2f5bd3'],
+      'inv-action': ['#a3141b', '#f0c24b'], slip: ['#e7e2df', '#fffefc'], 'slip-ink': ['#1e1a1b', '#1e1a1b'], 'slip-ink-2': ['#625a5d', '#625a5d'],
+      stamp: ['#c0161d', '#c0161d'], 'cat-1': ['#f07aa0', '#c2416b'], 'cat-2': ['#f2b759', '#b7791f'], 'cat-3': ['#5fcb8f', '#2f8f5b'],
+      'cat-4': ['#7da2f0', '#3566c8'], 'cat-5': ['#b193f0', '#7a4fc4'], 'cat-6': ['#5cc8c8', '#1f8a8a'],
+    }
+    for (const [name, [darkValue, lightValue]] of Object.entries(pairs)) {
+      expect(value(dark, name), name).toBe(darkValue)
+      expect(value(light, name), name).toBe(lightValue)
+    }
+    expect(dark).toContain('--ck-font-display: "Geologica", "Onest", system-ui, sans-serif;')
+    expect(dark).toContain('--ck-font-ui: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;')
+    expect(dark).toContain('--ck-font-slip: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;')
+    const sizes = Object.fromEntries([...dark.matchAll(/--ck-(radius-[a-z]+|space-\d+|tap|tabbar-ios|navbar-android|topbar-ios|topbar-android|fab-android): (\d+)px;/g)].map((match) => [match[1], Number(match[2])]))
+    expect(sizes).toEqual({
+      'space-1': 4, 'space-2': 8, 'space-3': 12, 'space-4': 16, 'space-5': 20, 'space-6': 24, 'space-8': 32, 'space-12': 48,
+      'radius-field': 12, 'radius-button': 14, 'radius-fab': 16, 'radius-card': 22, 'radius-sheet': 28, 'radius-snackbar': 4, 'radius-pill': 999,
+      tap: 48, 'tabbar-ios': 62, 'navbar-android': 64, 'topbar-ios': 44, 'topbar-android': 64, 'fab-android': 56,
+    })
+    expect(tokens).toMatch(/:root\[data-platform="ios"\] \{\s*--ck-tap: 44px;\s*\}/)
+    const motion = Object.fromEntries([...dark.matchAll(/--ck-dur-([a-z]+): (\d+)ms;/g)].map((match) => [match[1], Number(match[2])]))
+    expect(motion).toEqual({ press: 90, state: 180, count: 420, sheet: 360 })
     // Names kept by Charts.css must not be defined here: it points them at these tokens.
     expect(tokens).not.toMatch(/^\s*--ck-chart-/m)
   })
 
+  it('has no names of 1.x left: tokens.css defines none and no stylesheet or component reads one', () => {
+    // The move to 2.0 is over (2026-11-20): the LEGACY aliases are deleted with their last reader.
+    const old = ['bg', 'text', 'text-muted', 'surface-raised', 'brand', 'brand-hover', 'brand-active', 'on-brand', 'primary', 'primary-hover',
+      'primary-active', 'on-primary', 'accent', 'on-accent', 'accent-text', 'accent-bg', 'link', 'link-hover', 'border', 'border-field', 'divider',
+      'error-text', 'error-bg', 'error-border', 'success-text', 'success-bg', 'success-border', 'warning-text', 'warning-bg', 'warning-border',
+      'header-bg', 'header-text', 'header-accent', 'header-border', 'chip-selected-bg', 'chip-selected-text', 'card-shadow', 'panel-shadow',
+      'popover-shadow', 'fab-shadow', 'nav-bg', 'radius', 'radius-sm', 'font-body', 'font-figures', 'text-xs', 'text-sm', 'text-base', 'text-lg',
+      'text-xl', 'text-hero', 'text-2xs', 'toast-bg', 'toast-text', 'toast-action']
+    expect(tokens).not.toContain('LEGACY')
+    for (const name of old) expect(tokens, name).not.toMatch(new RegExp(`--ck-${name}\\s*:`))
+    const sources = Object.entries(import.meta.glob(['../**/*.{css,ts,tsx}', '!../**/*.test.*', '!../**/*preview*/**'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>)
+    expect(sources.length).toBeGreaterThan(100)
+    for (const [path, text] of sources) for (const name of old) expect(text, `${path} reads --ck-${name}`).not.toMatch(new RegExp(`var\\(--ck-${name}[,)]`))
+  })
+
   it('agrees with theme.ts and index.html about the key and the page colours', () => {
-    expect(dark).toContain(`--ck-bg: ${themeColors.dark};`)
-    expect(light).toContain(`--ck-bg: ${themeColors.light};`)
-    expect(html).toContain(`<meta name="theme-color" content="${themeColors.dark}" />`)
+    expect(dark).toContain(`--ck-paper: ${themeColors.dark};`)
+    expect(light).toContain(`--ck-paper: ${themeColors.light};`)
+    // One meta per system theme; the inline script and theme.ts give both the colour of the theme the page shows.
+    expect(html).toContain(`<meta name="theme-color" media="(prefers-color-scheme: light)" content="${themeColors.light}" />`)
+    expect(html).toContain(`<meta name="theme-color" media="(prefers-color-scheme: dark)" content="${themeColors.dark}" />`)
+    expect(html).toContain(`light ? '${themeColors.light}' : '${themeColors.dark}'`)
+    expect(read('./theme.ts')).toContain(`document.querySelectorAll('meta[name="theme-color"]')`)
     expect(html).toContain(`localStorage.getItem('${themeStorageKey}')`)
     // A saved choice wins; without one the system preference decides.
     expect(html).toContain(`saved === 'light' || (saved !== 'dark' && window.matchMedia('${lightSchemeQuery}').matches)`)
@@ -277,25 +325,26 @@ describe('theme contract in the files', () => {
     expect(read('../../brand/app-icon.svg')).toContain('<rect width="512" height="512" fill="#B01212"/>')
   })
 
-  it('loads Manrope from Google Fonts with display=swap and no font file of its own', () => {
+  it('loads Geologica, Onest and JetBrains Mono from Google Fonts with display=swap and no font file of its own', () => {
     // No Content-Security-Policy of the project forbids Google Fonts (deploy/Caddyfile, deploy/docker/Caddyfile).
     expect(html).toContain('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />')
-    expect(html).toContain('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&amp;display=swap" />')
+    expect(html).toContain('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@400..800&amp;family=Onest:wght@400..800&amp;family=JetBrains+Mono:wght@400..600&amp;display=swap" />')
+    expect(html).not.toContain('Manrope')
+    // The status bar of an installed app on iPhone is painted by the page (the top bar keeps the safe area).
+    expect(html).toContain('<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />')
     expect(tokens).not.toContain('@font-face')
     expect(tokens).not.toMatch(/url\(/)
     expect(tokens).not.toContain('Oswald')
   })
 
-  it('loads the fonts of figures the same way, with only the weights the design uses', () => {
-    // Artifact design 2026-10-13: figures are Manrope (tabular-nums in .ck-figures), one font request for the page.
+  it('loads every font in one request; figures are the display font with tabular digits', () => {
     expect(html.match(/fonts\.googleapis\.com\/css2/g)).toHaveLength(1)
-    expect(dark).toContain('--ck-font-figures: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;')
-    expect(dark).toContain('--ck-font-display-figures: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;')
+    expect(tokens).toMatch(/\.ck-figures \{ font-family: var\(--ck-font-display\);[^}]*font-variant-numeric: tabular-nums;/)
   })
 
-  it('defines the text scale of a phone: 12 (the words of the bottom bar) / 13 / 15 / 16 / 18 / 22 / 40 px', () => {
-    const scale = Object.fromEntries([...dark.matchAll(/--ck-text-(2xs|xs|sm|base|lg|xl|hero): ([\d.]+)rem;/g)].map((match) => [match[1], Number(match[2]) * 16]))
-    expect(scale).toEqual({ '2xs': 12, xs: 13, sm: 15, base: 16, lg: 18, xl: 22, hero: 40 })
+  it('defines the type scale of 2.0 in rem: 12 / 13 / 15 / 16 / 17 / 22 / 32 / 34 / 44 px at a root of 16 px', () => {
+    const scale = Object.fromEntries([...dark.matchAll(/--ck-text-([a-z-]+): ([\d.]+)rem;/g)].map((match) => [match[1], Number(match[2]) * 16]))
+    expect(scale).toEqual({ caption: 12, label: 13, body: 15, field: 16, title: 17, heading: 22, 'money-display': 32, 'title-large': 34, 'money-hero': 44 })
   })
 
   it('orders the layers: action bar, top bar, bottom navigation, menu, sheet, skip link', () => {
@@ -304,34 +353,23 @@ describe('theme contract in the files', () => {
     expect(order.every((value, index) => index === 0 || value > order[index - 1])).toBe(true)
   })
 
-  it('defines the shared tokens of the family budget in both themes, the gold accent with dark text on it', () => {
-    const contract = [
-      ...Array.from({ length: 6 }, (_, index) => [`--ck-cat-${index + 1}`, `--ck-cat-${index + 1}-tint`]).flat(),
-      '--ck-over-text', '--ck-over-bar', '--ck-track', '--ck-on-accent',
-    ]
-    for (const name of contract) {
-      expect(names(dark), name).toContain(name)
-      expect(names(light), name).toContain(name)
+  it('makes each category tint 15 % of its tone over the surface, in both themes', () => {
+    const hex = (text: string) => [1, 3, 5].map((at) => Number.parseInt(text.slice(at, at + 2), 16))
+    for (const block of [dark, light]) {
+      const surface = hex(/--ck-surface: (#[0-9a-f]{6});/.exec(block)?.[1] ?? '')
+      for (let tone = 1; tone <= 6; tone += 1) {
+        const colour = hex(new RegExp(`--ck-cat-${tone}: (#[0-9a-f]{6});`).exec(block)?.[1] ?? '')
+        const tint = hex(new RegExp(`--ck-cat-${tone}-tint: (#[0-9a-f]{6});`).exec(block)?.[1] ?? '')
+        tint.forEach((channel, index) => expect(Math.abs(channel - (colour[index] * 0.15 + surface[index] * 0.85)), `cat-${tone}`).toBeLessThanOrEqual(1))
+      }
     }
-    expect(tokens.match(/\/\* family-budget tokens \*\//g)).toHaveLength(2)
-    // Red/gold palette (back 2026-10-12): the red brand under white text, the gold accent under dark text, in both themes.
-    for (const theme of [dark, light]) {
-      expect(theme).toContain('--ck-brand: #b01212;')
-      expect(theme).toContain('--ck-on-brand: #ffffff;')
-      expect(theme).toContain('--ck-accent: #f0c24b;')
-      expect(theme).toContain('--ck-on-accent: #2a1b16;')
-      // The header bar is dark in both themes, with the red line under it.
-      expect(theme).toContain('--ck-header-bg: #1a0c0a;')
-      expect(theme).toContain('--ck-header-border: #b01212;')
-    }
-    // No card shadow in the dark theme: the colour of the shadow is transparent there.
-    expect(dark).toContain('--ck-panel-shadow: #00000000;')
   })
+
 
   it('styles the switch with tokens only', () => {
     const css = read('./ThemeToggle.css')
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(/i)
-    expect(css).toContain('min-height: 44px')
+    expect(css).toContain('min-height: var(--ck-tap)')
     expect(css).not.toContain('transition')
     expect([...css.matchAll(/\.(ck-[a-z-]+)/g)].every((match) => match[1].startsWith('ck-theme-'))).toBe(true)
   })

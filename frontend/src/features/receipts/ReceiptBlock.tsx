@@ -8,26 +8,27 @@ import type { ReceiptRequestState } from './request'
 import { errorMessage } from './state'
 
 /**
- * One block of a receipt screen with its own request: a card with a heading (`aside` — a quiet count at the right of it),
- * the loading, the error with «Повторить» or a recovery, then the content. `bare` — no card of its own (the days of
- * «Траты» on a phone are the cards): the heading stays for a screen reader and for the focus after a retry.
+ * One block of a receipt screen with its own request: a panel with a heading (`aside` — a quiet count at the right of it),
+ * the loading, the error with «Повторить» or a recovery, then the content. `bare` — no panel of its own (the days of
+ * «Траты» are the panels): the heading stays for a screen reader and for the focus after a retry. `slip` — a section of
+ * the paper slip of a receipt: no panel, the heading is a line of the paper.
  */
-export function ReceiptBlock<T>({ title, state, retry, recovery, children, id, aside, bare = false, className, skeleton }: {
+export function ReceiptBlock<T>({ title, state, retry, recovery, children, id, aside, bare = false, slip = false, className, skeleton }: {
   title: string; state: ReceiptRequestState<T>; retry: () => void; recovery?: ReactNode; children: ReactNode; id?: string
-  aside?: ReactNode; bare?: boolean; className?: string
+  aside?: ReactNode; bare?: boolean; slip?: boolean; className?: string
   /** The shape of the loading skeleton (components/Skeleton.tsx): the days of «Траты» are `spends`. */
   skeleton?: SkeletonShape
 }) {
   const heading = useId()
   const block = useLocalRequestFocus(state)
-  const classes = [bare ? 'receipt-bare' : 'receipt-panel', className].filter(Boolean).join(' ')
+  const classes = [slip ? 'receipt-slip-block' : bare ? 'receipt-bare' : 'receipt-panel', className].filter(Boolean).join(' ')
   const h2 = <h2 id={heading} data-request-focus-target tabIndex={-1} className={bare ? 'receipt-visually-hidden' : undefined}>{title}</h2>
   return <section id={id} ref={block} className={classes} aria-labelledby={heading} aria-busy={state.kind === 'loading'}>
     {aside && state.kind === 'ok' ? <div className="receipt-block-head">{h2}{aside}</div> : h2}
-    {state.kind === 'loading' && <RequestState kind="loading" message={`Загружаем: ${title.toLocaleLowerCase('ru-RU')}…`} shape={skeleton} />}
+    {state.kind === 'loading' && <RequestState kind="loading" message={`Загружаем: ${title.toLocaleLowerCase('ru-RU')}…`} shape={skeleton} compact={slip} />}
     {state.kind === 'error' && (recovery
-      ? <RequestState kind="empty" message={errorMessage(state)} action={recovery} />
-      : <RequestState kind="error" message={errorMessage(state)} onRetry={retry} />)}
+      ? <RequestState kind="empty" message={errorMessage(state)} action={recovery} compact={!bare || slip} />
+      : <RequestState kind="error" message={errorMessage(state)} onRetry={retry} compact={!bare || slip} />)}
     {state.kind === 'ok' && children}
   </section>
 }

@@ -12,7 +12,12 @@ const rules = (text: string) => [...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
   .flatMap((match) => match[1].split(',').map((selector) => ({ selector: selector.trim(), body: match[2].trim() })))
 const rule = (selector: string, text = css) => rules(text).filter((item) => item.selector === selector).map((item) => item.body).join(' ')
 const value = (body: string, property: string) => body.match(new RegExp(`(?:^|[;\\s])${property}\\s*:\\s*([^;]+);`))?.[1].trim()
-const px = (text: string | undefined) => Number(text?.match(/^(\d+(?:\.\d+)?)px/)?.[1] ?? NaN)
+/** The spacing scale of 2.0 (theme/tokens.css): a padding may name it instead of pixels. */
+const spaces: Record<string, number> = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 12: 48 }
+const px = (text: string | undefined) => {
+  const space = text?.match(/^var\(--ck-space-(\d+)\)/)?.[1]
+  return space ? spaces[space] ?? NaN : Number(text?.match(/^(\d+(?:\.\d+)?)px/)?.[1] ?? NaN)
+}
 
 /** Room for a table on the widest page: the page without its side padding, the panel padding and the two borders. */
 const room = () => {
@@ -90,10 +95,13 @@ describe('merge stylesheet guards (text of the rules, not rendering)', () => {
     expect(css.match(/#[0-9a-f]{3,8}|(?:rgb|hsl)a?\(/gi)).toBeNull()
     const sizes = [...css.matchAll(/font-size\s*:\s*([^;]+);/g)].map((match) => match[1].trim())
     expect(sizes.length).toBeGreaterThan(5)
-    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl)\)$/)
-    expect(value(rule('.ck-merge-table'), 'font-size')).toBe('var(--ck-text-sm)')
-    // Cards of the artifact: the surface with the shadow of the theme; the groups of the list are rows of their card.
-    expect(rule('.ck-merge-panel')).toContain('background: var(--ck-surface); box-shadow: var(--ck-card-shadow);')
-    expect(rule('.ck-merge-card')).toContain('border-top: 1px solid var(--ck-divider);')
+    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading)\)$/)
+    expect(value(rule('.ck-merge-table'), 'font-size')).toBe('var(--ck-text-label)')
+    // Panels of 2.0: the surface in a line frame, no shadow; the groups of the list are rows of their panel.
+    expect(rule('.ck-merge-panel')).toContain('border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface);')
+    expect(rule('.ck-merge-panel')).not.toContain('box-shadow')
+    expect(rule('.ck-merge-card')).toContain('border-top: 1px solid var(--ck-line);')
+    // Only 2.0 names of the tokens: the aliases of 1.x at the end of tokens.css are going away.
+    expect(css.match(/var\(--ck-(?:text-(?:xs|sm|base|lg|xl|hero|2xs)|text-muted|text|bg|border[\w-]*|divider|link[\w-]*|accent[\w-]*|primary[\w-]*|card-shadow|radius|radius-sm|font-figures|[a-z]+-(?:text|bg))\)/g)).toBeNull()
   })
 })

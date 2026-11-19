@@ -154,9 +154,12 @@ describe('markup of the chat (ChatView)', () => {
     expect(markup).toContain('<div class="chat-page chat-open">')
     expect(markup).toContain('<a class="ck-row chat-thread chat-thread-current" aria-current="page" href="/chat/5">')
     expect(markup).toContain('<li class="chat-bubble chat-bubble-person"><p>Сколько ушло на кафе в сентябре?</p></li>')
-    expect(markup).toContain('<li class="chat-bubble chat-bubble-model" aria-busy="false"><p>В сентябре на кафе ушло 49 819 ₸ — на 5 714 ₸ меньше, чем в августе.</p></li>')
+    // The answer of the assistant opens with its gold mark and its name.
+    expect(markup).toContain('<li class="chat-bubble chat-bubble-model" aria-busy="false"><span class="chat-who"><span class="chat-mark" aria-hidden="true"></span>ИИ</span><p>В сентябре на кафе ушло 49 819 ₸ — на 5 714 ₸ меньше, чем в августе.</p></li>')
     expect(markup).toContain(`>${chatTexts.deleteThread}</button>`)
-    expect(markup).toContain(`<h2 id="chat-thread-heading">${chatThreadFixture().thread.title}</h2>`)
+    // The title of the thread is the heading of the page already: here it names the section for a screen reader only.
+    expect(markup).toContain(`<h2 id="chat-thread-heading" class="ck-visually-hidden">${chatThreadFixture().thread.title}</h2>`)
+    expect(markup).not.toContain('ck-confirm')
   })
 
   it('renders the verdicts as a card (the plan by its name, «План №N» without one), the unchecked numbers, and the actions as buttons — done ones disabled', () => {
@@ -166,15 +169,15 @@ describe('markup of the chat (ChatView)', () => {
     expect(markup).toContain('<span class="chat-verdict chat-verdict-wait">Подождите</span>')
     expect(markup).toContain('<span class="chat-verdict chat-verdict-no">Отговариваю</span><span class="chat-verdict-name">План №9</span><span class="chat-verdict-why">Лимит «Дом» в октябре уже 112 %.</span>')
     expect(markup).toContain(`<p class="chat-unverified">${insightTexts.unverified} 356 000 ₸.</p>`)
-    expect(markup).toContain('<button type="button" class="chat-action">Подтвердить: перенести «Куртку» на ноябрь</button>')
-    expect(markup).toContain('<button type="button" class="chat-action chat-action-done" disabled="" aria-disabled="true">Сделано: План «Лампа в спальню» удалён.</button>')
+    expect(markup).toContain('<button type="button" class="chat-action"><span>Подтвердить: перенести «Куртку» на ноябрь</span></button>')
+    expect(markup).toContain('<button type="button" class="chat-action chat-action-done" disabled="" aria-disabled="true"><span>Сделано: План «Лампа в спальню» удалён.</span></button>')
   })
 
   it('draws a waiting answer as «печатает…» over a static skeleton and locks the composer; a failed one offers «Повторить»', () => {
     const waiting = chatThreadFixture()
     waiting.messages = [chatMessageFixture({ id: 33, status: 'queued', answer: null })]
     const markup = html(<ChatView threads={threads} threadId={5} thread={{ kind: 'ok', data: waiting }} text="и ещё" sending={false} notice={null} />)
-    expect(markup).toContain(`<li class="chat-bubble chat-bubble-model" aria-busy="true"><div class="chat-typing" role="status"><span>${chatTexts.typing}</span><div class="ck-skel ck-skel-compact" data-skeleton="compact" aria-hidden="true">`)
+    expect(markup).toContain(`<li class="chat-bubble chat-bubble-model" aria-busy="true"><span class="chat-who"><span class="chat-mark" aria-hidden="true"></span>ИИ</span><div class="chat-typing" role="status"><span>${chatTexts.typing}</span><div class="ck-skel ck-skel-compact" data-skeleton="compact" aria-hidden="true">`)
     expect(markup).toContain('readOnly=""')
     expect(markup).toContain(`disabled="">${chatTexts.sending}</button>`)
     const failed = chatThreadFixture()
@@ -192,7 +195,11 @@ describe('markup of the chat (ChatView)', () => {
     const refused = html(<ChatView threads={threads} text="Сколько?" sending={false} notice={aiTexts.disabled} />)
     expect(refused).toContain(`<p class="chat-notice" role="alert">${aiTexts.disabled}</p>`)
     const asking = html(<ChatView threads={threads} threadId={5} thread={{ kind: 'ok', data: chatThreadFixture() }} deleteStep="confirm" text="" sending={false} notice={null} />)
-    expect(asking).toContain(`<p id="chat-delete-question">${chatTexts.deleteQuestion}</p>`)
+    // Deleting a thread cannot be undone: the shared ConfirmDialog asks, the action in the colour of an error.
+    expect(asking).toContain('role="alertdialog"')
+    expect(asking).toContain(`>${chatTexts.deleteQuestion}</h2>`)
+    expect(asking).toContain(`>${chatTexts.deleteNote}</p>`)
+    expect(asking).toContain(`class="ck-confirm-action ck-confirm-danger">${chatTexts.deleteThread}</button>`)
     expect(asking).toContain(`>${chatTexts.cancel}</button>`)
     const loading = html(<ChatView threads={undefined} threadId={5} thread={{ kind: 'loading' }} text="" sending={false} notice={null} />)
     expect(loading).toContain('data-skeleton="compact"')

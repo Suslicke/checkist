@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import logo640 from '../../assets/brand/logo-640.webp'
-import logo1280 from '../../assets/brand/logo-1280.webp'
+import emblem96 from '../../assets/brand/emblem-96.webp'
+import emblem192 from '../../assets/brand/emblem-192.webp'
 import { getPocketIdStatus, POCKET_ID_LOGIN_URL, pocketIdOutcomes, takePocketIdOutcome } from '../../api/pocket-id'
 import type { PocketIdOutcome } from '../../api/pocket-id'
 import { login } from '../../api/session'
@@ -38,9 +38,19 @@ export type LoginViewProps = {
   pocketIdOutcome?: PocketIdOutcome | null
 }
 
-/** The sign-in on the address the person opened: the whole screen with its own `<main>`, no shell around it —
-    the logo as an app icon above a card with the form (two columns from 720 px). A real form: a password manager
-    offers to save and to fill it. The order in the markup is the Tab order: name, password, «Войти», theme switch. */
+/** The emblem and the name of the brand over a form, on the paper of the page (Чекист 2.0): the emblem is a picture
+ * without a background, so no dark plate is needed; the name is text. Shared with the invite of a new family. */
+export function LoginBrand({ subtitle }: { subtitle: string }) {
+  return <div className="ck-login-brand">
+    <img className="ck-login-logo" src={emblem192} srcSet={`${emblem96} 96w, ${emblem192} 192w`} sizes="88px" width="88" height="88" alt="" />
+    <p className="ck-login-name">Чекист</p>
+    <p className="ck-login-subtitle">{subtitle}</p>
+  </div>
+}
+
+/** The sign-in on the address the person opened: the whole screen with its own `<main>`, no shell around it — the
+    emblem and «Чекист» above a panel with the form, one column in the middle of the window. A real form: a password
+    manager offers to save and to fill it. The order in the markup is the Tab order: name, password, «Войти», theme switch. */
 export function LoginView({ state, expired, values, onChange, onSubmit, heading, pocketId, pocketIdOutcome }: LoginViewProps) {
   const pending = state.kind === 'pending'
   const invalid = (field: string) => (state.kind === 'failed' && state.fields.includes(field)) || undefined
@@ -48,16 +58,9 @@ export function LoginView({ state, expired, values, onChange, onSubmit, heading,
   return (
     <main id="main" className="ck-login">
       <div className="ck-login-layout">
-        <div className="ck-login-board">
-          <span className="ck-login-rays" aria-hidden="true" />
-          <img className="ck-login-logo" src={logo640} srcSet={`${logo640} 640w, ${logo1280} 1280w`}
-            sizes="(min-width: 720px) min(50vw, 520px), 152px" width="640" height="640" alt="Чекист — продуктовая разведка" />
-        </div>
+        <LoginBrand subtitle="Семейный бюджет" />
         <div className="ck-login-panel">
-          <div className="ck-login-title">
-            {heading}
-            <p className="ck-login-subtitle">Семейный бюджет</p>
-          </div>
+          <div className="ck-login-title">{heading}</div>
           <section className="ck-auth" aria-labelledby="page-heading">
             {expired && <p className="ck-auth-notice" data-auth-expired>{sessionExpiredText}</p>}
             {pocketIdOutcome && <div className="ck-auth-error" role="alert" data-pocket-id-outcome><p>{pocketIdOutcomes[pocketIdOutcome]}</p></div>}

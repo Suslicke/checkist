@@ -36,18 +36,22 @@ describe('statistics stylesheet guards (text of the rules, not rendering)', () =
       .filter((item) => item.selector === '.stats-field-grid' && declares(item.body, 'grid-template-columns'))
     expect(overridden).toEqual([])
   })
-  it('draws the panels as cards of the artifact: surface, radius 20, the card shadow of the theme, no frame', () => {
+  it('draws the panels as 2.0 panels: surface, a line border, the card radius, no shadow', () => {
     for (const [sheet, selector] of [[spending, '.spending-panel'], [receipts, '.stats-panel']] as const) {
       const body = rule(sheet, selector)
-      expect(body, selector).toContain('border-radius: var(--ck-radius)')
+      expect(body, selector).toContain('border-radius: var(--ck-radius-card)')
       expect(body, selector).toContain('background: var(--ck-surface)')
-      expect(body, selector).toContain('box-shadow: var(--ck-card-shadow)')
-      expect(declares(body, 'border'), selector).toBe(false)
+      expect(body, selector).toContain('border: 1px solid var(--ck-line)')
+      expect(declares(body, 'box-shadow'), selector).toBe(false)
     }
   })
-  it('sets every text size from the scale of the theme', () => {
+  it('sets every text size from the 2.0 scale and reads only 2.0 tokens', () => {
     for (const text of [spending, receipts, bar]) {
-      for (const [, size] of text.matchAll(/font-size:\s*([^;]+);/g)) expect(size).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl|hero)\)$/)
+      for (const [, size] of text.matchAll(/font-size:\s*([^;]+);/g)) {
+        expect(size).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading|money-display|title-large|money-hero)\)$/)
+      }
+      // The names of 1.x are aliases on their way out (docs/plans/2026-11-20-design-2.md, §1).
+      expect(text).not.toMatch(/var\(--ck-(bg|text|text-muted|text-(xs|sm|base|lg|xl|hero|2xs)|link|link-hover|border|border-field|divider|card-shadow|radius|radius-sm|brand|primary|accent|accent-text|surface-raised|chip-selected-bg|chip-selected-text|over-text|success-text|warning-text|warning-bg|warning-border|error-text|error-border|neutral-bg|disabled-bg|disabled-text|disabled-border|popover-border|popover-shadow)\)/)
     }
   })
   it('gives the text column of a table a least width, so whole values do not squeeze it to letters', () => {
@@ -90,8 +94,9 @@ describe('statistics stylesheet guards (text of the rules, not rendering)', () =
   it('keeps the top of a tab low and whole: one phone threshold, words never cut (feature/stats-compact)', () => {
     for (const [, width] of bar.matchAll(/@media \(max-width: (\d+)px\)/g)) expect(width).toBe('540')
     expect(bar).not.toMatch(/text-overflow|-webkit-line-clamp/)
-    expect(rule(bar, '.stats-segment')).toContain('white-space: nowrap')
-    expect(rule(bar, '.stats-segment')).toContain('flex: 1 1 auto')
+    // The look of a segment is .ck-segments of App.css; here only the room: each as wide as its words, never cut.
+    expect(rule(bar, '.stats-segments > .stats-segment')).toContain('white-space: nowrap')
+    expect(rule(bar, '.stats-segments > .stats-segment')).toContain('flex: 1 1 auto')
     expect(rule(bar, '.stats-period-open')).toContain('min-height: 40px')
     // The period button wraps its words rather than cutting them: no single line is forced on it.
     expect(rule(bar, '.stats-period-open')).not.toContain('nowrap')

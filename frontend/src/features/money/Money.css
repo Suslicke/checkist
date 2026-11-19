@@ -1,63 +1,88 @@
-/* «Деньги» (2026-10-26, the right frame of frontend/home-preview/index.html): the card of the month with the three
-   sums and the strip of the flow, the hub of six tiles 2 × 3, the card of the chat. Bricks of tokens.css (.ck-panel,
-   .ck-row-*); colours only by tokens, text sizes only by the scale; the two column wrappers have no box here — the
-   desktop puts them side by side (theme/desktop.css). */
-.money-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; max-width: 760px; }
+/* «Деньги» (Чекист 2.0, 2026-11-20): the month as calm figures — «Свободно» as the one figure of the screen, the strip of
+   the flow (spent in ink, payments ahead hatched, plans ahead dotted, free on the track) with the lines that name it,
+   the four tiles of the hub, six months of spends, the assistant in gold. Colours only by 2.0 tokens, text sizes only by
+   the 2.0 scale; the two column wrappers have no box here — the desktop puts them side by side (theme/desktop.css). */
+.money-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ck-space-3); min-width: 0; max-width: 760px; }
 .money-main, .money-side { display: contents; }
-/* A phone reads the month, the hub, then the chat. */
-.money-side > * { order: 1; }
-.money-chat { order: 2; }
+/* A phone reads the month, the tiles, the six months, then the assistant. */
+.money-hub { order: 1; }
+.money-months { order: 2; }
+.money-ai { order: 3; }
 
 /* The card of the month. */
-.money-summary { gap: 10px; }
-.money-eyebrow { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.money-sums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.money-sums > div { display: grid; gap: 2px; min-width: 0; }
-.money-sums dt { color: var(--ck-text-muted); font-size: var(--ck-text-2xs); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
-.money-sums dd { margin: 0; overflow: hidden; font-size: var(--ck-text-base); font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
-/* The strip: what is spent in the colour of the first category, the payments and the plans ahead as tints with a line
-   of their colour, what is free on the track. */
-.money-flow { display: flex; height: 10px; margin-top: 4px; overflow: hidden; border-radius: 5px; background: var(--ck-track); }
-.money-flow > i { display: block; min-width: 2px; height: 100%; }
-.money-flow-spent { background: var(--ck-cat-1); }
-.money-flow-payments { background: var(--ck-cat-2-tint); box-shadow: inset 0 0 0 1px var(--ck-cat-2); }
-.money-flow-plans { background: var(--ck-cat-4-tint); box-shadow: inset 0 0 0 1px var(--ck-cat-4); }
-.money-flow-free { background: var(--ck-track); }
-.money-caption { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
-.money-caption b { color: var(--ck-text); white-space: nowrap; }
-.money-caption .money-over { color: var(--ck-over-text); }
+.money-month { gap: var(--ck-space-3); }
+/* A link of the head of a panel: a word in seal-ink, a tap high. */
+.money-link { display: inline-flex; flex: none; align-items: center; min-height: var(--ck-tap); margin-block: calc((var(--ck-tap) - 1.4em) / -2); color: var(--ck-seal-ink); font-size: var(--ck-text-label); font-weight: 600; text-decoration: none; white-space: nowrap; }
+@media (hover: hover) {
+  .money-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+}
+.money-figure { display: grid; gap: var(--ck-space-1); justify-items: start; min-width: 0; }
+.money-figure-label { margin: 0; color: var(--ck-ink-2); font-family: var(--ck-font-ui); font-size: var(--ck-text-label); font-weight: 500; line-height: 1.4; }
+.money-figure.is-over .money-figure-label, .money-figure.is-over .money-figure-note { color: var(--ck-over); }
+.money-figure .ck-money { max-width: 100%; }
+.money-figure-note { color: var(--ck-ink-2); font-size: var(--ck-text-label); line-height: 1.4; }
+.money-figure.is-over .money-figure-note { font-weight: 600; }
 
-/* The hub: six tiles, two in a row, each a link with the picture, the big words and a note. */
-.money-hub { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-.money-tile { display: grid; align-content: start; gap: 6px; min-width: 0; min-height: 110px; padding: 14px; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); color: var(--ck-text); text-decoration: none; }
-.money-tile:hover .money-tile-head { text-decoration: underline; text-underline-offset: 3px; }
-.money-tile-head { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--ck-text-sm); font-weight: 800; }
-.money-tile-icon { display: grid; flex: none; place-content: center; width: 28px; height: 28px; border-radius: 8px; }
-.money-tone-success { background: var(--ck-success-bg); color: var(--ck-success-text); }
-.money-tone-ai { background: var(--ck-accent-bg); color: var(--ck-accent-text); }
-.money-tone-1 { background: var(--ck-cat-1-tint); color: var(--ck-cat-1); }
-.money-tone-2 { background: var(--ck-cat-2-tint); color: var(--ck-cat-2); }
-.money-tone-3 { background: var(--ck-cat-3-tint); color: var(--ck-cat-3); }
-.money-tone-4 { background: var(--ck-cat-4-tint); color: var(--ck-cat-4); }
-.money-tone-5 { background: var(--ck-cat-5-tint); color: var(--ck-cat-5); }
-.money-tone-6 { background: var(--ck-cat-6-tint); color: var(--ck-cat-6); }
-.money-tile-value { overflow: hidden; font-size: var(--ck-text-lg); font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
-/* The note may take two lines, as in the mock («2 из 5 оплачено · аренда через 2 дня»); the sums in it stay whole. */
-.money-tile-note { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--ck-text-muted); font-size: var(--ck-text-2xs); overflow-wrap: normal; }
-/* The six columns of the statistics: the shown month in the colour of the first category, the others its tint. */
-.money-columns { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
-.money-columns > i { flex: 1 1 0; min-width: 0; border-radius: 2px 2px 0 0; background: var(--ck-cat-1-tint); }
-.money-columns > .money-column-now { background: var(--ck-cat-1); }
+/* The strip: spent in ink, the payments ahead hatched, the plans ahead dotted, what is free on the track. */
+.money-flow { display: flex; gap: 2px; height: 10px; overflow: hidden; border-radius: var(--ck-radius-pill); background: var(--ck-track); }
+.money-flow > i { display: block; min-width: 3px; height: 100%; }
+.money-flow-spent, .money-key-spent { background: var(--ck-ink); }
+.money-flow-payments, .money-key-payments { background: repeating-linear-gradient(-45deg, var(--ck-ink-2) 0 2px, transparent 2px 5px); }
+.money-flow-plans, .money-key-plans { background: radial-gradient(circle, var(--ck-ink-2) 0 1.1px, transparent 1.6px) 0 0 / 4px 4px; }
+.money-flow-free { background: transparent; }
 
-/* The chat: the last thread as a row with the mark of the model. */
-.money-chat { gap: 8px; }
-.money-chat-row { display: flex; align-items: center; gap: 12px; min-height: 56px; margin-top: -4px; color: var(--ck-text); text-decoration: none; }
-.money-chat-row:hover .ck-row-title { text-decoration: underline; text-underline-offset: 3px; }
-.money-chat-mark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ck-accent-bg); color: var(--ck-accent-text); }
-.money-chat-preview { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
-.money-chat-go { flex: none; color: var(--ck-text-muted); }
+/* The lines of the flow: the swatch of the strip, the words, the amount at the right; «Отложено» apart under a line. */
+.money-lines { display: grid; margin: 0; }
+.money-line { display: flex; align-items: center; justify-content: space-between; gap: var(--ck-space-3); min-height: 36px; min-width: 0; }
+.money-line dt { display: flex; align-items: center; gap: var(--ck-space-2); min-width: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; }
+.money-line dd { flex: none; margin: 0; }
+.money-line-aside { margin-top: var(--ck-space-1); padding-top: var(--ck-space-1); border-top: 1px solid var(--ck-line); }
+.money-line-missing { color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; white-space: nowrap; }
+.money-key { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+.money-key-payments, .money-key-plans { box-shadow: inset 0 0 0 1px var(--ck-ink-2); }
+.money-key-income { visibility: hidden; }
+.money-key-aside { visibility: hidden; }
+
+/* The hub: four tiles, two in a row, each a link with the picture, the figure and a note. */
+.money-hub { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ck-space-3); margin: 0; padding: 0; list-style: none; }
+.money-hub > li { display: grid; min-width: 0; }
+.money-tile { display: grid; align-content: start; gap: var(--ck-space-2); min-width: 0; min-height: 132px; padding: var(--ck-space-4) 14px; border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface); color: var(--ck-ink); text-decoration: none; }
+.money-tile:where(:active) { background: var(--ck-surface-2); }
+.money-tile-head { display: flex; align-items: center; gap: var(--ck-space-2); min-width: 0; }
+.money-tile-icon { width: 32px; height: 32px; border-radius: 10px; }
+.money-tone-in { --ck-tone: var(--ck-income); }
+.money-tile-title { flex: 1; min-width: 0; overflow: hidden; font-size: var(--ck-text-body); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.money-tile-go { flex: none; color: var(--ck-ink-2); }
+.money-tile-value { min-width: 0; overflow: hidden; color: var(--ck-ink); font-family: var(--ck-font-display); font-size: var(--ck-text-title); font-weight: 600; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.money-tile-bar { height: 6px; }
+/* The note may take two lines («4 из 7 оплачено · Коммунальные через 2 дня»); the words of an overdue one in over. */
+.money-tile-note { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--ck-ink-2); font-size: var(--ck-text-caption); font-weight: 500; line-height: 1.4; }
+.money-tile-alert { color: var(--ck-over); font-weight: 600; }
+@media (hover: hover) {
+  .money-tile:hover .money-tile-title { text-decoration: underline; text-underline-offset: 3px; }
+}
+
+/* Six months of spends: the shown month in ink, the others quiet; the short names under them. */
+.money-columns { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: var(--ck-space-2); align-items: end; }
+.money-column { display: grid; grid-template-rows: 72px auto; gap: 6px; min-width: 0; }
+.money-column > i { align-self: end; height: var(--money-column); min-height: 3px; border-radius: 6px 6px 3px 3px; background: color-mix(in srgb, var(--ck-ink) 18%, var(--ck-surface)); }
+.money-column.is-now > i { background: var(--ck-ink); }
+.money-column-label { color: var(--ck-ink-2); font-size: var(--ck-text-caption); font-weight: 500; text-align: center; white-space: nowrap; }
+.money-column.is-now .money-column-label { color: var(--ck-ink); font-weight: 600; }
+.money-months-note { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); }
+
+/* The assistant: its name in gold-ink, the badges in gold-soft; the rows say what it found and what was asked. */
+.money-ai { gap: var(--ck-space-1); }
+.money-ai-who { display: inline-flex; align-items: center; gap: 6px; color: var(--ck-gold-ink); }
+.money-ai-badge { background: var(--ck-gold-soft); color: var(--ck-gold-ink); }
+.money-ai-row { color: var(--ck-ink); }
+.money-ai-meta { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
+.money-ai-go { flex: none; color: var(--ck-ink-2); }
+@media (hover: hover) {
+  .money-ai-row:hover .ck-row-title { text-decoration: underline; text-underline-offset: 3px; }
+}
 
 @media (forced-colors: active) {
-  .money-flow > i, .money-columns > i { border: 1px solid CanvasText; }
-  .money-flow-spent, .money-column-now { background: CanvasText; }
+  .money-flow > i, .money-column > i, .money-key { border: 1px solid CanvasText; }
+  .money-flow-spent, .money-key-spent, .money-column.is-now > i { background: CanvasText; }
 }

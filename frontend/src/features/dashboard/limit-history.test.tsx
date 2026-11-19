@@ -4,7 +4,7 @@ import { getBudgetLimitHistory } from '../../api/budget'
 import type { BudgetLimitChange, BudgetLimitHistory } from '../../api/budget'
 import { isBudgetLimitHistory } from '../../api/budget-schema'
 import { LimitHistory } from './LimitsPage'
-import { filterHistory, historyCategories, historyChangeText, historyEntries } from './limits-state'
+import { filterHistory, historyCategories, historyChangePhrase, historyChangeText, historyEntries } from './limits-state'
 
 const nb = (text: string) => text.replace(/[\u00a0\u202f]/g, ' ')
 const food = { id: 1, name: 'Продукты', path: [{ id: 1, name: 'Продукты' }] }
@@ -41,6 +41,10 @@ describe('«История изменений» without React', () => {
       ['20.09.2026', 'Андрей', 'Продукты', 'удалён, был 180 ₸', null, null],
     ])
     expect(nb(historyChangeText({ kind: 'changed', old_amount: '0.50', new_amount: '1.00', currency: 'EUR' }))).toBe('0,50 → 1 €')
+    // The same change with the sums apart, for Money: the old amount without its sign, the new one with it.
+    expect(historyChangePhrase({ kind: 'changed', old_amount: '0.50', new_amount: '1.00', currency: 'EUR' })).toEqual([{ money: '0.50', currency: '' }, ' → ', { money: '1.00', currency: 'EUR' }])
+    expect(historyChangePhrase({ kind: 'created', old_amount: null, new_amount: '150000.00', currency: 'KZT' })).toEqual(['новый лимит ', { money: '150000.00', currency: 'KZT' }])
+    expect(historyChangePhrase({ kind: 'deleted', old_amount: '120000.00', new_amount: null, currency: 'KZT' })).toEqual(['удалён, был ', { money: '120000.00', currency: 'KZT' }])
   })
   it('filters by a category of the journal', () => {
     const entries = historyEntries(journal())
@@ -58,7 +62,9 @@ describe('«История изменений» markup', () => {
     expect(html).toContain('<option value="">Все категории</option>')
     expect(html).toContain('<option value="2" selected="">Продукты › Молочное</option>')
     expect(html).toContain('<time dateTime="2026-09-20T12:00:00Z">20.09.2026</time>')
-    expect(html).toContain('<span class="ck-figures">120 000 → 150 000 ₸</span>')
+    // The sums by Money: «120 000 → 150 000 ₸» as a person reads it.
+    expect(html.replace(/<[^>]+>/g, '').replace(/[\u00a0\u202f]/g, ' ')).toContain('120 000 → 150 000 ₸')
+    expect(html).toContain('<span class="limits-history-text">')
     expect(html).toContain('class="limits-history-badge limits-history-up"')
     expect(html).not.toContain('201 → 180')
   })

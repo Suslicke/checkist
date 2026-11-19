@@ -1,155 +1,139 @@
-/* Sign-in (the whole screen, .ck-login-*), /account and the forms of /family (.ck-auth-*), in the language of the
-   artifact (docs/plans/2026-10-13-artifact-mobile-design.md): cards of 20 px on the page background, a heading of
-   18 px / 800, rows of 56 px with dividers, fields of 48 px, the main action filled with --ck-primary, the second an
-   outline of the link colour, a danger a quiet outline. Colours come from theme/tokens.css only, sizes from the
-   text scale. App.css goes AFTER this file in the build: every state of a button that sets a colour here is written
-   with a class, so it outweighs the shared `button` rules of the shell. No motion. */
-.ck-auth { display: grid; gap: 16px; min-width: 0; max-width: 560px; overflow-wrap: anywhere; }
-.ck-auth-panel { display: grid; gap: 16px; min-width: 0; padding: 20px; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
+/* Sign-in (the whole screen, .ck-login-*), «Аккаунт», «Семья» and the invite of a new family (.ck-auth-*) in the
+   language of Чекист 2.0 (docs/design-system): panels on the surface with a line frame and no shadow, titles in Onest,
+   the name of the person and the brand in Geologica, the fields of App.css, one main action filled with seal (the shared
+   `button` rules of App.css paint it, with their press), tonal and quiet buttons, a danger an error word. Colours only
+   by 2.0 tokens, sizes only from the text scale. App.css goes AFTER this file: a rule here that paints a button has a
+   class, so it outweighs the shared `button:where(…)` rules. No motion of its own. */
+.ck-auth { display: grid; gap: var(--ck-space-3); min-width: 0; max-width: 600px; overflow-wrap: anywhere; }
+/* The columns of a computer (theme/desktop.css): no box below 960 px — one column in the order of the markup. */
+.ck-auth-col { display: contents; }
+.ck-auth-panel { display: grid; gap: var(--ck-space-4); min-width: 0; padding: var(--ck-space-4); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface); }
 .ck-auth-panel > * { min-width: 0; max-width: 100%; }
-.ck-auth-panel h2 { font-size: var(--ck-text-lg); font-weight: 800; line-height: 1.3; }
-/* The heading of a card with its link on the right («Переименовать»). */
-.ck-auth-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.ck-auth-panel h2 { margin: 0; font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; line-height: 1.3; text-wrap: balance; }
+.ck-auth p { margin: 0; }
+/* The heading of a panel with its word on the right («Переименовать»). */
+.ck-auth-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ck-space-3); min-width: 0; }
 .ck-auth-head > h2 { min-width: 0; }
-.ck-auth-link { flex: none; min-height: 44px; margin-block: -12px; padding: 0 2px; border: 0; background: none; color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; cursor: pointer; }
-.ck-auth-link:hover { background: none; color: var(--ck-link-hover); text-decoration: underline; }
-.ck-auth-link:active { background: none; color: var(--ck-link-hover); }
+.ck-auth-link { flex: none; min-height: var(--ck-tap); margin-block: -10px; padding: 0 var(--ck-space-1); border: 0; border-radius: var(--ck-radius-field); background: transparent; color: var(--ck-seal-ink); font-size: var(--ck-text-label); font-weight: 600; text-decoration: none; cursor: pointer; }
+.ck-auth-link:active { background: color-mix(in srgb, var(--ck-seal-ink) 10%, transparent); color: var(--ck-seal-ink); }
 
+/* Fields: the words over the field; the field itself is the field of App.css (the line-strong frame, 16 px). */
 .ck-auth-field { display: grid; gap: 6px; min-width: 0; }
-.ck-auth-field label { font-size: var(--ck-text-sm); font-weight: 600; }
-.ck-auth-field input, .ck-auth-field select { width: 100%; min-width: 0; min-height: 48px; padding: 10px 14px; color: var(--ck-text); background: var(--ck-surface); border: 1px solid var(--ck-border-field); border-radius: var(--ck-radius-sm); font-size: var(--ck-text-base); }
-.ck-auth-field input[aria-invalid="true"] { border-color: var(--ck-error-border); border-width: 2px; }
-.ck-auth-actions { display: grid; gap: 12px; }
+.ck-auth-field label { color: var(--ck-ink); font-size: var(--ck-text-label); font-weight: 600; }
+.ck-auth-field input, .ck-auth-field select { width: 100%; min-width: 0; }
+.ck-auth-field input[aria-invalid="true"] { border-color: var(--ck-error); box-shadow: inset 0 0 0 1px var(--ck-error); }
+.ck-auth-actions { display: grid; gap: var(--ck-space-3); }
 
-/* Rows of a card: 56 px, the words on the left, the value or the control on the right, a divider between them. */
+/* Rows of a panel: the words on the left, the value or the control on the right, a line between them. */
 .ck-auth-rows { display: grid; margin: 0; padding: 0; list-style: none; }
-/* A card that is only a list of rows: the rows reach its top and bottom edges, as in the artifact. */
-.ck-auth-panel.ck-auth-list { gap: 0; padding-block: 4px; }
-.ck-auth-rows > li + li { border-top: 1px solid var(--ck-divider); }
-.ck-auth-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 56px; padding-block: 6px; color: var(--ck-text); font-size: var(--ck-text-sm); font-weight: 600; text-decoration: none; }
-.ck-auth-row-text { display: grid; gap: 2px; min-width: 0; }
-.ck-auth-row-meta { overflow: hidden; color: var(--ck-text-muted); font-size: var(--ck-text-xs); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-/* A row that leads to another page: the whole row is the link, a chevron on the right. */
-a.ck-auth-row:hover .ck-auth-row-label { color: var(--ck-link-hover); text-decoration: underline; }
-.ck-auth-chevron { flex: none; width: 20px; height: 20px; fill: none; stroke: var(--ck-text-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* A panel that is a list of rows: the rows reach its top and bottom edges. */
+.ck-auth-panel.ck-auth-list { gap: 0; padding-block: var(--ck-space-1); }
+.ck-auth-panel.ck-auth-list > h2 { padding-block: var(--ck-space-3) var(--ck-space-1); }
+.ck-auth-rows > li + li { border-top: 1px solid var(--ck-line); }
+.ck-auth-row { display: flex; align-items: center; justify-content: space-between; gap: var(--ck-space-3); min-width: 0; min-height: 56px; padding-block: var(--ck-space-2); color: var(--ck-ink); font-size: var(--ck-text-body); font-weight: 500; text-decoration: none; }
+.ck-auth-row-text { display: grid; flex: 1; gap: 2px; min-width: 0; }
 .ck-auth-row-label { min-width: 0; }
+.ck-auth-row-meta { overflow: hidden; color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+a.ck-auth-row { border-radius: var(--ck-radius-field); }
+a.ck-auth-row:active { background: color-mix(in srgb, var(--ck-ink) 6%, transparent); }
+.ck-auth-chevron { flex: none; width: 20px; height: 20px; fill: none; stroke: var(--ck-ink-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 /* A row of segments (Тема, Значки): the segments go under the word when both do not fit a narrow phone. */
 li.ck-auth-row { flex-wrap: wrap; }
-li.ck-auth-row > .ck-auth-segments { margin-left: auto; }
+li.ck-auth-row > .ck-segments { flex: 0 1 auto; margin-left: auto; }
+/* A switch row (Скрывать суммы): the words and their line, the switch at the right; the whole row toggles. */
+.ck-auth-rows .ck-switch-row { min-height: 56px; padding-block: var(--ck-space-2); }
+/* «Главное число на Главной» (features/dashboard HomeFigureSetting) as the last block of «Оформление». */
+.ck-auth-figure { padding-block: var(--ck-space-3) var(--ck-space-2); }
 
-/* The person: initials in a circle, the name and the login under it. */
-.ck-auth-profile { display: flex; align-items: center; gap: 16px; min-width: 0; }
-.ck-auth-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--ck-cat-1-tint); color: var(--ck-text); box-shadow: inset 0 0 0 2px var(--ck-cat-1); font-size: var(--ck-text-lg); font-weight: 800; }
+/* The person: initials in a tile of the first tone, the name in Geologica, the login under it. */
+.ck-auth-profile { display: flex; align-items: center; gap: var(--ck-space-4); min-width: 0; }
+.ck-auth-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--ck-cat-1-tint); color: var(--ck-cat-1); font-family: var(--ck-font-display); font-size: var(--ck-text-title); font-weight: 600; }
 .ck-auth-profile-text { display: grid; gap: 2px; min-width: 0; }
-.ck-auth-profile-name { font-size: var(--ck-text-lg); font-weight: 800; line-height: 1.3; }
-.ck-auth-username { color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; }
+.ck-auth-panel .ck-auth-profile-name { font-family: var(--ck-font-display); font-size: var(--ck-text-heading); font-weight: 600; line-height: 1.2; }
+.ck-auth-username { color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; }
 
-/* The theme: two segments, the chosen one inverted like a selected chip. */
-.ck-auth-segments { display: inline-flex; flex: none; gap: 4px; padding: 3px; border-radius: var(--ck-radius-pill); background: var(--ck-bg); }
-.ck-auth-segment { min-height: 40px; padding: 6px 14px; border: 0; border-radius: var(--ck-radius-pill); background: transparent; color: var(--ck-text); font-size: var(--ck-text-sm); font-weight: 700; }
-.ck-auth-segment:hover { background: var(--ck-surface-raised); color: var(--ck-text); }
-.ck-auth-segment:active { background: var(--ck-surface-raised); color: var(--ck-text); }
-.ck-auth-segment[aria-pressed="true"], .ck-auth-segment[aria-pressed="true"]:hover, .ck-auth-segment[aria-pressed="true"]:active { background: var(--ck-chip-selected-bg); color: var(--ck-chip-selected-text); }
-
-/* The main action: the fill of --ck-primary (red in the light theme, gold in the dark one), 56 px, the whole width. */
-.ck-auth-primary { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 56px; padding: 12px 20px; border: 0; border-radius: var(--ck-radius-button); background: var(--ck-primary); color: var(--ck-on-primary); font-size: var(--ck-text-base); font-weight: 800; text-decoration: none; }
-.ck-auth-primary:hover { background: var(--ck-primary-hover); color: var(--ck-on-primary); }
-.ck-auth-primary:active { background: var(--ck-primary-hover); color: var(--ck-on-primary); }
-/* The outline button keeps its surface, frame and text in every state. */
-.ck-auth-secondary { min-height: 48px; border: 1.5px solid var(--ck-link); background: var(--ck-surface); color: var(--ck-link); font-weight: 700; }
-.ck-auth-secondary:hover { background: var(--ck-surface-raised); border-color: var(--ck-link-hover); color: var(--ck-link-hover); }
-.ck-auth-secondary:active { background: var(--ck-accent-bg); border-color: var(--ck-link-hover); color: var(--ck-link-hover); }
-/* A danger is quiet: an outline in the error colours, never a fill. */
-.ck-auth-danger { min-height: 48px; border: 1.5px solid var(--ck-error-border); background: var(--ck-surface); color: var(--ck-error-text); font-weight: 700; }
-.ck-auth-danger:hover { background: var(--ck-error-bg); border-color: var(--ck-error-text); color: var(--ck-error-text); }
-.ck-auth-danger:active { background: var(--ck-error-bg); border-color: var(--ck-error-text); color: var(--ck-error-text); }
+/* The main action: the seal fill of the shared `button` rules, the whole width, 52 px. */
+.ck-auth-primary { display: inline-flex; align-items: center; justify-content: center; gap: var(--ck-space-2); width: 100%; min-height: 52px; border-radius: var(--ck-radius-button); font-size: var(--ck-text-field); text-decoration: none; }
+/* A second action: tonal (surface-2 under ink) in every state; a link (Pocket ID) looks the same. */
+.ck-auth-secondary { display: inline-flex; align-items: center; justify-content: center; gap: var(--ck-space-2); min-height: var(--ck-tap); padding: 10px 18px; border: 1px solid transparent; border-radius: var(--ck-radius-button); background: var(--ck-surface-2); color: var(--ck-ink); font-weight: 600; line-height: 1.2; text-decoration: none; }
+/* A danger is quiet: the error colour as an outline and a word, never a fill. */
+.ck-auth-danger { min-height: var(--ck-tap); padding: 10px 18px; border: 1px solid var(--ck-error); border-radius: var(--ck-radius-button); background: transparent; color: var(--ck-error); font-weight: 600; }
+@media (hover: hover) {
+  .ck-auth-secondary:hover { border-color: transparent; background: color-mix(in srgb, var(--ck-ink) 6%, var(--ck-surface-2)); color: var(--ck-ink); }
+  .ck-auth-danger:hover { border-color: var(--ck-error); background: color-mix(in srgb, var(--ck-error) 6%, transparent); color: var(--ck-error); }
+}
+.ck-auth-secondary:active { border-color: transparent; background: color-mix(in srgb, var(--ck-ink) 10%, var(--ck-surface-2)); color: var(--ck-ink); }
+.ck-auth-danger:active { border-color: var(--ck-error); background: var(--ck-error-soft); color: var(--ck-error); }
+/* «Выйти из аккаунта»: a row of its own at the end, the error word in the middle (the iOS «Выйти» cell). */
+.ck-auth-signout { width: 100%; min-height: 52px; border-color: var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface); font-size: var(--ck-text-field); }
 /* A request in flight: `aria-disabled`, never `disabled`. Heavier than the states above, so it holds under the pointer. */
-.ck-auth button[aria-disabled="true"], .ck-auth button[aria-disabled="true"]:hover, .ck-auth button[aria-disabled="true"]:active { background: var(--ck-disabled-bg); border-color: var(--ck-disabled-border); color: var(--ck-disabled-text); cursor: default; }
-/* The ring keeps an offset: in the light theme the blue ring is not seen right against the red fill. */
-.ck-auth button:focus-visible, .ck-auth input:focus-visible, .ck-auth select:focus-visible, .ck-auth a:focus-visible { outline: 3px solid var(--ck-focus); outline-offset: 3px; }
+.ck-auth button[aria-disabled="true"], .ck-auth button[aria-disabled="true"]:hover, .ck-auth button[aria-disabled="true"]:active { border-color: var(--ck-surface-2); background: var(--ck-surface-2); color: var(--ck-ink-2); cursor: default; }
 
+/* Results: a refusal in the error colour with a bar on the left, a success in the income colour, both in words. */
 .ck-auth-message:empty { display: none; }
 .ck-auth-message p, .ck-auth-message ul { margin: 0; }
 .ck-auth-message ul { padding-left: 22px; }
-/* The bar on the left tells a refusal from a success without the colour. */
-.ck-auth-error { display: grid; gap: 6px; padding-left: 12px; border-left: 4px solid var(--ck-error-border); color: var(--ck-error-text); }
-.ck-auth-done { color: var(--ck-success-text); font-weight: 600; }
-.ck-auth-notice { padding: 14px 16px; border: 1px solid var(--ck-warning-border); border-radius: var(--ck-radius-sm); background: var(--ck-warning-bg); color: var(--ck-warning-text); }
-.ck-auth-rules { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
+.ck-auth-error { display: grid; gap: 6px; padding-left: var(--ck-space-3); border-left: 3px solid var(--ck-error); color: var(--ck-error); font-size: var(--ck-text-body); }
+.ck-auth-done { color: var(--ck-income); font-size: var(--ck-text-body); font-weight: 600; }
+.ck-auth-done:empty { display: none; }
+.ck-auth-notice { padding: var(--ck-space-3) var(--ck-space-4); border-radius: var(--ck-radius-field); background: var(--ck-surface-2); color: var(--ck-ink); font-size: var(--ck-text-body); line-height: 1.45; }
+.ck-auth-rules { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); }
 ul.ck-auth-rules { display: grid; gap: 2px; padding-left: 20px; }
-.ck-auth-hint { color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
+.ck-auth-hint { color: var(--ck-ink-2); font-size: var(--ck-text-label); line-height: 1.45; }
 .ck-auth-hint:empty { display: none; }
 
-/* Sign-in screen: the logo above a card with the form on a phone; the logo on the left from 720 px. */
+/* The sign-in: the emblem on the paper, «Чекист» in Geologica, a panel with the form under it; one column at every
+   width, in the middle of the window. */
 .ck-login {
-  display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 24px 16px;
-  background: var(--ck-bg); color: var(--ck-text); overflow-wrap: anywhere;
+  display: grid; place-items: center; min-height: 100vh; min-height: 100dvh;
+  padding: max(var(--ck-space-8), env(safe-area-inset-top)) var(--ck-space-4) max(var(--ck-space-8), env(safe-area-inset-bottom));
+  background: var(--ck-paper); color: var(--ck-ink); overflow-wrap: anywhere;
 }
-.ck-login-layout { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 24px; width: 100%; max-width: 1080px; }
-/* The board is dark in both themes: the logo file is an opaque near-black square. On a phone it is an app icon. */
-.ck-login-board {
-  position: relative; isolation: isolate; overflow: hidden;
-  width: min(100%, 152px, 22vh); width: min(100%, 152px, 22svh); aspect-ratio: 1;
-  padding: 6px; border: 2px solid var(--ck-accent); border-radius: 32px;
-  background: var(--ck-logo-bg); box-shadow: var(--ck-card-shadow);
-}
-/* Rays: a striped conic gradient that fades to nothing towards the emblem. */
-.ck-login-rays {
-  position: absolute; inset: 4px; z-index: 0;
-  background: repeating-conic-gradient(from -4deg at 50% 42%, color-mix(in srgb, var(--ck-brand) 30%, transparent) 0deg 4deg, transparent 4deg 12deg);
-  -webkit-mask-image: radial-gradient(circle at 50% 42%, transparent 42%, black 88%);
-  mask-image: radial-gradient(circle at 50% 42%, transparent 42%, black 88%);
-}
-/* `lighten` lets the rays through the dark background of the picture, so its square is not seen on the board. */
-.ck-login-logo { position: relative; z-index: 1; display: block; width: 100%; height: auto; mix-blend-mode: lighten; }
+.ck-login-layout { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--ck-space-6); width: 100%; max-width: 400px; }
+.ck-login-brand { display: grid; justify-items: center; gap: var(--ck-space-1); text-align: center; }
+.ck-login-logo { display: block; width: 88px; height: 88px; margin-bottom: var(--ck-space-2); }
+.ck-login-name { margin: 0; font-family: var(--ck-font-display); font-size: var(--ck-text-title-large); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.ck-login-subtitle { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-body); }
+.ck-login-panel { display: grid; gap: var(--ck-space-5); width: 100%; min-width: 0; padding: var(--ck-space-6) var(--ck-space-5); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface); }
+.ck-login-title { display: grid; gap: var(--ck-space-1); }
+.ck-login-panel h1 { margin: 0; font-family: var(--ck-font-display); font-size: var(--ck-text-heading); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+/* On this screen the form lies in the panel itself, without a panel of its own. */
+.ck-login .ck-auth { gap: var(--ck-space-4); max-width: none; }
+.ck-login .ck-auth-panel { gap: var(--ck-space-4); padding: 0; border: 0; border-radius: 0; background: none; }
+.ck-login .ck-auth-actions { margin-top: var(--ck-space-1); }
+.ck-login-note { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); text-align: center; }
+.ck-login-note a { color: var(--ck-seal-ink); font-weight: 600; }
+.ck-login-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--ck-space-3); }
 
-/* The card of the form. */
-.ck-login-panel { display: grid; gap: 20px; width: 100%; max-width: 420px; min-width: 0; padding: 24px 20px; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
-.ck-login-title { display: grid; gap: 4px; text-align: center; }
-.ck-login-panel h1 { font-size: var(--ck-text-xl); font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; }
-.ck-login-subtitle { color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 600; }
-/* On this screen the form lies in the card itself, without a card of its own. */
-.ck-login .ck-auth { gap: 16px; max-width: none; }
-.ck-login .ck-auth-panel { gap: 16px; padding: 0; background: none; border-radius: 0; box-shadow: none; }
-.ck-login .ck-auth-actions { margin-top: 4px; }
-.ck-login-note { color: var(--ck-text-muted); font-size: var(--ck-text-xs); text-align: center; }
-.ck-login-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; }
+/* «Подключение нейросети (MCP)» on «Аккаунт» (2026-10-15): the form, the tokens as rows, a new token once on a slip. */
+.ck-auth-mcp code { font-family: var(--ck-font-slip); font-size: var(--ck-text-label); overflow-wrap: anywhere; }
+.ck-auth-mcp-form { display: grid; gap: var(--ck-space-3); }
+.ck-auth-mcp-scope { display: flex; flex-wrap: wrap; gap: var(--ck-space-2); margin: 0; padding: 0; border: 0; }
+.ck-auth-mcp-scope legend { margin-bottom: 6px; padding: 0; font-size: var(--ck-text-label); font-weight: 600; }
+.ck-auth-mcp-scope label { display: inline-flex; align-items: center; gap: var(--ck-space-2); min-height: var(--ck-tap); padding: 0 var(--ck-space-4) 0 var(--ck-space-3); border: 1px solid var(--ck-line-strong); border-radius: var(--ck-radius-pill); font-size: var(--ck-text-label); font-weight: 600; cursor: pointer; }
+.ck-auth-mcp-scope label:has(:checked) { border-color: var(--ck-ink); box-shadow: inset 0 0 0 1px var(--ck-ink); }
+.ck-auth-mcp-scope input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--ck-ink); }
+.ck-auth-mcp-tokens .ck-row { min-height: 60px; }
+.ck-auth-mcp-tokens .ck-row-meta { white-space: normal; }
+.ck-auth-mcp-tokens [data-revoked] .ck-row-title { color: var(--ck-ink-2); }
+.ck-auth-mcp-tokens .ck-auth-danger { flex: none; padding-inline: var(--ck-space-3); font-size: var(--ck-text-label); }
+/* The one-time token: the paper slip in both themes, the lines in the slip font. */
+.ck-auth-slip { display: grid; gap: var(--ck-space-3); padding: var(--ck-space-4); border-radius: var(--ck-radius-field); background: var(--ck-slip); color: var(--ck-slip-ink); }
+.ck-auth-slip p { color: var(--ck-slip-ink); font-size: var(--ck-text-body); line-height: 1.45; }
+.ck-auth-mcp-copy { display: grid; gap: var(--ck-space-1); }
+.ck-auth-slip .ck-auth-row-label { color: var(--ck-slip-ink-2); font-size: var(--ck-text-caption); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.ck-auth-mcp-copy-row { display: flex; gap: var(--ck-space-2); min-width: 0; }
+.ck-auth-slip .ck-auth-mcp-copy-row input { flex: 1 1 auto; min-width: 0; border: 1px dashed var(--ck-slip-ink-2); background: transparent; color: var(--ck-slip-ink); font-family: var(--ck-font-slip); font-size: var(--ck-text-label); }
+.ck-auth-slip .ck-auth-slip-button { flex: none; min-height: var(--ck-tap); padding: 8px 14px; border: 1px solid var(--ck-slip-ink-2); border-radius: var(--ck-radius-button); background: transparent; color: var(--ck-slip-ink); font-size: var(--ck-text-label); font-weight: 600; }
+.ck-auth-slip .ck-auth-slip-button:active { background: color-mix(in srgb, var(--ck-slip-ink) 10%, transparent); }
 
-@media (min-width: 720px) {
-  .ck-login { padding: 32px; }
-  .ck-login-layout { grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr); align-items: center; justify-items: stretch; gap: 48px; }
-  .ck-login-board { justify-self: end; width: min(100%, 520px, 80vh); padding: 14px; border-radius: var(--ck-radius); }
-  .ck-login-rays { inset: 7px; }
-  .ck-login-panel { justify-self: start; padding: 32px 28px; }
-  .ck-login-footer { grid-column: 2; justify-self: start; width: 100%; max-width: 420px; }
-}
+/* «Вход через Pocket ID»: a tonal button that is a link (a page navigation) on the sign-in; the panel on «Аккаунт». */
+.ck-auth-pocket-id { width: 100%; }
+.ck-auth-pocket-id-section { gap: var(--ck-space-3); }
 
 @media (forced-colors: active) {
-  .ck-auth-panel, .ck-login-panel { border: 1px solid CanvasText; }
-  .ck-login-board { border-color: CanvasText; box-shadow: none; }
-  .ck-login-rays { display: none; }
-  .ck-login-logo { mix-blend-mode: normal; }
-  .ck-auth-field input, .ck-auth-field select { border-color: FieldText; }
-  .ck-auth-primary { border: 1px solid ButtonText; }
-  .ck-auth-segment[aria-pressed="true"] { outline: 2px solid Highlight; }
-  .ck-auth-field input[aria-invalid="true"], .ck-auth-error, .ck-auth-notice { border-color: CanvasText; }
+  .ck-auth-panel, .ck-login-panel, .ck-auth-slip { border: 1px solid CanvasText; }
+  .ck-auth-primary, .ck-auth-secondary { border: 1px solid ButtonText; }
+  .ck-auth-field input[aria-invalid="true"], .ck-auth-error { border-color: CanvasText; }
   .ck-auth button[aria-disabled="true"] { border-color: GrayText; color: GrayText; }
-  .ck-auth button:focus-visible, .ck-auth input:focus-visible, .ck-auth select:focus-visible, .ck-auth a:focus-visible { outline-color: Highlight; }
 }
-
-/* «Подключение нейросети (MCP)» on /account (2026-10-15). */
-.ck-auth-mcp { display: grid; gap: 14px; }
-.ck-auth-mcp code { overflow-wrap: anywhere; }
-.ck-auth-mcp-form { display: grid; gap: 12px; }
-.ck-auth-mcp-scope { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; border: 0; }
-.ck-auth-mcp-scope legend { margin-bottom: 6px; font-weight: 600; }
-.ck-auth-mcp-scope label { display: inline-flex; align-items: center; gap: 8px; }
-.ck-auth-mcp-issued { display: grid; gap: 10px; padding: 14px; border: 1.5px solid var(--ck-primary); border-radius: var(--ck-radius-button); }
-.ck-auth-mcp-copy { display: grid; gap: 4px; }
-.ck-auth-mcp-copy-row { display: flex; gap: 8px; }
-.ck-auth-mcp-copy-row input { flex: 1 1 auto; min-width: 0; font-family: var(--ck-font-figures, monospace); font-size: var(--ck-text-xs); }
-.ck-auth-mcp-tokens [data-revoked] { opacity: 0.6; }
-
-/* «Войти через Pocket ID» / «Подключить Pocket ID»: an outline button that is a link (a page navigation). */
-.ck-auth-pocket-id { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 10px 20px; border-radius: var(--ck-radius-button); text-decoration: none; }
-.ck-auth-pocket-id-section { display: grid; gap: 14px; }

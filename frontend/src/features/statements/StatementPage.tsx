@@ -6,8 +6,9 @@ import type { Goal } from '../../api/goals'
 import { assignStatementGoal, deleteStatement, getStatement, saveStatement } from '../../api/statements'
 import type { StatementDetail, StatementRow } from '../../api/statements'
 import type { Category } from '../../api/types'
+import ConfirmDialog from '../../components/ConfirmDialog'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
-import Sheet from '../../components/Sheet'
 import { usePageTitle } from '../../components/page-header'
 import { Link, navigate } from '../../navigation'
 import { formatMoney } from '../../lib/money'
@@ -43,11 +44,16 @@ export type StatementViewProps = {
   onDelete: () => void
 }
 
-/** «18 450 ₸» of a spend, «+150 000 ₸» of an incoming. */
+/** The amount of a row: what goes into the spend, or the incoming. A purchase returned in full shows what the bank took. */
+function rowAmount(row: StatementRow): { value: string; income: boolean } {
+  if (!row.amount.startsWith('-')) return { value: row.amount, income: true }
+  return { value: row.spend !== '0.00' ? row.spend : row.amount.slice(1), income: false }
+}
+
+/** «18 450 ₸» of a spend, «+150 000 ₸» of an incoming: the words of the check box of a row. */
 function amountText(row: StatementRow): string {
-  if (!row.amount.startsWith('-')) return `+${formatMoney(row.amount, row.currency)}`
-  // A purchase returned in full shows what the bank took; any other — what goes into the spend.
-  return formatMoney(row.spend !== '0.00' ? row.spend : row.amount.slice(1), row.currency)
+  const { value, income } = rowAmount(row)
+  return `${income ? '+' : ''}${formatMoney(value, row.currency)}`
 }
 
 type RowProps = Pick<StatementViewProps, 'edits' | 'onOpen' | 'onToggle' | 'onCategory' | 'onStore' | 'onGoal'> & {
@@ -81,7 +87,8 @@ function RowItem({ row, open, edits, options, byId, goals, onOpen, onToggle, onC
   const editable = saveable(row)
   const gift = asGoal(row)
   const editorId = `statement-row-${row.id}-edit`
-  return <li className={`statement-row${questionable && !edit?.touched ? ' statement-row-review' : ''}`} data-state={row.state} data-kind={row.kind}>
+  const amount = rowAmount(row)
+  return <li className={`statement-row${questionable && !edit?.touched ? ' statement-row-review' : ''}`} data-state={row.state} data-kind={row.kind} data-ai={row.ai ?? undefined}>
     <div className="statement-row-line">
       {editable
         ? <label className="statement-check-box">
@@ -95,7 +102,8 @@ function RowItem({ row, open, edits, options, byId, goals, onOpen, onToggle, onC
           <span className="ck-row-title">{title}</span>
           <span className="ck-row-meta">{rowMeta(row, edit, byId)}</span>
         </span>
-        <span className={`ck-row-amount${row.amount.startsWith('-') ? '' : ' statement-income'}`}>{amountText(row)}</span>
+        <span className={`ck-row-amount${amount.income ? ' statement-income' : ''}`}>
+          <Money value={amount.value} currency={row.currency} size="row" sign={amount.income ? 'plus' : 'auto'} tone={amount.income ? 'in' : undefined} /></span>
       </button>
     </div>
     {note && <p className="statement-row-note">{note}</p>}
@@ -294,12 +302,7 @@ export default function StatementPage({ statementId }: { statementId: number }) 
       onOpen={setOpen} onToggle={(id, checked) => setEdits((previous) => toggleRow(previous, id, checked))}
       onCategory={choose} onStore={(id, store) => setEdits((previous) => setStore(previous, id, store))}
       onSave={() => { void save() }} onDelete={() => setConfirm(true)} />
-    <Sheet open={confirm} onClose={() => setConfirm(false)} title="Убрать черновик">
-      <div className="statement-confirm">
-        <p>{statementTexts.deleteQuestion}</p>
-        <button type="button" className="ck-button-danger" onClick={() => { void remove() }}>Убрать</button>
-        <button type="button" className="ck-button-secondary" onClick={() => setConfirm(false)}>Оставить</button>
-      </div>
-    </Sheet>
+    <ConfirmDialog open={confirm} title={statementTexts.deleteTitle} message={statementTexts.deleteMessage} confirmLabel="Убрать черновик"
+      cancelLabel="Оставить" danger onConfirm={() => { void remove() }} onCancel={() => setConfirm(false)} />
   </>
 }

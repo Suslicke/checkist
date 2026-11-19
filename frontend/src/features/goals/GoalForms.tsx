@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type { Contribution, Goal } from '../../api/goals'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import { currencySymbol } from '../../lib/money'
 import type { Person } from '../../lib/people'
 import { contributionDraftOf, contributionTitle, dayText, goalDraftOf, goalErrors, moneyValue } from './goals-state'
@@ -14,16 +15,14 @@ function Field({ id, label, error, children }: { id: string; label: string; erro
   </div>
 }
 
-/** A deletion asks once more, in place of its button. */
-function Remove({ question, label, busy, onDelete }: { question: string; label: string; busy: boolean; onDelete: () => void }) {
+/** A deletion cannot be undone: it asks once more in a ConfirmDialog. */
+function Remove({ question, message, label, busy, onDelete }: { question: string; message?: string; label: string; busy: boolean; onDelete: () => void }) {
   const [confirming, setConfirming] = useState(false)
-  return confirming
-    ? <div className="goal-confirm">
-      <p>{question}</p>
-      <button type="button" className="ck-button-danger" aria-disabled={busy || undefined} onClick={busy ? undefined : onDelete}>Удалить</button>
-      <button type="button" className="ck-button-secondary" onClick={() => setConfirming(false)}>Отмена</button>
-    </div>
-    : <button type="button" className="ck-button-danger" onClick={() => setConfirming(true)}>{label}</button>
+  return <>
+    <button type="button" className="ck-button-danger goal-delete" onClick={() => setConfirming(true)}>{label}</button>
+    <ConfirmDialog open={confirming} danger title={question} message={message} confirmLabel={label}
+      onConfirm={() => { if (!busy) { setConfirming(false); onDelete() } }} onCancel={() => setConfirming(false)} />
+  </>
 }
 
 export type GoalFormProps = {
@@ -106,7 +105,7 @@ export function GoalForm({ goal, currency, household, busy, failure = null, onSu
     </fieldset>}
     {failure && <p className="goal-field-error" role="alert">{failure}</p>}
     <button type="submit" className="goal-submit" aria-disabled={busy || undefined}>{goal ? 'Сохранить' : 'Добавить цель'}</button>
-    {goal && onDelete && <Remove question={`Удалить «${goal.name}» вместе со взносами?`} label="Удалить цель" busy={busy} onDelete={onDelete} />}
+    {goal && onDelete && <Remove question={`Удалить «${goal.name}» вместе со взносами?`} message="История взносов удалится вместе с целью." label="Удалить цель" busy={busy} onDelete={onDelete} />}
   </form>
 }
 
@@ -155,7 +154,7 @@ export function InterestRecord({ item, busy, failure = null, onDelete }: { item:
     <p className="goal-note">{contributionTitle(item)} на {dayText(item.date)}. Это не взнос, а разница сверки депозита с банком: в «откладываете»
       она не входит.</p>
     {failure && <p className="goal-field-error" role="alert">{failure}</p>}
-    <Remove question="Удалить эту сверку?" label="Удалить сверку" busy={busy} onDelete={onDelete} />
+    <Remove question="Удалить эту сверку?" message="Следующая сверка посчитает проценты заново." label="Удалить сверку" busy={busy} onDelete={onDelete} />
   </div>
 }
 

@@ -1,0 +1,25 @@
+/* The message after an action (Snackbar.tsx; docs/design-system/components/Snackbar): ink with the paper text, the
+   action in --ck-inv-action, the floating shadow; at the bottom of the window over the bars (--ck-bottom-occupied: the
+   capsule of iOS, the navigation of Android, nothing on a wide screen) on the --ck-z-toast layer. iOS — the toast with
+   the corner 16 and the bar of the countdown that runs down only under no reduced motion; Android and a computer — the
+   Material 3 snackbar, the corner --ck-radius-snackbar, no bar. Colours are tokens only. */
+.ck-snackbar { position: fixed; right: max(var(--ck-space-4), env(safe-area-inset-right, 0px)); bottom: calc(var(--ck-bottom-occupied) + var(--ck-space-2)); left: max(var(--ck-space-4), env(safe-area-inset-left, 0px)); z-index: var(--ck-z-toast); display: flex; align-items: center; gap: var(--ck-space-3); max-width: 560px; min-height: var(--ck-tap); margin: 0 auto; padding: 6px var(--ck-space-2) 6px var(--ck-space-4); overflow: hidden; border-radius: var(--ck-radius-snackbar); background: var(--ck-ink); color: var(--ck-paper); box-shadow: var(--ck-shadow-float); font-family: var(--ck-font-ui); font-size: var(--ck-text-body); font-weight: 500; line-height: 1.3; }
+.ck-snackbar-message { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.ck-snackbar-action { flex: none; min-height: var(--ck-tap); margin: 0; padding: 0 var(--ck-space-3); border: 0; border-radius: var(--ck-radius-pill); background: transparent; color: var(--ck-inv-action); font-size: var(--ck-text-body); font-weight: 700; }
+.ck-snackbar-action:hover:not(:disabled) { background: color-mix(in oklab, var(--ck-inv-action) 14%, transparent); }
+.ck-snackbar-action:active:not(:disabled) { background: color-mix(in oklab, var(--ck-inv-action) 20%, transparent); }
+/* The bar of the countdown: drawn on iOS only and only while it moves. */
+.ck-snackbar-count { display: none; }
+
+:root[data-platform="ios"] .ck-snackbar { right: max(var(--ck-space-3), env(safe-area-inset-right, 0px)); left: max(var(--ck-space-3), env(safe-area-inset-left, 0px)); padding: var(--ck-space-2) 10px var(--ck-space-2) var(--ck-space-4); border-radius: 16px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .ck-snackbar { animation: ck-snackbar-in var(--ck-dur-state) var(--ck-ease-out); }
+  :root[data-platform="ios"] .ck-snackbar-count { position: absolute; bottom: 0; left: 0; display: block; width: 100%; height: 3px; background: var(--ck-inv-action); transform-origin: left; animation: ck-snackbar-count var(--ck-snackbar-countdown) linear forwards; }
+  @keyframes ck-snackbar-in { from { opacity: 0; transform: translateY(var(--ck-space-2)); } }
+  @keyframes ck-snackbar-count { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+}
+
+@media (forced-colors: active) {
+  .ck-snackbar { border: 1px solid CanvasText; }
+}

@@ -1,19 +1,20 @@
 /* The filters of a screen on a phone (ResponsiveFilters.tsx): the button «Фильтры (N)» and, beside it, the chips
-   of what is filtered. No width media query here: the view is chosen by useNarrow(). Colours are tokens only. */
-.ck-filters { min-width: 0; margin-bottom: 16px; }
-.ck-filters-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.ck-filters-toggle { flex: none; min-height: 48px; border-color: var(--ck-link); background: var(--ck-surface); color: var(--ck-link); white-space: nowrap; }
-.ck-filters-toggle:hover:not(:disabled) { border-color: var(--ck-link-hover); background: var(--ck-surface-raised); color: var(--ck-link-hover); }
-.ck-filters-toggle:active:not(:disabled) { border-color: var(--ck-link-hover); background: var(--ck-accent-bg); color: var(--ck-link-hover); }
+   of what is filtered. No width media query here: the view is chosen by useNarrow(). Colours are tokens only.
+   The button is tonal (Чекист 2.0: surface-2 under ink): the seal is the one main action of a screen. */
+.ck-filters { min-width: 0; margin-bottom: var(--ck-space-4); }
+.ck-filters-bar { display: flex; align-items: center; gap: var(--ck-space-2); min-width: 0; }
+.ck-filters-toggle { flex: none; min-height: var(--ck-tap); border-color: var(--ck-surface-2); background: var(--ck-surface-2); color: var(--ck-ink); white-space: nowrap; }
+.ck-filters-toggle:hover:not(:disabled) { border-color: var(--ck-surface-2); background: color-mix(in srgb, var(--ck-ink) 8%, var(--ck-surface-2)); color: var(--ck-ink); }
+.ck-filters-toggle:active:not(:disabled) { border-color: var(--ck-surface-2); background: color-mix(in srgb, var(--ck-ink) 10%, var(--ck-surface-2)); color: var(--ck-ink); }
 .ck-filters-summary { flex: 1 1 auto; min-width: 0; }
-.ck-filters-sheet { display: grid; gap: 16px; padding-bottom: 4px; }
+.ck-filters-sheet { display: grid; gap: var(--ck-space-4); padding-bottom: 4px; }
 .ck-filters-done { width: 100%; }
 /* The sheet is drawn in document.body, outside the screen: the rules of a screen for its fields
    (`.ck-rec select`, `.product-page input` …) do not reach it. The fields of a filter form get one look here. */
 .ck-filters-sheet label { font-weight: 600; }
-.ck-filters-sheet select { width: 100%; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid var(--ck-border-field); border-radius: var(--ck-radius-sm); background: var(--ck-surface); color: var(--ck-text); }
-.ck-filters-sheet input:not([type="checkbox"]):not([type="radio"]) { width: 100%; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid var(--ck-border-field); border-radius: var(--ck-radius-sm); background: var(--ck-surface); color: var(--ck-text); }
-.ck-filters-sheet [aria-invalid="true"] { border-color: var(--ck-error-border); }
+.ck-filters-sheet select { width: 100%; min-width: 0; min-height: var(--ck-tap); padding: 10px 12px; border: 1px solid var(--ck-line-strong); border-radius: var(--ck-radius-field); background: var(--ck-surface); color: var(--ck-ink); }
+.ck-filters-sheet input:not([type="checkbox"]):not([type="radio"]) { width: 100%; min-width: 0; min-height: var(--ck-tap); padding: 10px 12px; border: 1px solid var(--ck-line-strong); border-radius: var(--ck-radius-field); background: var(--ck-surface); color: var(--ck-ink); }
+.ck-filters-sheet [aria-invalid="true"] { border-color: var(--ck-error); }
 /* A pinned bar of a form inside the sheet stops at the bottom of the sheet: the bottom menu is under the backdrop. */
 .ck-filters-sheet .ck-action-bar { bottom: 0; }
 /* The compact bar of a statistics tab (`compact`): what is chosen on the left, a low pill on the right with the

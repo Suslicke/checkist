@@ -113,8 +113,8 @@ describe('the save bar of «Лимиты»', () => {
   })
   it('names the number of changes on the button', () => {
     expect(saveBarLabel(0)).toBe('Сохранить')
-    expect(saveBarLabel(1)).toBe('Сохранить · 1 изменение')
-    expect(saveBarLabel(3)).toBe('Сохранить · 3 изменения')
-    expect(saveBarLabel(11)).toBe('Сохранить · 11 изменений')
+    expect(saveBarLabel(1)).toBe('Сохранить · 1\u00a0изменение')
+    expect(saveBarLabel(3)).toBe('Сохранить · 3\u00a0изменения')
+    expect(saveBarLabel(11)).toBe('Сохранить · 11\u00a0изменений')
   })
 })

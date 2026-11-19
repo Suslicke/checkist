@@ -3,6 +3,7 @@ import { getCategories } from '../../api/catalog'
 import { dismissStores, getStoresState, mergeStores, setStoreCategory } from '../../api/store-merges'
 import type { StoresState } from '../../api/store-merges'
 import type { Category, LocalApiResult } from '../../api/types'
+import Icon from '../../components/Icon'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import { categoryTree } from '../expense/expense-form'
@@ -49,14 +50,20 @@ export function StoresView({ state, search, selected, ask, busy, notice, failure
       <ul className="ck-list">
         {state.suggestions.map((suggestion) => {
           const stores = pick(state, suggestion.stores)
+          const model = suggestion.source === 'model'
+          // A suggestion of the model carries the gold of the assistant; one found by the names, a quiet store tile.
           return <li key={suggestion.stores.join('-')} className="stores-suggestion">
-            <div className="ck-row-main">
-              <span className="stores-names">{stores.map((store) => store.name).join(' · ')}</span>
-              <span className="ck-row-meta">{stores.map((store) => spendsText(store.receipts_count)).join(' · ')}
-                {suggestion.source === 'model' ? ' · по мнению модели' : ''}</span>
+            <div className="stores-suggestion-head">
+              <span className={`ck-row-badge stores-suggestion-badge${model ? ' stores-suggestion-model' : ''}`} aria-hidden="true">
+                <Icon name={model ? 'insight' : 'store'} size={20} /></span>
+              <div className="ck-row-main">
+                <span className="stores-names">{stores.map((store) => store.name).join(' · ')}</span>
+                <span className="ck-row-meta">{stores.map((store) => spendsText(store.receipts_count)).join(' · ')}
+                  {model ? ' · по мнению модели' : ''}</span>
+              </div>
             </div>
             <div className="stores-suggestion-actions">
-              <button type="button" disabled={busy} onClick={() => onAsk(suggestion.stores)}>Склеить</button>
+              <button type="button" className="stores-suggestion-merge" disabled={busy} onClick={() => onAsk(suggestion.stores)}>Склеить</button>
               <button type="button" className="ck-button-secondary" disabled={busy} onClick={() => onDismiss(suggestion.stores)}>Не то</button>
             </div>
           </li>
@@ -86,7 +93,7 @@ export function StoresView({ state, search, selected, ask, busy, notice, failure
               ? <label className="ck-row stores-row"><input type="checkbox" checked={selected.includes(store.id)} onChange={() => onToggle(store.id)} />{content}</label>
               : <div className="ck-row stores-row">{content}</div>}
             {state.can_merge && onCategory && tree.length > 0 && <label className="stores-category-pick">
-              <span>Неразобранное считать в</span>
+              <span className="stores-category-label">Неразобранное считать в</span>
               <select value={store.default_category ?? ''} disabled={busy} aria-label={`${store.name}: неразобранные позиции считать в категории`}
                 onChange={(event) => onCategory(store.id, event.target.value ? Number(event.target.value) : null)}>
                 <option value="">Не разбирать (как есть)</option>

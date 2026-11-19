@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { getCategories } from '../../api/catalog'
 import { getStores } from '../../api/stores'
 import type { Category, StoreEntry } from '../../api/types'
+import Money from '../../components/Money'
 import Sheet from '../../components/Sheet'
 import { navigate } from '../../navigation'
 import { formatPurchasedOn } from '../../lib/format'
@@ -207,8 +208,9 @@ export function ExportView(props: ExportViewProps) {
         <p className="export-preview" aria-live="polite">
           {preview.kind === 'loading' && 'Считаем…'}
           {preview.kind === 'error' && 'Не удалось посчитать. Выгрузка всё равно доступна.'}
-          {preview.kind === 'ok' && previewText(preview.data).map((part, index) => part.figure
-            ? <span key={index} className="ck-figures">{part.text}</span> : <span key={index}>{part.text}</span>)}
+          {preview.kind === 'ok' && previewText(preview.data).map((part, index) => part.money
+            ? <Money key={index} value={part.money.value} currency={part.money.currency} />
+            : part.figure ? <span key={index} className="ck-figures">{part.text}</span> : <span key={index}>{part.text}</span>)}
         </p>
         {large && <p className="export-warning" role="alert">Слишком много чеков для одного файла: сузьте период или добавьте фильтры.</p>}
         <div className="export-buttons">

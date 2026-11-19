@@ -3,7 +3,8 @@ import type { FormEvent } from 'react'
 import { getManualParse, getManualSuggestions, requestManualParse } from '../../api/receipts'
 import type { ManualParse, ManualParseDraft, ManualSuggestion } from '../../api/receipts'
 import ChipScroller from '../../components/ChipScroller'
-import { formatMoney } from '../../lib/money'
+import Icon from '../../components/Icon'
+import Money from '../../components/Money'
 import { createPollingRequest } from '../recognition/polling'
 import { todayISO } from './expense-form'
 import { isActive, PARSE_TEXT_MAX, PARSE_WAIT_MS, parseOutcome, parseTexts, requestFailureMessage } from './parse-text'
@@ -28,18 +29,18 @@ export function TextHintView({ text, view, onText, onSubmit, voice, suggestions 
   const listed = !working && hasSearchWords(text) ? suggestions : []
   const chips = !working && !text.trim() ? frequent : []
   return <form className="expense-hint" onSubmit={submit} noValidate aria-busy={working}>
-    <label htmlFor="expense-hint-text" className="expense-hint-label">{parseTexts.label}</label>
+    <label htmlFor="expense-hint-text" className="expense-hint-label"><Icon name="insight" size={18} className="expense-hint-icon" />{parseTexts.label}</label>
     <div className="expense-hint-row">
       <input id="expense-hint-text" type="text" autoComplete="off" enterKeyHint="go" maxLength={PARSE_TEXT_MAX}
         placeholder={placeholder} value={text} readOnly={working} aria-describedby="expense-hint-status"
         onChange={(event) => onText(event.target.value)} />
-      {voice && <button type="button" className="expense-hint-mic" aria-pressed={voice.listening} disabled={working}
+      {voice && <button type="button" className="ck-icon-button expense-hint-mic" aria-pressed={voice.listening} disabled={working}
         aria-label={voice.listening ? 'Остановить запись' : 'Сказать голосом'} onClick={voice.onToggle}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
           <rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8" />
         </svg>
       </button>}
-      <button type="submit" className="expense-hint-send" disabled={working || !text.trim()} aria-label={working ? parseTexts.working : parseTexts.button}>
+      <button type="submit" className="ck-icon-button expense-hint-send" disabled={working || !text.trim()} aria-label={working ? parseTexts.working : parseTexts.button}>
         {working
           ? <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
           : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" /></svg>}
@@ -53,11 +54,12 @@ export function TextHintView({ text, view, onText, onSubmit, voice, suggestions 
     {listed.length > 0 && <ul className="ck-list expense-suggest" aria-label="Как в прошлый раз">
       {listed.map((spend) => <li key={spend.receipt_id}>
         <button type="button" className="ck-row expense-suggest-row" onClick={() => onRepeat(spend)}>
+          <span className="ck-row-badge" aria-hidden="true"><Icon name="repeat" size={20} /></span>
           <span className="ck-row-main">
             <span className="ck-row-title">{suggestionTitle(spend)}</span>
             <span className="ck-row-meta">{suggestionMeta(spend, today)}</span>
           </span>
-          <span className="ck-row-amount">{formatMoney(spend.total, spend.currency)}</span>
+          <span className="ck-row-amount"><Money value={spend.total} currency={spend.currency} size="row" /></span>
         </button>
       </li>)}
     </ul>}

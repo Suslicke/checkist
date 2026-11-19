@@ -66,6 +66,12 @@ function wholeWords(text: string) {
   ))
 }
 
+/** The area under one run of a line: the run, down to the bottom of the plot and back to its first point. */
+function areaPath(run: string, bottom: number): string {
+  const start = /^M(-?[\d.]+)/.exec(run)?.[1] ?? '0'
+  return `${run}V${c(bottom)}H${start}Z`
+}
+
 function Swatch({ style }: { style: SeriesStyle }) {
   return (
     <svg className={`ck-line-swatch ck-chart-c${style.color}`} viewBox="0 0 34 14" aria-hidden="true" focusable="false">
@@ -236,6 +242,8 @@ export default function LineChart({
             const { style } = visible[index]
             return (
               <g key={item.key} className={`ck-line-series ck-chart-c${style.color}`}>
+                {/* A single line gets a faint wash of its colour down to the axis, as the pace of the month. */}
+                {visible.length === 1 && item.segments.map((d) => <path key={`area-${d}`} className="ck-line-area" d={areaPath(d, plot.bottom)} />)}
                 {item.segments.map((d) => <path key={d} className="ck-line-path" d={d} strokeDasharray={style.dash || undefined} />)}
                 {item.points.map((point) => {
                   const current = point.xIndex === activeIndex

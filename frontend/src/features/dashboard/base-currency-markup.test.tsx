@@ -14,8 +14,11 @@ import { DashboardView } from './DashboardPage'
 import { LimitsView } from './LimitsPage'
 import { legacyLimit } from './limits-state'
 
-const nb = (text: string) => text.replaceAll(' ', ' ')
+const nb = (text: string) => text.replaceAll(' ', '\u00a0')
 const noop = () => {}
+/** What a person reads: no tags, one kind of space (the markup of other screens is theirs to change). */
+const words = (html: string) => html.replace(/<svg\b.*?<\/svg>/g, '').replace(/<[^>]+>/g, '').replace(/[\u00a0\u202f]/g, ' ')
+const money = (int: string, sign: string, frac = '') => `<span class="ck-money-int">${int.replaceAll(' ', '\u202f')}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f${sign}</span>`
 
 describe('money in the family base currency (2026-10-13)', () => {
   it('shows the converted twin beside an amount in another currency only', () => {
@@ -45,8 +48,8 @@ describe('«Главная» in the base currency', () => {
   }
   it('shows «20 $» with «≈ 8 978,80 ₸» under it, and the spends without a rate in their own card', () => {
     const html = renderToStaticMarkup(<DashboardView data={data()} today="2026-10" date="2026-10-12" />)
-    expect(html).toContain(`<span class="ck-row-amount ck-figures">${nb('20 $')}<span class="dash-recent-twin">${nb('≈ 8 978,80 ₸')}</span></span>`)
-    expect(html).toContain(`<span class="ck-row-amount ck-figures">${nb('4 500 ₸')}</span>`)
+    expect(html).toContain(`<span class="ck-row-amount dash-recent-amount"><span class="ck-money ck-money--row">${money('20', '$')}</span><span class="ck-money ck-money--inline ck-twin"><span class="ck-money-approx">≈\u00a0</span>${money('8 978', '₸', ',80')}</span></span>`)
+    expect(html).toContain(`<span class="ck-row-amount dash-recent-amount"><span class="ck-money ck-money--row">${money('4 500', '₸')}</span></span>`)
     expect(html).toContain('<h2 id="dash-unconverted-heading">Без курса</h2>')
     expect(html).toContain('Нет курса Нацбанка на дату покупки — не в итоге')
     expect(html).not.toContain('Другие валюты')
@@ -74,8 +77,8 @@ describe('«Траты» keep the original amount', () => {
   })
   it('a row says «20 $» and «≈ 8 978,80 ₸»', () => {
     const html = renderToStaticMarkup(<SpendDays receipts={rows} today="2026-10-12" showOwner={false} />)
-    expect(html).toContain(`${nb('20 $')}<span class="spends-row-twin">${nb('≈ 8 978,80 ₸')}</span>`)
-    expect(html.match(/spends-row-twin/g)).toHaveLength(1)
+    expect(words(html)).toContain('20 $≈ 8 978,80 ₸')
+    expect(words(html).match(/≈/g)).toHaveLength(1)
   })
 })
 
@@ -95,7 +98,7 @@ describe('«Лимиты» only in the base currency', () => {
     expect(html).toContain('выбирает главный в семье')
   })
   it('shows a limit of another currency converted, ready to move to the base one', () => {
-    expect(html).toContain(`<span class="limits-current ck-figures">${nb('50 $')} · ${nb('≈ 22 447 ₸')}</span>`)
+    expect(html).toContain(`<span class="limits-current"><span class="ck-money ck-money--inline">${money('50', '$')}</span> · <span class="ck-money ck-money--inline ck-twin"><span class="ck-money-approx">≈\u00a0</span>${money('22 447', '₸')}</span></span>`)
     expect(html).toContain('aria-label="Удалить лимит «Кафе»"')
     expect(legacyLimit([limitFixture(), usd], 8, 'KZT')).toBe(usd)
     expect(legacyLimit([limitFixture(), usd, { ...usd, id: 10, currency: 'KZT' }], 8, 'KZT')).toBeUndefined()

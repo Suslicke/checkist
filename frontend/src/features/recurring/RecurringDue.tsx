@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import { announceIncome, createIncome } from '../../api/incomes'
 import { decideRecurring, getRecurringMonth, payRecurring } from '../../api/recurring'
 import type { RecurringDecisionKind, RecurringMonth, RecurringMonthPayment, RecurringQuestion } from '../../api/recurring'
+import Icon from '../../components/Icon'
+import Money from '../../components/Money'
 import Sheet from '../../components/Sheet'
 import { formatMoney } from '../../lib/money'
 import { Link } from '../../navigation'
@@ -27,12 +29,12 @@ function IncomeDueItem({ row, busy, onAdd }: { row: RecurringMonthPayment; busy:
     if (!busy && valid) onAdd(row, amountValue(amount) as string)
   }
   return <li className="inc-due-row">
-    <span className="inc-due-name">{row.name} {formatMoney(row.amount, row.currency)} — внести?</span>
+    <span className="inc-due-name">{row.name} <Money value={row.amount} currency={row.currency} tone="in" sign="plus" /> — внести?</span>
     <span className="ck-row-meta">{dayAndMonth(row.due_date)}</span>
     <form className="inc-due-form" onSubmit={submit} noValidate>
       <input inputMode="decimal" autoComplete="off" value={amount} aria-label={`Сумма «${row.name}», ${row.currency}`} aria-invalid={!valid}
         onChange={(event) => setAmount(event.target.value)} />
-      <button type="submit" aria-disabled={busy || !valid || undefined}>Внести</button>
+      <button type="submit" className="ck-button-secondary" aria-disabled={busy || !valid || undefined}>Внести</button>
     </form>
   </li>
 }
@@ -45,15 +47,17 @@ export function IncomeDueCard({ rows, busy, onAdd }: { rows: RecurringMonthPayme
   </section>
 }
 
-/** The day of the due date in a badge; the colour says paid / open / overdue, the words of the row say it too. */
+/** The day of the due date in a badge; a paid one — a check in the colour of the income. The colour says paid / open /
+ * overdue, the words of the row say it too. */
 export function DueBadge({ row }: { row: Pick<RecurringMonthPayment, 'due_date' | 'state'> }) {
-  return <span className={`ck-row-badge rec-day rec-day-${row.state}`} aria-hidden="true">{Number(row.due_date.slice(8, 10))}</span>
+  return <span className={`ck-row-badge rec-day rec-day-${row.state}`} aria-hidden="true">
+    {row.state === 'paid' ? <Icon name="check" size={20} /> : Number(row.due_date.slice(8, 10))}</span>
 }
 
 /** One payment of the month: the day, the name, its state in words and the amount (paid — what was paid). `onPay` — an
  * open one gets «Оплатил» under its amount. */
 export function PaymentRow({ row, today, onPay }: { row: RecurringMonthPayment; today: string; onPay?: (row: RecurringMonthPayment) => void }) {
-  const amount = formatMoney(row.paid?.total ?? row.amount, row.currency)
+  const amount = <Money value={row.paid?.total ?? row.amount} currency={row.currency} size="row" />
   return <li className="ck-row rec-row">
     <DueBadge row={row} />
     <span className="ck-row-main">
@@ -61,10 +65,10 @@ export function PaymentRow({ row, today, onPay }: { row: RecurringMonthPayment; 
       <span className={`ck-row-meta rec-meta-${row.state}`}>{stateText(row, today)}</span>
     </span>
     {onPay
-      ? <span className="rec-row-end"><span className="ck-row-amount ck-figures">{amount}</span>
-        <button type="button" className="rec-pay-open" aria-haspopup="dialog" onClick={() => onPay(row)}>
+      ? <span className="rec-row-end"><span className="ck-row-amount">{amount}</span>
+        <button type="button" className="ck-button-secondary rec-pay-open" aria-haspopup="dialog" onClick={() => onPay(row)}>
           Оплатил<span className="rec-visually-hidden"> «{row.name}»</span></button></span>
-      : <span className="ck-row-amount ck-figures">{amount}</span>}
+      : <span className="ck-row-amount">{amount}</span>}
   </li>
 }
 
@@ -74,7 +78,8 @@ export function QuestionsCard({ questions, today, busy, onDecide }: { questions:
   if (!questions.length) return null
   const month = questions[0].month
   return <section className="ck-panel rec-card rec-ask" aria-labelledby="rec-ask-heading">
-    <div className="ck-panel-head"><h2 id="rec-ask-heading">{capitalize(forMonth(month, today))} не нашёл оплату</h2></div>
+    <div className="ck-panel-head rec-ask-head-row"><span className="ck-row-badge rec-ask-mark" aria-hidden="true"><Icon name="repeat" size={20} /></span>
+      <h2 id="rec-ask-heading">{capitalize(forMonth(month, today))} не нашёл оплату</h2></div>
     <p className="rec-note">Сам ничего не добавлю — ответьте по каждому платежу.</p>
     <ul className="rec-ask-list">
       {questions.map((question) => <li key={`${question.payment_id}:${question.month}`} className="rec-ask-item">
@@ -82,12 +87,12 @@ export function QuestionsCard({ questions, today, busy, onDecide }: { questions:
           <span className="rec-ask-name">{question.name}</span>
           <span className="rec-ask-meta">срок {dayAndMonth(question.due_date)}</span>
         </div>
-        <button type="button" className="rec-ask-add" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDecide(question, 'added')}>
-          {question.from_history ? 'Добавить по средней' : 'Добавить'} <span className="ck-figures">{formatMoney(question.amount, question.currency)}</span>
+        <button type="button" className="ck-button-secondary rec-ask-add" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDecide(question, 'added')}>
+          {question.from_history ? 'Добавить по средней' : 'Добавить'} <Money value={question.amount} currency={question.currency} />
         </button>
         <div className="rec-ask-other">
-          <button type="button" className="ck-button-secondary" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDecide(question, 'skipped')}>Не было</button>
-          <button type="button" className="ck-button-secondary" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDecide(question, 'elsewhere')}>Оплачено иначе</button>
+          <button type="button" className="ck-button-ghost" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDecide(question, 'skipped')}>Не было</button>
+          <button type="button" className="ck-button-ghost" aria-disabled={busy || undefined} onClick={busy ? undefined : () => onDecide(question, 'elsewhere')}>Оплачено иначе</button>
         </div>
       </li>)}
     </ul>
@@ -96,8 +101,8 @@ export function QuestionsCard({ questions, today, busy, onDecide }: { questions:
 
 export function NoticeLine({ notice }: { notice: Notice | null }) {
   if (!notice) return null
-  return <p className="rec-notice" role="status">{notice.text}
-    {notice.receiptId ? <> <Link className="rec-inline-link" to={`/receipts/${notice.receiptId}`}>Открыть трату</Link></> : null}</p>
+  return <p className="rec-notice" role="status"><Icon name="check" size={18} className="ck-icon rec-notice-mark" /><span>{notice.text}
+    {notice.receiptId ? <> <Link className="rec-inline-link" to={`/receipts/${notice.receiptId}`}>Открыть трату</Link></> : null}</span></p>
 }
 
 export type RecurringDueViewProps = {
@@ -137,10 +142,10 @@ export function RecurringDueView({ data, busy = false, notice = null, onDecide =
       {open.length > 0
         ? <>
           {left.length > 0 && <p className="rec-sum">{paymentsText(open.length)} · {left.map((total, index) => <span key={total.currency}>
-            {index > 0 && ' + '}<span className="ck-figures rec-sum-value">{formatMoney(total.left, total.currency)}</span></span>)}</p>}
+            {index > 0 && ' + '}<Money value={total.left} currency={total.currency} className="rec-sum-value" /></span>)}</p>}
           <ul className="ck-list rec-list">{open.map((row) => <PaymentRow key={row.id} row={row} today={data.today} onPay={payable} />)}</ul>
         </>
-        : <p className="rec-all-paid">Всё оплачено</p>}
+        : <p className="rec-all-paid"><Icon name="check" size={18} />Всё оплачено</p>}
       {closed.length > 0 && <details className="rec-closed">
         <summary>Оплачено {closed.length} из {rows.length}</summary>
         <ul className="ck-list rec-list">{closed.map((row) => <PaymentRow key={row.id} row={row} today={data.today} />)}</ul>

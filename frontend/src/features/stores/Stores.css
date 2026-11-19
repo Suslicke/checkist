@@ -1,45 +1,57 @@
-/* «Магазины» (`/stores`) in the language of the artifact: the cards and rows are the bricks of tokens.css (.ck-panel,
-   .ck-list, .ck-row); this file holds what only this screen has. Colours are tokens only, sizes from the text scale. */
-.stores-page { display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 720px; }
-.stores-intro, .stores-note { margin: 0; color: var(--ck-text-muted); font-size: var(--ck-text-sm); }
-.stores-notice { margin: 0; padding: 12px 16px; border-radius: var(--ck-radius-sm); background: var(--ck-success-bg); color: var(--ck-success-text); font-size: var(--ck-text-sm); font-weight: 600; }
-.stores-failure { margin: 0; padding: 12px 16px; border: 1px solid var(--ck-error-border); border-radius: var(--ck-radius-sm); background: var(--ck-error-bg); color: var(--ck-error-text); font-size: var(--ck-text-sm); }
+/* «Магазины» (`/stores`) in Чекист 2.0: the panels and rows are the bricks of tokens.css (.ck-panel, .ck-list, .ck-row);
+   this file holds what only this screen has — the suggestions to merge (the gold of the assistant on a suggestion of the
+   model), the rows with a check, the quiet choice «Неразобранное считать в» under a place, the main action in the
+   pinned bar. Colours are 2.0 tokens only, sizes from the 2.0 text scale. */
+.stores-page { display: flex; flex-direction: column; gap: 12px; min-width: 0; max-width: 720px; }
+.stores-intro, .stores-note { margin: 0; color: var(--ck-ink-2); font-size: var(--ck-text-label); line-height: 1.45; }
+.stores-notice { margin: 0; padding: var(--ck-space-3) var(--ck-space-4); border: 1px solid color-mix(in srgb, var(--ck-income) 35%, transparent); border-radius: var(--ck-radius-field); background: var(--ck-income-soft); color: var(--ck-ink); font-size: var(--ck-text-label); font-weight: 600; }
+.stores-failure { margin: 0; padding: var(--ck-space-3) var(--ck-space-4); border: 1px solid var(--ck-error); border-radius: var(--ck-radius-field); background: var(--ck-error-soft); color: var(--ck-error); font-size: var(--ck-text-label); }
 .stores-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.stores-total { color: var(--ck-text-muted); font-size: var(--ck-text-sm); font-weight: 700; font-variant-numeric: tabular-nums; }
+.stores-total { color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* «Похоже на одного получателя»: the names on the gold tint of the card, the two actions under them. */
-.stores-suggestions { background: var(--ck-accent-bg); box-shadow: none; }
-.stores-suggestions .ck-panel-head > h2 { color: var(--ck-accent-text); }
-.stores-suggestion { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding-block: 12px; }
-.stores-suggestions .ck-list > li + li { border-top-color: var(--ck-border); }
-.stores-names { overflow-wrap: anywhere; font-size: var(--ck-text-sm); font-weight: 800; }
-.stores-suggestion-actions { display: flex; gap: 8px; }
-.stores-suggestion-actions > button { min-width: 140px; }
+/* «Похоже на одного получателя»: a suggestion is a row — its tile, the names and the counts — with two actions under it;
+   «Склеить» is the tonal seal (the full seal is the pinned «Склеить выбранные»), «Не то» tonal. */
+.stores-suggestion { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding-block: var(--ck-space-3); }
+.stores-suggestion-head { display: flex; align-items: center; gap: var(--ck-space-3); min-width: 0; }
+.stores-suggestion-badge { --ck-tone: var(--ck-ink-2); }
+.stores-suggestion-badge.stores-suggestion-model { background: var(--ck-gold-soft); color: var(--ck-gold-ink); }
+.stores-names { overflow-wrap: anywhere; font-size: var(--ck-text-body); font-weight: 600; line-height: 1.3; }
+.stores-suggestion .ck-row-meta { white-space: normal; }
+.stores-suggestion-actions { display: flex; gap: var(--ck-space-2); padding-left: 52px; }
+.stores-suggestion-actions > button { min-width: 120px; }
+.stores-suggestion-actions > .stores-suggestion-merge:not(:disabled) { border-color: transparent; background: var(--ck-seal-soft); color: var(--ck-seal-ink); }
 
-.stores-search input { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--ck-border-field); border-radius: var(--ck-radius-sm); background: var(--ck-bg); color: var(--ck-text); font-size: var(--ck-text-base); }
-.stores-search input::placeholder { color: var(--ck-text-muted); }
-.stores-row { min-height: 56px; padding-block: 8px; }
+.stores-search input { width: 100%; min-height: var(--ck-tap); padding: 0 14px; border: 1px solid var(--ck-line); border-radius: var(--ck-radius-field); background: var(--ck-surface-2); color: var(--ck-ink); font-size: var(--ck-text-field); }
+.stores-search input::placeholder { color: var(--ck-ink-2); }
+.stores-row { min-height: 56px; padding-block: var(--ck-space-2); }
 label.stores-row { cursor: pointer; }
-.stores-row input, .stores-choice input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--ck-brand); }
+.stores-row input, .stores-choice input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--ck-ink); }
 .stores-row .ck-row-meta { white-space: normal; }
+.stores-category { color: var(--ck-ink); }
 
 .stores-actions { display: flex; min-width: 0; }
-.stores-actions > button { flex: 1; min-height: 56px; font-size: var(--ck-text-base); }
+.stores-actions > button { flex: 1; min-height: 52px; border-radius: 16px; font-size: var(--ck-text-field); }
 
 /* The sheet: one store to keep, chosen among the merged ones; the main action under the note. */
-.stores-ask { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.stores-ask { display: flex; flex-direction: column; gap: var(--ck-space-4); min-width: 0; }
 .stores-ask fieldset { display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; }
-.stores-ask legend { margin-bottom: 8px; padding: 0; font-weight: 800; }
-.stores-choice { display: flex; align-items: center; gap: 12px; min-height: 56px; padding-block: 8px; border-top: 1px solid var(--ck-divider); cursor: pointer; }
-.stores-ask-actions { display: flex; flex-direction: column; gap: 8px; }
-.stores-ask-actions > button { width: 100%; min-height: 52px; }
+.stores-ask legend { margin-bottom: var(--ck-space-2); padding: 0; font-size: var(--ck-text-title); font-weight: 600; }
+.stores-choice { display: flex; align-items: center; gap: var(--ck-space-3); min-height: 56px; padding-block: var(--ck-space-2); border-top: 1px solid var(--ck-line); cursor: pointer; }
+.stores-ask-actions { display: flex; flex-direction: column; gap: var(--ck-space-2); }
+.stores-ask-actions > button { width: 100%; min-height: 52px; border-radius: 16px; }
+
+/* «Неразобранное считать в» under a place (2026-10-15): a quiet line of the moderator — the words in ink-2 and the select
+   drawn as its value with a chevron, no field and no fill; the value stays 16 px, so iOS does not zoom into it, and the
+   select keeps the height of a tap while the line around it stays low. */
+.stores-category-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--ck-space-2); margin-top: -10px; padding: 0 0 var(--ck-space-1) 34px; }
+.stores-category-label { color: var(--ck-ink-2); font-size: var(--ck-text-caption); font-weight: 500; }
+.stores-category-pick select { flex: 0 1 auto; min-width: 0; max-width: 100%; min-height: var(--ck-tap); margin-block: -6px; padding: 0 22px 0 0; border: 0; border-radius: 0;
+  -webkit-appearance: none; appearance: none; background: linear-gradient(45deg, transparent 50%, var(--ck-ink-2) 50%) right 9px center / 6px 6px no-repeat, linear-gradient(135deg, var(--ck-ink-2) 50%, transparent 50%) right 3px center / 6px 6px no-repeat;
+  color: var(--ck-ink); font-size: var(--ck-text-field); font-weight: 500; text-overflow: ellipsis; field-sizing: content; cursor: pointer; }
 
 @media (max-width: 540px) {
   .stores-page { max-width: none; }
+  .stores-suggestion-actions { padding-left: 0; }
   .stores-suggestion-actions > button { flex: 1 1 0; min-width: 0; }
   .stores-actions { margin-inline: calc(50% - 50vw); padding-inline: 16px; }
 }
-
-/* «Неразобранное считать в» under a place (2026-10-15): a quiet line of the moderator. */
-.stores-category-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 0 0 12px 44px; color: var(--ck-text-muted); font-size: var(--ck-text-xs); }
-.stores-category-pick select { flex: 1 1 200px; min-width: 0; max-width: 100%; }

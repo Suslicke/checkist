@@ -89,7 +89,8 @@ describe('«Выгрузка» markup (Vitest/SSR, not browser visual acceptance
   it('says what will be exported in figures and links the file', () => {
     const html = render()
     expect(html).toContain('<p class="export-preview" aria-live="polite"><span>Будет выгружено: </span><span class="ck-figures">2 чека</span>')
-    expect(html).toContain('<span class="ck-figures">5 790 ₸</span>')
+    // A sum of the preview is Money: the digits and the currency sign in their own parts, never wrapped.
+    expect(html).toMatch(/<span class="ck-money ck-money--inline"><span class="ck-money-int">5\u202f790<\/span><span class="ck-money-cur">\u202f₸<\/span><\/span>/u)
     expect(html).toContain('<div class="export-actions ck-action-bar">')
     expect(html).toContain('href="/api/export/?from=2026-10-01&amp;to=2026-10-31&amp;include=receipts%2Clines%2Ccategories%2Cstores%2Climits%2Csummary&amp;download=1" download=""><svg class="export-icon"')
     expect(html).toContain('target="_blank" rel="noopener">Открыть</a>')
@@ -113,7 +114,8 @@ describe('«Выгрузка» styles', () => {
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i)
     expect(css).toMatch(/\.export-check \{[^}]*min-height: 48px/)
     expect(css).toMatch(/\.export-row \{[^}]*min-height: 56px/)
-    expect(css).toMatch(/a\.export-download \{[^}]*min-height: 56px[^}]*background: var\(--ck-primary\); color: var\(--ck-on-primary\)/)
+    // «Скачать JSON» is the one seal of the screen: the block button of 2.0, 52 px, the seal under its own text.
+    expect(css).toMatch(/a\.export-download \{[^}]*min-height: 52px[^}]*background: var\(--ck-seal\); color: var\(--ck-on-seal\)/)
     for (const size of css.match(/font-size: [^;]+/g) ?? []) expect(size).toMatch(/var\(--ck-text-/)
   })
 })

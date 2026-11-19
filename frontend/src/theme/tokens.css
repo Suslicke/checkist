@@ -1,332 +1,255 @@
 /* ==========================================================================
-   Чекист: токены темы. Единственный файл проекта, где записаны цвета.
-   Остальные CSS только читают var(--ck-*); нужен новый токен — он
-   добавляется сюда в обе темы и в справочник ниже.
+   Чекист 2.0: токены темы. Единственный файл проекта, где записаны цвета
+   (2026-11-20, ветка feature/design-2; значения — docs/design-system/tokens.json,
+   правила — docs/design-system/README.md и platforms.md, контракт перехода —
+   docs/plans/2026-11-20-design-2.md). Остальные CSS только читают var(--ck-*);
+   нужен новый токен — он добавляется сюда в обе темы и в справочник ниже.
 
-   Красно-золотая палитра «Чекиста» (возвращена 2026-10-12 по просьбе
-   человека вместо бирюзовой палитры семейного редизайна; значения — из
-   tokens.css до редизайна, коммит 74ba64d; раскладка, шрифты и имена токенов
-   редизайна не менялись): светлая и тёмная темы равноправны. Тёмная —
-   значения по умолчанию в :root (работает и без скрипта). Светлая —
-   :root[data-theme="light"]; атрибут ставят встроенный скрипт index.html и
-   theme.ts: по выбору человека (localStorage, ключ checkist.theme), а пока он
-   не выбирал — по системной настройке prefers-color-scheme.
+   Тёмная тема — значения по умолчанию в :root (работает и без скрипта).
+   Светлая — :root[data-theme="light"]; атрибут ставят встроенный скрипт
+   index.html и theme.ts (выбор человека в checkist.theme, иначе
+   prefers-color-scheme). Платформа — <html data-platform="ios|android">
+   (компьютер — android): от неё здесь зависит только --ck-tap.
 
-   ПРАВИЛА СМЫСЛА
-   - Красный бренд (#B01212 в обеих темах) — ЗАЛИВКА главного действия
-     (кнопка, текущая страница пагинации, флажки); поверх него --ck-on-brand —
-     белый в обеих темах.
-   - Золото — акцент: --ck-accent — золотая заливка («＋» меню, главные
-     кнопки «Главной», выбранный чип трат) с ТЁМНЫМ текстом --ck-on-accent
-     (#2A1B16) в обеих темах; выбранное и текущее — --ck-accent-text на
-     подложке --ck-accent-bg. Золотая заливка в светлой теме почти не
-     отличается от карточки (1,61:1): кнопку узнают по тёмной надписи, сама
-     заливка — не единственный признак. Ссылки — золотые в тёмной теме и
-     тёмно-красные в светлой (--ck-link).
-   - Шапка и нижнее меню — тёмная полоса в ОБЕИХ темах с красной линией
-     (--ck-header-border), как до редизайна; светлый блок повторяет те же
-     значения, чтобы обе темы задавали все токены шапки.
-   - Цвета категорий --ck-cat-1 … --ck-cat-6 — точка, полоса, значок
-     категории; их подложки --ck-cat-N-tint — фон под основным текстом.
-     Номер категории выбирает экран, порядок не менять.
-   - Превышение лимита — медно-оранжевое: текст --ck-over-text, заполнение
-     полосы --ck-over-bar на дорожке --ck-track. Не красное бренда и не золото
-     акцента: это не ошибка и не выбор; рядом всегда текст «сверх лимита».
-   - Ошибка — тройка error (в тёмной — коралловая, в светлой — малиновая,
-     чтобы не совпадать с красным бренда), никогда только цветом: рядом текст
-     или значок. Предупреждение — янтарное, успех — зелёный, сведения —
-     синие, нейтральное — тёплое серое.
-   - Тройка ошибки (фон --ck-error-bg, рамка --ck-error-border, текст
-     --ck-error-text) — для сообщений об ошибках и неверных полей. Особого
-     оформления опасных действий (удалить, отклонить) нет: эти кнопки —
-     обычные контурные, как прочие второстепенные. Выделять ли их и как —
-     не решено, решение за человеком.
-   - Тень карточки — только в светлой теме (--ck-panel-shadow); в тёмной
-     токен прозрачен, карточку отделяет поверхность и рамка.
+   ПРАВИЛА 2.0 (коротко; целиком — docs/design-system)
+   - Фон экрана --ck-paper, панели и строки --ck-surface с рамкой --ck-line,
+     тени у панелей нет. Тональные кнопки и плитки — --ck-surface-2.
+   - --ck-seal — бренд и ОДНО главное действие экрана (кнопка, «＋», FAB),
+     текст на нём --ck-on-seal. Второй красной кнопки на экране нет; опасное
+     действие — не seal, а --ck-error контуром (.ck-button-danger).
+   - Выбор — --ck-ink: выбранный чип залит ink, текст на нём --ck-paper.
+     Текущий раздел меню и действие словом — --ck-seal-ink.
+   - --ck-gold / --ck-gold-ink — голос ассистента и вехи, не кнопки.
+   - Траты — --ck-ink, не красным. Доход — --ck-income со знаком «+». От 80 %
+     лимита — --ck-over (текст) и --ck-over-bar (полоса). Ошибка — --ck-error.
+     Состояние никогда не передаётся только цветом: рядом слово или значок.
+   - Категории — --ck-cat-1 … -6 по ((id − 1) mod 6) + 1; плитка значка —
+     --ck-cat-N-tint (тон 15 % поверх surface), значок — сам тон.
+   - Стекло --ck-material — только плавающий хром iOS и только вместе с
+     backdrop-filter; без него — surface.
+   - Бумажный чек — --ck-slip с --ck-slip-ink, штамп --ck-stamp: бумага в
+     обеих темах.
+   - Кольцо фокуса — --ck-focus, 2 px с отступом 2 px, у всего, до чего
+     доходит Tab.
+   - Суммы — компонент Money (components/Money.tsx), текст — классы стилей
+     .ck-money-hero … .ck-slip (App.css); font-size только токенами
+     --ck-text-* ниже.
+   - Движение — только под prefers-reduced-motion: no-preference и только
+     длительностями --ck-dur-*.
 
    СПРАВОЧНИК ТОКЕНОВ
-   Поверхности и текст
-     --ck-bg               фон страницы (подкрашенный, карточки на нём белее)
-     --ck-surface          панель, карточка, таблица, поле ввода
-     --ck-surface-raised   приподнятая панель, наведение на строку, шапка
-                           таблицы, подсветка строки легенды
-     --ck-text             основной текст
-     --ck-text-muted       вторичный текст, подписи, пояснения
-   Бренд (красная заливка главного действия)
-     --ck-brand            заливка главной кнопки, текущей страницы пагинации,
-                           accent-color флажков и переключателей
-     --ck-brand-hover      та же заливка при наведении
-     --ck-brand-active     та же заливка при нажатии
-     --ck-on-brand         текст и значок поверх заливки бренда
-   Акцент (золото; контракт семейного бюджета)
-     --ck-accent           заливка акцентной кнопки («＋» меню) и декор
-     --ck-on-accent        текст поверх акцентной заливки (тёмный в обеих темах)
-     --ck-accent-text      акцент текстом: активный пункт, выделенное значение
-     --ck-accent-bg        мягкая подложка выбранного / активного элемента,
-                           фон подсказки макета
-   Ссылки
-     --ck-link             ссылка, текст и рамка контурной кнопки-ссылки
-     --ck-link-hover       ссылка при наведении
-   Линии
-     --ck-border           декоративная рамка карточки (контраст не нормируется)
-     --ck-border-field     рамка поля, выбора, контурной кнопки: не ниже 3:1
-     --ck-divider          разделитель строк таблицы и списка
-     --ck-focus            кольцо фокуса на странице и панели: не ниже 3:1
-   Состояния: error, success, warning, info, neutral — у каждого три токена
-     --ck-<s>-text         текст состояния; 4,5:1 на своей подложке, на панели
-                           и на фоне страницы
-     --ck-<s>-bg           подложка сообщения, плашки статуса
-     --ck-<s>-border       рамка плашки и МАРКЕР состояния (точка, полоса
-                           слева, рамка неверного поля): не ниже 3:1 на панели
-   Недоступное
-     --ck-disabled-bg      фон заблокированной кнопки и поля
-     --ck-disabled-text    текст заблокированного элемента (читаемый)
-     --ck-disabled-border  рамка заблокированного элемента
-   Всплывающее
-     --ck-popover-border   рамка всплывающей подсказки и прилипшей панели
-     --ck-popover-shadow   ЦВЕТ тени подсказки: box-shadow: 0 4px 16px var(…)
-     --ck-panel-shadow     ЦВЕТ мягкой тени карточки: 0 1px 2px var(…);
-                           в тёмной теме прозрачный
-   Шапка и нижнее меню — тёмная полоса в обеих темах
-     --ck-header-bg        фон шапки и нижнего меню телефона
-     --ck-header-text      текст и ссылки шапки
-     --ck-header-text-muted вторичный текст шапки, рамка переключателя темы
-     --ck-header-accent    текущий пункт меню, его отметка
-     --ck-header-hover-bg  подложка пункта при наведении и текущего пункта
-     --ck-header-border    линия под шапкой и над нижним меню (декор)
-     --ck-header-focus     кольцо фокуса в шапке
-     --ck-logo-bg          подложка полного логотипа, тёмная в обеих темах;
-                           равна фону файлов логотипа (assets/brand/README.md)
-   Семейный бюджет (контракт параллельных задач, имена не менять)
-     --ck-cat-1 … -6       цвет категории: красный, золотой, зелёный, синий,
-                           сливовый, песочный (в светлой — коричневый); соседние
-                           номера чередуются по светлоте
-     --ck-cat-1-tint … -6-tint  подложка категории под основным текстом
-     --ck-over-text        текст «сверх лимита»
-     --ck-over-bar         заполнение полосы сверх лимита
-     --ck-track            дорожка полосы прогресса
-     --ck-chip-selected-bg / --ck-chip-selected-text  выбранный чип
-   Геометрия и шрифты (одинаковы в обеих темах)
-     --ck-radius-sm        12px: поле, плашка, пункт меню
-     --ck-radius           20px: панель, карточка
-     --ck-radius-button    16px: кнопка и кнопка-ссылка
-     --ck-radius-pill      999px: чип, текущий пункт меню, страница пагинации
-     --ck-font-body        Manrope (Google Fonts, display=swap), затем system-ui
-     --ck-font-display     заголовки и вывеска: тот же Manrope
-     --ck-font-figures     цифры денег, количеств и цен: Manrope 700 с tabular-nums (артефакт 2026-10-13)
-                           (Google Fonts, кириллица); только через .ck-figures
-     --ck-font-display-figures  сумма-герой (одна на экран): Manrope 800;
-                           только через .ck-hero-figure
-   Шкала размеров текста (мобильный дизайн 2026-10-12; font-size меняется
-   только этими токенами): --ck-text-2xs 12px (только подписи нижнего меню
-   телефона, артефакт 2026-10-13) · -xs 13px · -sm 15px · -base 16px (и не
-   меньше у полей ввода: iOS не приближает страницу) · -lg 18px · -xl 22px
-   (заголовок верхней полосы телефона) · -hero 40px (сумма-герой)
-   Главное действие (артефакт 2026-10-13): --ck-primary / -hover / -active —
-   заливка кнопки, «＋» нижнего меню, текущей страницы пагинации; текст на
-   ней --ck-on-primary. Светлая — красный под белым (7,14; нажатие 11,52),
-   тёмная — золото под тёмным (9,89; наведение #ffd45e 11,7, нажатие #d9a93a 7,6).
-   --ck-nav-bg — нижнее меню телефона и лист «Ещё»; --ck-card-shadow /
-   --ck-fab-shadow — тень карточки и «＋».
+   Поверхности
+     --ck-paper            фон экрана и страницы
+     --ck-surface          панели, строки, поля ввода, листы, диалоги
+     --ck-surface-2        тональные кнопки, плитки листа «＋», дорожка сегментов iOS
+     --ck-nav-android      нижняя навигация и верхняя полоса Android при прокрутке
+     --ck-line             рамки панелей и разделители строк (декор, контраст не нормируется)
+     --ck-line-strong      рамка поля, чипа, контурной кнопки: не ниже 3:1 (ink-2 75 % поверх surface)
+     --ck-track            дорожка полосы лимита и бюджета, выключенный переключатель iOS
+     --ck-bezel            рамка телефона в превью, прорезь печати чека
+   Текст
+     --ck-ink              основной текст, суммы трат, заливка выбранного чипа, фон тоста
+     --ck-ink-2            вторичный текст, копейки и знак валюты
+   Бренд
+     --ck-seal / --ck-seal-press   главное действие и оно при наведении и нажатии
+     --ck-on-seal          текст и значок на seal (белый в обеих темах)
+     --ck-seal-soft        индикатор раздела Android, мягкая подложка бренда
+     --ck-seal-ink         красный текстом: текущий раздел, «назад», действие словом
+   Ассистент и вехи
+     --ck-gold / --ck-gold-ink / --ck-gold-soft
+   Состояния (тон, мягкая подложка — тон 10 % поверх surface)
+     --ck-income / --ck-income-soft   доход, «в графике», включённый переключатель
+     --ck-over / --ck-over-bar / --ck-over-soft   от 80 % лимита: текст, полоса, подложка
+     --ck-error / --ck-error-soft     ошибки полей и опасные действия
+     --ck-focus            кольцо фокуса
+   Тост
+     --ck-inv-action       действие на тосте (фон --ck-ink, текст тоста --ck-paper)
+   Стекло и слои
+     --ck-material / --ck-material-line   стекло iOS и его кромка
+     --ck-scrim            затемнение под листом и диалогом
+     --ck-skeleton         блоки скелета, заливка под линией графика
+     --ck-network-track    дорожка полосы сети (seal 25 % на прозрачном)
+   Бумажный чек
+     --ck-slip / --ck-slip-ink / --ck-slip-ink-2 / --ck-stamp
+   Категории
+     --ck-cat-1 … -6, --ck-cat-1-tint … -6-tint
    Графики (в Charts.css имена --ck-chart-* остаются и ссылаются сюда)
      --ck-series-1 … -8    серии в фиксированном порядке: синий, оранжевый,
-                           бирюзовый, жёлтый, розовый, зелёный, фиолетовый,
+                           бирюзовый, янтарный, розовый, зелёный, фиолетовый,
                            красный; порядок не менять и не зацикливать
-     --ck-series-other     «прочее»
-     --ck-series-special   «особое» (несопоставленное, со штриховкой)
-     --ck-plot-grid        линии сетки
-     --ck-plot-axis        оси, выноски, рамка значка легенды
-     поверхность, текст, подсветка и фокус графика — общие токены:
-     --ck-surface, --ck-text, --ck-text-muted, --ck-surface-raised, --ck-focus
-   Раскладка телефона (не цвета; одинаковы в обеих темах, владелец — lib/cards
-   и components/ActionBar.css, см. lib/cards/README.md)
+     --ck-series-other     «прочее»;  --ck-series-special — «особое» со штриховкой
+     --ck-plot-grid / --ck-plot-axis   сетка (= line) и оси
+   Шрифты
+     --ck-font-display     Geologica: суммы и заголовки
+     --ck-font-ui          Onest: весь интерфейс
+     --ck-font-slip        JetBrains Mono: только строки бумажного чека
+   Размер текста (rem: на iOS корень — -apple-system-body, растёт с Dynamic Type)
+     --ck-text-caption .75 · -label .8125 · -body .9375 · -field 1 (поля, не
+     меньше 16 px) · -title 1.0625 · -heading 1.375 · -money-display 2 ·
+     -title-large 2.125 · -money-hero 2.75
+   Отступы  --ck-space-1 4 · -2 8 · -3 12 · -4 16 · -5 20 · -6 24 · -8 32 · -12 48
+   Углы     --ck-radius-field 12 · -button 14 · -fab 16 · -card 22 · -sheet 28 ·
+            -snackbar 4 · -pill 999 (углы концентричны: внутренний = внешний − отступ)
+   Тени     --ck-shadow-float — плавающее (таб-бар, «＋», FAB, лист, тост, диалог);
+            --ck-shadow-sm — бегунок переключателя и выбранный сегмент iOS
+   Размеры  --ck-tap — цель касания и высота кнопки и поля: 48 px (Android и
+            компьютер), 44 px на iOS; --ck-tabbar-ios 62 · --ck-navbar-android 64 ·
+            --ck-topbar-ios 44 · --ck-topbar-android 64 · --ck-fab-android 56
+   Движение --ck-dur-press 90ms (сжатие до 97 %) · -state 180ms · -count 420ms ·
+            -sheet 360ms; --ck-ease-out, --ck-ease-spring
+   Раскладка и слои (прежние имена и смысл; владельцы — оболочка, lib/cards и
+   components/ActionBar.css)
      --ck-bottom-nav-height  высота нижней навигации без полосы жестов; здесь
-                           0px, навигация переопределяет в своём узком блоке
-                           App.css — обязательно на :root, иначе
-                           --ck-bottom-occupied не пересчитается
-     --ck-top-bar-height   высота прилипшей строки заголовка телефона (App.css,
-                           тот же узкий блок): прилипающее под ней отсчитывает
-                           top от неё; 0px, где строка не прилипает
-     --ck-safe-bottom      полоса жестов телефона; отлична от 0px только на
-                           телефоне с такой полосой: в index.html включён
-                           viewport-fit=cover
-     --ck-bottom-occupied  всё занятое внизу окна: навигация + полоса жестов;
-                           от него отсчитывается низ панели действий
-     --ck-action-bar-room  место под панель действий для scroll-padding-bottom:
-                           две кнопки по 44px друг под другом, зазор 12px,
-                           поля панели 2 × 10px и запас
-     --ck-z-action-bar     10: панель действий (закреплённые ячейки таблиц и
-                           плашка результата остаются на 1)
-     --ck-z-bottom-nav     20: нижняя навигация
-     --ck-z-top-bar        15: верхняя полоса телефона (заголовок, «назад»)
-     --ck-z-menu-sheet     30: раскрытое меню («Ещё») поверх навигации
-     --ck-z-sheet          35: лист снизу (components/Sheet) и его подложка
-     --ck-z-skip-link      40: ссылка «к содержимому» поверх всего
+                           0px, оболочка переопределяет в своём блоке — на :root
+     --ck-top-bar-height   высота прилипшей верхней полосы телефона; 0px, где не липнет
+     --ck-safe-bottom      полоса жестов (index.html: viewport-fit=cover)
+     --ck-bottom-occupied  навигация + полоса жестов: от него низ панели действий
+     --ck-action-bar-room  место под панель действий для scroll-padding-bottom
+     --ck-z-action-bar 10 · --ck-z-top-bar 15 · --ck-z-bottom-nav 20 ·
+     --ck-z-toast 25 · --ck-z-menu-sheet 30 · --ck-z-sheet 35 ·
+     --ck-z-network-bar 38 · --ck-z-skip-link 40
+     --ck-tape-tooth       зубец «ленты чека»; --ck-fade-size — затухание ряда чипов
 
-   КОНТРАСТ (формула WCAG 2.x: (L1 + 0,05) / (L2 + 0,05), посчитано скриптом)
-   Светлая тема, на карточке #FFFAF0 (в скобках — на фоне страницы #F6EFDC)
-     текст 15,93 (14,44) · вторичный 6,35 (5,75), на приподнятой #F5EAD0 5,52 ·
-     ссылка 8,06 (7,31), на подложке акцента 6,82, наведение 11,61 ·
-     акцент-текст 6,39 (5,79), на подложке акцента 5,41 · текст на подложке
-     акцента 13,48 · сверх лимита текст 6,21 (5,63)
-     ошибка 8,47 (7,68) · успех 6,22 (5,64) · предупреждение 7,19 (6,52) ·
-     сведения 7,89 (7,15) · нейтральное 7,60 (6,89) · заблокированный текст на своём фоне 5,13
-     текст состояния на своей подложке: ошибка 7,41, успех 5,62, предупреждение 6,43, сведения 7,00, нейтральное 6,37
-     белый на красном бренде 7,14 (наведение 9,39, нажатие 11,52); тёмный
-     #2A1B16 на золоте 9,89; выбранный чип 15,93
-     рамка поля 4,32 (3,91); фокус 5,79 (5,25); золото против карточки 1,61;
-     красная заливка против карточки 6,86 (кнопку узнают по надписи)
-     маркеры состояний: ошибка 4,58, успех 4,02, предупреждение 3,70, сведения 3,90, нейтральное 3,72;
-     полоса сверх лимита 4,53, на дорожке 3,60
-     цвета категорий на карточке: 6,28 · 4,19 · 6,96 · 4,27 · 8,71 · 4,73;
-     текст на подложках категорий 12,73–13,50
-   Тёмная тема, на карточке #1F1A17 (в скобках — на фоне страницы #141110)
-     текст 14,25 (15,54) · вторичный 7,70 (8,40), на приподнятой #2B241F 6,83 ·
-     ссылка 10,28 (11,21), на подложке акцента 7,93, наведение 12,69 ·
-     акцент-текст 10,28 (11,21), на подложке акцента 7,93 · текст на подложке
-     акцента 11,00 · сверх лимита текст 8,68 (9,46)
-     ошибка 8,41 (9,17) · успех 9,88 (10,78) · предупреждение 9,62 (10,49) ·
-     сведения 8,77 (9,56) · нейтральное 10,11 (11,02) · заблокированный текст на своём фоне 5,26
-     текст состояния на своей подложке: ошибка 7,80, успех 8,18, предупреждение 8,09, сведения 7,77, нейтральное 8,61
-     белый на красном бренде 7,14 (наведение 9,39, нажатие 11,52); тёмный
-     #2A1B16 на золоте 9,89; выбранный чип 15,54
-     рамка поля 4,17 (4,55); фокус 12,17 (13,27); золото против карточки 10,28;
-     красная заливка против карточки 2,41 (кнопку узнают по надписи)
-     маркеры состояний: ошибка 4,49, успех 4,68, предупреждение 4,97, сведения 4,49, нейтральное 4,17;
-     полоса сверх лимита 5,91, на дорожке 4,36
-     цвета категорий на карточке: 5,39 · 9,44 · 8,53 · 5,55 · 6,40 · 7,63;
-     текст на подложках категорий 11,00–12,61
-   Шапка и нижнее меню (одинаковы в обеих темах), на полосе #1A0C0A:
-     текст 15,78 · вторичный 9,64 · текущий пункт золотом
-     11,38, на подложке наведения #33201B 9,19 · фокус 13,47 ·
-     «＋» золото на полосе 11,38, знак на нём 9,89
-   Мобильный дизайн (2026-10-12): пары текста и фона из прежних токенов
-   (светлая / тёмная):
-     цифры .ck-figures --ck-text на карточке 15,93 / 14,25, на фоне 14,44 / 15,54
-     «назад» --ck-link на --ck-bg 7,31 / 11,21; «Фильтры (N)», «Из галереи»
-     --ck-link на карточке 8,06 / 10,28; наведение --ck-link-hover на приподнятой
-     10,10 / 11,24, нажатие на --ck-accent-bg 9,82 / 9,79
-     крестик «Закрыть» --ck-text-muted на карточке 6,35 / 7,70, при наведении --ck-text
-     на приподнятой 13,86 / 12,63; ручка листа --ck-border-field 4,32 / 4,17
-     тихая опасная кнопка --ck-error-text на карточке 8,47 / 8,41, рамка
-     --ck-error-border 4,58 / 4,49; наведение — текст на --ck-error-bg 7,41 / 7,80
-     чип .ck-chip --ck-text на карточке 15,93 / 14,25, выбранный 15,93 / 15,54;
-     рамка чипа --ck-border-field 4,32 / 4,17
-     выноски .ck-leader — декор --ck-text-muted; зубцы .ck-tape и затухание
-     чипов — маски, своего цвета у них нет; подложка листа — цвет тени
-     --ck-popover-shadow, не текст
-   Кольцо фокуса: золотое #FFD45E в тёмной теме и в шапке, синее #1D5FC4 в
-     светлой (как до редизайна): красное кольцо слилось бы с бренд-заливкой.
-   Графики: серии 1–8 прежние (палитра проверена валидатором: полоса
-     светлоты, различимость соседних серий при протан- и дейтеранопии).
-     Светлая: бирюзовый, жёлтый и розовый ниже 3:1 на карточке — для них
-     обязательны подписи, легенда или таблица (в графиках проекта есть).
+   КОНТРАСТ (WCAG 2.x, посчитано скриптом; светлая / тёмная)
+     ink на paper 16,15 / 16,50, на surface 17,58 / 15,34, на surface-2 14,81 / 13,63
+     ink-2 на paper 5,88 / 7,19, на surface 6,41 / 6,69, на surface-2 5,40 / 5,94
+     on-seal на seal 6,22 / 5,03; seal-ink на paper 7,37 / 8,37, на seal-soft 6,72 / 6,90
+     paper на ink (выбранный чип) 16,15 / 16,50; inv-action на ink 10,74 / 6,84
+     income на surface 5,20 / 8,73; over 4,90 / 8,32; error 7,42 / 7,21
+     на мягкой подложке своего тона: income 4,55 / 7,31; over 4,28 / 7,00 (в
+     светлой — только полужирным и со словом); error 6,24 / 6,17; gold-ink 6,19 / 8,56
+     gold-ink на surface 6,56 / 10,50; focus на paper 5,29 / 11,30, на surface 5,76 / 10,50
+     line-strong на surface 3,62 / 4,34, на paper 3,32 / 4,66
+     over-bar на track 2,56 / 4,99 (полоса — не единственный признак: подпись словами)
+     тон категории на своей плитке 3,01–4,45 / 5,28–7,16 (значок, графика ≥ 3:1);
+     ink на плитке категории 14,28–14,87 / 11,20–12,07
+     серии графиков на surface: светлая 3,06–6,35, тёмная 5,25–10,76; «прочее»
+     3,45 / 4,71; «особое», сетка и оси — декор (под ними подписи и таблица)
    ========================================================================== */
 
 :root {
   color-scheme: dark;
 
-  --ck-bg: #141110;
-  --ck-surface: #1f1a17;
-  --ck-surface-raised: #2b241f;
-  --ck-text: #f3e9cf;
-  --ck-text-muted: #b9ac93;
+  --ck-paper: #121012;
+  --ck-surface: #1b181a;
+  --ck-surface-2: #272225;
+  --ck-nav-android: #221e20;
+  --ck-line: #302a2d;
+  --ck-line-strong: #847c7f;
+  --ck-track: #2c2629;
+  --ck-bezel: #050405;
+  --ck-ink: #f3eeef;
+  --ck-ink-2: #a79da0;
 
-  --ck-brand: #b01212;
-  --ck-brand-hover: #8f0e0e;
-  --ck-brand-active: #760b0b;
-  --ck-on-brand: #ffffff;
+  --ck-seal: #d42a31;
+  --ck-seal-press: #b51f26;
+  --ck-on-seal: #ffffff;
+  --ck-seal-soft: #3a1a1d;
+  --ck-seal-ink: #ff8a8f;
 
-  --ck-accent: #f0c24b;
-  --ck-on-accent: #2a1b16;
-  --ck-accent-text: #f0c24b;
-  --ck-accent-bg: #3a2e12;
+  --ck-gold: #f0c24b;
+  --ck-gold-ink: #f0c24b;
+  --ck-gold-soft: #30291f;
 
-  /* Главное действие (артефакт 2026-10-13): «＋», «Сохранить», «Снять чек» — в тёмной золото, в светлой красный. */
-  --ck-primary: #f0c24b;
-  --ck-primary-hover: #ffd45e;
-  --ck-primary-active: #d9a93a;
-  --ck-on-primary: #2a1b16;
-  --ck-card-shadow: none;
-  --ck-fab-shadow: 0 6px 16px #00000080;
-  --ck-nav-bg: #1f1a17;
-  --ck-link: #f0c24b;
-  --ck-link-hover: #ffd97a;
+  --ck-income: #5bcb92;
+  --ck-income-soft: #212a26;
+  --ck-over: #f59e5b;
+  --ck-over-bar: #e07b39;
+  --ck-over-soft: #312521;
+  --ck-error: #ff7aa8;
+  --ck-error-soft: #322228;
+  --ck-focus: #f0c24b;
 
-  --ck-border: #5a4d44;
-  --ck-border-field: #8a7a6c;
-  --ck-divider: #3a312b;
-  --ck-focus: #ffd45e;
+  --ck-inv-action: #a3141b;
 
-  --ck-error-text: #ff9a8a;
-  --ck-error-bg: #3a1714;
-  --ck-error-border: #d0604f;
-  --ck-success-text: #7fd6a2;
-  --ck-success-bg: #14301f;
-  --ck-success-border: #3f9567;
-  --ck-warning-text: #ffb163;
-  --ck-warning-bg: #3a2508;
-  --ck-warning-border: #c07a2a;
-  --ck-info-text: #8fbcf5;
-  --ck-info-bg: #14263d;
-  --ck-info-border: #4f84c9;
-  --ck-neutral-text: #d2c5ab;
-  --ck-neutral-bg: #2e2722;
-  --ck-neutral-border: #8a7a6c;
+  --ck-material: rgba(30, 27, 29, 0.72);
+  --ck-material-line: rgba(255, 255, 255, 0.08);
+  --ck-scrim: rgba(6, 4, 5, 0.6);
+  --ck-skeleton: rgba(243, 238, 239, 0.08);
 
-  --ck-disabled-bg: #2b2520;
-  --ck-disabled-text: #a39780;
-  --ck-disabled-border: #4a4039;
+  --ck-slip: #e7e2df;
+  --ck-slip-ink: #1e1a1b;
+  --ck-slip-ink-2: #625a5d;
+  --ck-stamp: #c0161d;
 
-  --ck-popover-border: #8a7a6c;
-  --ck-popover-shadow: #00000080;
-  --ck-panel-shadow: #00000000;
+  --ck-cat-1: #f07aa0;
+  --ck-cat-2: #f2b759;
+  --ck-cat-3: #5fcb8f;
+  --ck-cat-4: #7da2f0;
+  --ck-cat-5: #b193f0;
+  --ck-cat-6: #5cc8c8;
+  --ck-cat-1-tint: #3b272e;
+  --ck-cat-2-tint: #3b3023;
+  --ck-cat-3-tint: #25332c;
+  --ck-cat-4-tint: #2a2d3a;
+  --ck-cat-5-tint: #322a3a;
+  --ck-cat-6-tint: #253234;
 
-  --ck-header-bg: #1a0c0a;
-  --ck-header-text: #f3e9cf;
-  --ck-header-text-muted: #c4b79e;
-  --ck-header-accent: #f0c24b;
-  --ck-header-hover-bg: #33201b;
-  --ck-header-border: #b01212;
-  --ck-header-focus: #ffd45e;
-  /* The plate of the full logo is near-black in both themes: the light block does not redefine it. */
-  --ck-logo-bg: #0f0f0e;
+  --ck-series-1: #7da2f0;
+  --ck-series-2: #f08a4b;
+  --ck-series-3: #5cc8c8;
+  --ck-series-4: #f2c45e;
+  --ck-series-5: #f07aa0;
+  --ck-series-6: #5bcb92;
+  --ck-series-7: #b193f0;
+  --ck-series-8: #ef5a52;
+  --ck-series-other: #8a8285;
+  --ck-series-special: #5a5255;
+  --ck-plot-grid: #302a2d;
+  --ck-plot-axis: #5e5558;
 
-  /* family-budget tokens */
-  --ck-cat-1: #e8685c;
-  --ck-cat-2: #e9b949;
-  --ck-cat-3: #8cc48d;
-  --ck-cat-4: #6f93d0;
-  --ck-cat-5: #cf86bd;
-  --ck-cat-6: #c9a77a;
-  --ck-cat-1-tint: #3d1c18;
-  --ck-cat-2-tint: #3a2e12;
-  --ck-cat-3-tint: #1f3020;
-  --ck-cat-4-tint: #1e2a3d;
-  --ck-cat-5-tint: #3a2033;
-  --ck-cat-6-tint: #352a1e;
-  --ck-over-text: #ffa25c;
-  --ck-over-bar: #e8792e;
-  --ck-track: #3a312b;
-  --ck-chip-selected-bg: #f3e9cf;
-  --ck-chip-selected-text: #141110;
+  --ck-shadow-float: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.5);
+  --ck-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
 
-  /* Geometry, fonts and the layout of a phone are the same in both themes: the light block does not redefine them. */
-  --ck-radius-sm: 12px;
-  --ck-radius: 20px;
-  --ck-radius-button: 16px;
+  /* Derived from the tokens of the theme: one declaration for both themes (var() resolves on <html> itself). */
+  --ck-network-track: color-mix(in srgb, var(--ck-seal) 25%, transparent);
+
+  /* Everything below is the same in both themes: the light block does not redefine it. */
+  --ck-font-display: "Geologica", "Onest", system-ui, sans-serif;
+  --ck-font-ui: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ck-font-slip: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --ck-text-caption: 0.75rem;
+  --ck-text-label: 0.8125rem;
+  --ck-text-body: 0.9375rem;
+  --ck-text-field: 1rem;
+  --ck-text-title: 1.0625rem;
+  --ck-text-heading: 1.375rem;
+  --ck-text-money-display: 2rem;
+  --ck-text-title-large: 2.125rem;
+  --ck-text-money-hero: 2.75rem;
+
+  --ck-space-1: 4px;
+  --ck-space-2: 8px;
+  --ck-space-3: 12px;
+  --ck-space-4: 16px;
+  --ck-space-5: 20px;
+  --ck-space-6: 24px;
+  --ck-space-8: 32px;
+  --ck-space-12: 48px;
+
+  --ck-radius-field: 12px;
+  --ck-radius-button: 14px;
+  --ck-radius-fab: 16px;
+  --ck-radius-card: 22px;
+  --ck-radius-sheet: 28px;
+  --ck-radius-snackbar: 4px;
   --ck-radius-pill: 999px;
-  --ck-font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --ck-font-display: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --ck-font-figures: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --ck-font-display-figures: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --ck-text-2xs: 0.75rem;
-  --ck-text-xs: 0.8125rem;
-  --ck-text-sm: 0.9375rem;
-  --ck-text-base: 1rem;
-  --ck-text-lg: 1.125rem;
-  --ck-text-xl: 1.375rem;
-  --ck-text-hero: 2.5rem;
+
+  --ck-tap: 48px;
+  --ck-tabbar-ios: 62px;
+  --ck-navbar-android: 64px;
+  --ck-topbar-ios: 44px;
+  --ck-topbar-android: 64px;
+  --ck-fab-android: 56px;
+
+  --ck-dur-press: 90ms;
+  --ck-dur-state: 180ms;
+  --ck-dur-count: 420ms;
+  --ck-dur-sheet: 360ms;
+  --ck-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ck-ease-spring: cubic-bezier(0.32, 1.25, 0.5, 1);
+
   --ck-tape-tooth: 8px;
   --ck-fade-size: 24px;
 
@@ -338,141 +261,113 @@
   --ck-z-action-bar: 10;
   --ck-z-top-bar: 15;
   --ck-z-bottom-nav: 20;
+  --ck-z-toast: 25;
   --ck-z-menu-sheet: 30;
   --ck-z-sheet: 35;
+  --ck-z-network-bar: 38;
   --ck-z-skip-link: 40;
-
-  --ck-series-1: #3987e5;
-  --ck-series-2: #d95926;
-  --ck-series-3: #199e70;
-  --ck-series-4: #c98500;
-  --ck-series-5: #d55181;
-  --ck-series-6: #008300;
-  --ck-series-7: #9085e9;
-  --ck-series-8: #e66767;
-  --ck-series-other: #9a8f80;
-  --ck-series-special: #6b6157;
-  --ck-plot-grid: #332b26;
-  --ck-plot-axis: #5a4d44;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --ck-bg: #f6efdc;
-  --ck-surface: #fffaf0;
-  --ck-surface-raised: #f5ead0;
-  --ck-text: #2a1b16;
-  --ck-text-muted: #6a5a4c;
+  --ck-paper: #f4f2f2;
+  --ck-surface: #fdfcfc;
+  --ck-surface-2: #ece8e8;
+  --ck-nav-android: #efe9e9;
+  --ck-line: #e2dcdc;
+  --ck-line-strong: #8a8386;
+  --ck-track: #e6e0e0;
+  --ck-bezel: #221c1e;
+  --ck-ink: #1b1517;
+  --ck-ink-2: #645b5e;
 
-  --ck-brand: #b01212;
-  --ck-brand-hover: #8f0e0e;
-  --ck-brand-active: #760b0b;
-  --ck-on-brand: #ffffff;
+  --ck-seal: #c0161d;
+  --ck-seal-press: #9f1016;
+  --ck-on-seal: #ffffff;
+  --ck-seal-soft: #f7e4e4;
+  --ck-seal-ink: #9e1218;
 
-  --ck-accent: #f0c24b;
-  --ck-on-accent: #2a1b16;
-  --ck-accent-text: #7a5600;
-  --ck-accent-bg: #f8e7b4;
+  --ck-gold: #e9b949;
+  --ck-gold-ink: #7a5500;
+  --ck-gold-soft: #fbf5ea;
 
-  --ck-primary: #b01212;
-  --ck-primary-hover: #8f0e0e;
-  --ck-primary-active: #760b0b;
-  --ck-on-primary: #ffffff;
-  --ck-card-shadow: 0 1px 2px #2a1b1614;
-  --ck-fab-shadow: 0 6px 16px #b0121255;
-  --ck-nav-bg: #fffaf0;
-  --ck-link: #9b1414;
-  --ck-link-hover: #6f0d0d;
+  --ck-income: #1e7a4c;
+  --ck-income-soft: #e7efea;
+  --ck-over: #b4530f;
+  --ck-over-bar: #d9701e;
+  --ck-over-soft: #f6ebe4;
+  --ck-error: #a3154a;
+  --ck-error-soft: #f4e5ea;
+  --ck-focus: #2f5bd3;
 
-  --ck-border: #d8c9ab;
-  --ck-border-field: #857463;
-  --ck-divider: #e9dfc8;
-  --ck-focus: #1d5fc4;
+  --ck-inv-action: #f0c24b;
 
-  --ck-error-text: #8a1f4d;
-  --ck-error-bg: #fbe6ee;
-  --ck-error-border: #b5507c;
-  --ck-success-text: #1f6b45;
-  --ck-success-bg: #e3f3e8;
-  --ck-success-border: #3f8a62;
-  --ck-warning-text: #7a4a00;
-  --ck-warning-bg: #fdeccc;
-  --ck-warning-border: #b0761a;
-  --ck-info-text: #1a4f8f;
-  --ck-info-bg: #e4eefb;
-  --ck-info-border: #4f80c0;
-  --ck-neutral-text: #5c4f43;
-  --ck-neutral-bg: #efe6d2;
-  --ck-neutral-border: #8f7f6c;
+  --ck-material: rgba(253, 252, 252, 0.74);
+  --ck-material-line: rgba(27, 21, 23, 0.08);
+  --ck-scrim: rgba(27, 21, 23, 0.38);
+  --ck-skeleton: rgba(27, 21, 23, 0.08);
 
-  --ck-disabled-bg: #ebe2ce;
-  --ck-disabled-text: #6a5a4c;
-  --ck-disabled-border: #d8c9ab;
+  --ck-slip: #fffefc;
+  --ck-slip-ink: #1e1a1b;
+  --ck-slip-ink-2: #625a5d;
+  --ck-stamp: #c0161d;
 
-  --ck-popover-border: #857463;
-  --ck-popover-shadow: #2a1b161f;
-  --ck-panel-shadow: #2a1b1614;
+  --ck-cat-1: #c2416b;
+  --ck-cat-2: #b7791f;
+  --ck-cat-3: #2f8f5b;
+  --ck-cat-4: #3566c8;
+  --ck-cat-5: #7a4fc4;
+  --ck-cat-6: #1f8a8a;
+  --ck-cat-1-tint: #f4e0e6;
+  --ck-cat-2-tint: #f2e8db;
+  --ck-cat-3-tint: #deece4;
+  --ck-cat-4-tint: #dfe6f4;
+  --ck-cat-5-tint: #e9e2f4;
+  --ck-cat-6-tint: #dcebeb;
 
-  --ck-header-bg: #1a0c0a;
-  --ck-header-text: #f3e9cf;
-  --ck-header-text-muted: #c4b79e;
-  --ck-header-accent: #f0c24b;
-  --ck-header-hover-bg: #33201b;
-  --ck-header-border: #b01212;
-  --ck-header-focus: #ffd45e;
+  --ck-series-1: #3566c8;
+  --ck-series-2: #d0601a;
+  --ck-series-3: #1f8a8a;
+  --ck-series-4: #b98a10;
+  --ck-series-5: #c2416b;
+  --ck-series-6: #1e7a4c;
+  --ck-series-7: #7a4fc4;
+  --ck-series-8: #b81d1d;
+  --ck-series-other: #8f8689;
+  --ck-series-special: #c9c1c3;
+  --ck-plot-grid: #e2dcdc;
+  --ck-plot-axis: #c8bfc1;
 
-  /* family-budget tokens */
-  --ck-cat-1: #b3261e;
-  --ck-cat-2: #a07000;
-  --ck-cat-3: #1f6338;
-  --ck-cat-4: #4a78bf;
-  --ck-cat-5: #73305f;
-  --ck-cat-6: #8d6a3f;
-  --ck-cat-1-tint: #f8dcd8;
-  --ck-cat-2-tint: #f6e7bf;
-  --ck-cat-3-tint: #dcecdc;
-  --ck-cat-4-tint: #dfe7f4;
-  --ck-cat-5-tint: #f1dceb;
-  --ck-cat-6-tint: #ece0cf;
-  --ck-over-text: #9a4600;
-  --ck-over-bar: #b05e0b;
-  --ck-track: #ebe0c8;
-  --ck-chip-selected-bg: #2a1b16;
-  --ck-chip-selected-text: #fffaf0;
+  --ck-shadow-float: 0 1px 2px rgba(60, 20, 25, 0.06), 0 10px 28px rgba(60, 20, 25, 0.1);
+  --ck-shadow-sm: 0 1px 2px rgba(27, 21, 23, 0.14);
+}
 
-  --ck-series-1: #2a78d6;
-  --ck-series-2: #eb6834;
-  --ck-series-3: #1baf7a;
-  --ck-series-4: #eda100;
-  --ck-series-5: #e87ba4;
-  --ck-series-6: #008300;
-  --ck-series-7: #4a3aa7;
-  --ck-series-8: #e34948;
-  --ck-series-other: #8b8170;
-  --ck-series-special: #bdb3a0;
-  --ck-plot-grid: #ece3cf;
-  --ck-plot-axis: #cdbfa3;
+/* The platform (platforms.md): the least touch target and the height of a button and a field. */
+:root[data-platform="ios"] {
+  --ck-tap: 44px;
 }
 
 /* ==========================================================================
-   Утилиты мобильного дизайна (2026-10-12; контракт параллельных работ, имена
-   не менять). Здесь, после токенов: в сборке этот файл идёт позже CSS экранов,
-   поэтому утилита того же веса побеждает класс экрана.
+   Утилиты и кирпичи экранов (контракт параллельных работ, имена не менять).
+   Здесь, после токенов: в сборке этот файл идёт позже CSS экранов. Утилиты
+   значений (.ck-figures, .ck-hero-figure) — обычный класс: побеждают класс
+   экрана того же веса. Кирпичи — через :where(), нулевой вес: экран может
+   поправить любой кирпич своим классом. Внутри :where() запятых нет.
    ========================================================================== */
 
-/* Цифры денег, количеств и цен: голос кассовой ленты. Только для значений, не для текста. */
-.ck-figures { font-family: var(--ck-font-figures); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Цифры денег, количеств и цен: табличные, в шрифте сумм, никогда не переносятся. Только для значений. */
+.ck-figures { font-family: var(--ck-font-display); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* Сумма-герой: не больше одной на экран. На узком окне уменьшается вместе с ним (10vw), но не выше шкалы. */
-.ck-hero-figure { font-family: var(--ck-font-display-figures); font-size: min(var(--ck-text-hero), 10vw); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Главное число экрана — одно на экран. На узком окне уменьшается вместе с ним (11vw), но не выше шкалы. */
+.ck-hero-figure { font-family: var(--ck-font-display); font-size: min(var(--ck-text-money-hero), 11vw); font-weight: 600; line-height: 1; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* Точечная выноска «Молоко ……… 450 ₸» в строке flex: точки встают перед последним ребёнком (суммой).
    Точки — декор цветом вторичного текста; имя переносится, сумма — никогда. */
 .ck-leader { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .ck-leader > * { min-width: 0; }
 .ck-leader > :last-child { order: 2; flex: none; white-space: nowrap; }
-.ck-leader::before { content: ""; order: 1; flex: 1 1 16px; min-width: 16px; height: 0.25em; background: radial-gradient(circle, var(--ck-text-muted) 0 1px, transparent 1.5px) left center / 6px 100% repeat-x; }
+.ck-leader::before { content: ""; order: 1; flex: 1 1 16px; min-width: 16px; height: 0.25em; background: radial-gradient(circle, var(--ck-ink-2) 0 1px, transparent 1.5px) left center / 6px 100% repeat-x; }
 
 /* «Лента чека»: рваный нижний край карточки, зубцы маской (не цветом) — работает на любом фоне в обеих темах.
    Карточку рисует сам экран; утилита только срезает низ и добавляет место под зубцы. Без поддержки маски —
@@ -485,47 +380,38 @@
   }
 }
 
-/* Кирпичи экранов по артефакту (2026-10-13, docs/plans/2026-10-13-artifact-mobile-design.md). Все через :where() —
-   нулевая специфичность: tokens.css в сборке идёт после CSS экранов, и экран может поправить любой кирпич своим классом.
-   Панель .ck-panel (не .ck-card: тот занят карточками таблиц lib/cards) — поверхность 20 px со скруглением 20; строка списка — значок 40 × 40, название и мета, сумма справа,
-   разделитель между строками; полоса — дорожка 8 px. */
-:where(.ck-panel) { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 20px; border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow); }
-:where(.ck-panel-head) { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
-:where(.ck-panel-head > h2) { font-size: var(--ck-text-lg); font-weight: 800; }
-:where(.ck-panel-head > a) { flex: none; color: var(--ck-link); font-size: var(--ck-text-sm); font-weight: 700; text-decoration: none; }
+/* Панель 2.0: surface с рамкой line, угол card, без тени (.ck-card занят карточками таблиц lib/cards). */
+:where(.ck-panel) { display: flex; flex-direction: column; gap: var(--ck-space-3); min-width: 0; padding: var(--ck-space-4); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface); }
+:where(.ck-panel-head) { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ck-space-3); min-width: 0; }
+/* The heading of a panel is ck-title (Onest), not a display heading: one element over the weightless :where(h2) of
+   App.css, still under any class of a screen. */
+:where(.ck-panel-head) > h2 { font-family: var(--ck-font-ui); font-size: var(--ck-text-title); font-weight: 600; line-height: 1.3; }
+:where(.ck-panel-head > a) { flex: none; color: var(--ck-seal-ink); font-size: var(--ck-text-label); font-weight: 600; text-decoration: none; }
+
+/* Строка списка (SpendRow): плитка 40 × 40, название и подпись, сумма справа; разделитель только между строками. */
 :where(.ck-list) { margin: 0; padding: 0; list-style: none; }
-:where(.ck-row) { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 64px; padding: 12px 0; color: inherit; text-decoration: none; }
-:where(.ck-list > li + li) { border-top: 1px solid var(--ck-divider); }
-:where(.ck-row-badge) { display: flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--ck-radius-sm); font-size: var(--ck-text-xs); font-weight: 800; }
+:where(.ck-row) { display: flex; align-items: center; gap: var(--ck-space-3); min-width: 0; min-height: 60px; padding: 10px 0; color: inherit; text-decoration: none; }
+:where(.ck-list > li + li) { border-top: 1px solid var(--ck-line); }
+/* Плитка категории: тон задаёт экран — --ck-tone (или класс .ck-tone-N); без тона — нейтральная ink-2. */
+:where(.ck-row-badge) { display: flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--ck-radius-field); background: color-mix(in srgb, var(--ck-tone, var(--ck-ink-2)) 15%, var(--ck-surface)); color: var(--ck-tone, var(--ck-ink-2)); font-size: var(--ck-text-label); font-weight: 600; }
+:where(.ck-tone-1) { --ck-tone: var(--ck-cat-1); }
+:where(.ck-tone-2) { --ck-tone: var(--ck-cat-2); }
+:where(.ck-tone-3) { --ck-tone: var(--ck-cat-3); }
+:where(.ck-tone-4) { --ck-tone: var(--ck-cat-4); }
+:where(.ck-tone-5) { --ck-tone: var(--ck-cat-5); }
+:where(.ck-tone-6) { --ck-tone: var(--ck-cat-6); }
 :where(.ck-row-main) { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
-:where(.ck-row-title) { overflow: hidden; font-size: var(--ck-text-sm); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-:where(.ck-row-meta) { overflow: hidden; color: var(--ck-text-muted); font-size: var(--ck-text-xs); text-overflow: ellipsis; white-space: nowrap; }
-:where(.ck-row-amount) { flex: none; font-size: var(--ck-text-sm); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-:where(.ck-bar) { height: 8px; overflow: hidden; border-radius: 4px; background: var(--ck-track); }
-:where(.ck-bar > span) { display: block; height: 100%; border-radius: inherit; background: var(--ck-link); }
+:where(.ck-row-title) { overflow: hidden; font-size: var(--ck-text-body); font-weight: 600; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+:where(.ck-row-meta) { overflow: hidden; color: var(--ck-ink-2); font-size: var(--ck-text-label); text-overflow: ellipsis; white-space: nowrap; }
+:where(.ck-row-amount) { flex: none; font-family: var(--ck-font-display); font-size: var(--ck-text-body); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+/* Источник траты: «Фото», «Выписка», «Словами», «Вручную» — подпись в тонкой рамке. */
+:where(.ck-stamp) { display: inline-flex; align-items: center; gap: var(--ck-space-1); padding: 1px 6px; border: 1px solid var(--ck-line); border-radius: 6px; color: var(--ck-ink-2); font-size: var(--ck-text-caption); font-weight: 500; line-height: 1.35; white-space: nowrap; }
+
+/* Полоса лимита (LimitBar): дорожка 8 px, заливка ink; от 80 % — over-bar. Слова «почти лимит» / «сверх лимита» пишет экран. */
+:where(.ck-bar) { height: 8px; overflow: hidden; border-radius: var(--ck-radius-pill); background: var(--ck-track); }
+:where(.ck-bar > span) { display: block; height: 100%; border-radius: inherit; background: var(--ck-ink); }
+:where(.ck-bar.is-near > span) { background: var(--ck-over-bar); }
+:where(.ck-bar.is-over > span) { background: var(--ck-over-bar); }
+
 :where(.ck-stack) { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-
-/* feature/spends-home (2026-10-13): «Удалено · Отменить» внизу «Трат» и «Удалить» под строкой траты при свайпе.
-   Полоса — тёмная, как шапка, в обеих темах: её текст и кольцо фокуса — шапки, «Отменить» — золотом (контраст — как у
-   золота шапки), рамка — цвет рамок темы (в тёмной теме полосу видно на фоне страницы); «Удалить» — красный бренд под
-   белым (7,14). Слой — над нижним меню, под листом «Ещё». */
-:root {
-  --ck-toast-bg: var(--ck-header-bg);
-  --ck-toast-text: var(--ck-header-text);
-  --ck-toast-action: var(--ck-accent);
-  --ck-toast-focus: var(--ck-header-focus);
-  --ck-toast-border: var(--ck-border);
-  --ck-swipe-delete-bg: var(--ck-brand);
-  --ck-swipe-delete-text: var(--ck-on-brand);
-  --ck-z-toast: 25;
-}
-
-/* feature/split-skeletons (2026-10-13): загрузка частями. Скелет загрузки — серые блоки цветом дорожки полосы
-   (--ck-track: в светлой #EBE0C8 на карточке #FFFAF0, в тёмной #3A312B на #1F1A17 — декор, не текст). Тонкая полоса
-   сети сверху окна — цвет главного действия (--ck-primary) на бледной дорожке того же цвета; слой — над листом, под
-   ссылкой «к содержимому». */
-:root {
-  --ck-skeleton: var(--ck-track);
-  --ck-network-track: color-mix(in srgb, var(--ck-primary) 25%, transparent);
-  --ck-z-network-bar: 38;
-}

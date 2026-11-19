@@ -296,26 +296,39 @@ describe('local_single keeps the previous interface (SSR only, no browser intera
 })
 
 describe('header row of a screen: «назад», the slots of a page, the heading, «✕» (SSR only; the pinning is CSS, checked by a person)', () => {
-  const back = /<a class="ck-back ck-round" aria-label="([^"]*)" href="([^"]*)"><svg class="ck-icon" viewBox="0 0 24 24" width="20" height="20"/
+  /** «Назад»: the chevron of iOS and the arrow of Android (shell.css shows one), and the name of the screen it leads to as
+   * its text — «‹ Траты» to the eye of iOS, «Назад: Траты» to the screen reader. Returns the address and the name. */
+  const back = /<a class="ck-back" href="([^"]*)"><svg class="ck-icon ck-back-chevron"[^>]*>.*?<\/svg><svg class="ck-icon ck-back-arrow"[^>]*>.*?<\/svg><span class="ck-back-text">(?:<span class="ck-shell-hidden">Назад: <\/span>)?([^<]*)<\/span><\/a>/
   const slot = '<div class="intro-slot"></div>'
   /** «Чат с ИИ» at the end of the row of every page of a signed-in person (2026-10-26; not on a focus screen). */
   const chat = '<a class="ck-chat-link ck-chat-link-page" aria-label="Чат с ИИ" href="/chat"><svg[^>]*>.*?</svg></a>'
   /** The row up to its own end: after the heading come the slot of the page and, on a focus screen, «✕». */
   const intro = (html: string) => {
     const after = html.indexOf(`</h1>${slot}`) + `</h1>${slot}`.length
-    return html.slice(html.indexOf('<div class="intro">'), html.indexOf('</div>', after) + 6)
+    return html.slice(html.indexOf('<div class="intro"'), html.indexOf('</div>', after) + 6)
   }
 
-  it('leads a nested page back to its list, before the heading in the same row', () => {
+  it('leads a nested page back to its list, before the heading in the same row, named by the screen it leads to', () => {
     const html = render(reader, { kind: 'receipt', receiptId: 7 }, '/receipts/7')
-    expect(intro(html)).toMatch(new RegExp(`^<div class="intro"><a class="ck-back ck-round" aria-label="Назад к тратам" href="/receipts"><svg[^>]*>.*?</svg></a>${slot}<h1 id="page-heading" tabindex="-1">Чек</h1>${slot}${chat}</div>$`))
+    expect(intro(html)).toMatch(new RegExp(`^<div class="intro" data-nav="nested"><a class="ck-back" href="/receipts">.*?<span class="ck-back-text"><span class="ck-shell-hidden">Назад: </span>Траты</span></a>${slot}<h1 id="page-heading" tabindex="-1">Чек</h1>${slot}${chat}</div>$`))
+    expect(back.exec(html)?.slice(1)).toEqual(['/receipts', 'Траты'])
+    // The short bar of an iOS section root repeats the heading for the eye only.
+    expect(html).toContain('<div class="ck-topbar" data-nav="nested" aria-hidden="true"><span class="ck-topbar-title">Чек</span></div>')
+  })
+
+  it('names the root of a section and the focus screen in the header row, for the large title of iOS', () => {
+    expect(render(reader, { kind: 'receipts', query: { page: 1 } }, '/receipts')).toContain('<div class="intro" data-nav="root">')
+    expect(render(reader, { kind: 'receipts', query: { page: 1 } }, '/receipts')).toContain('<div class="ck-topbar" data-nav="root" aria-hidden="true"><span class="ck-topbar-title">Траты</span></div>')
+    expect(render(reader, { kind: 'expense-new' }, '/receipts/new')).toContain('<div class="intro" data-nav="focus">')
+    // The mark under the row that tells the bar the page lies under it.
+    expect(render(reader, { kind: 'receipts', query: { page: 1 } }, '/receipts')).toContain('<div class="ck-scroll-mark" aria-hidden="true"></div>')
   })
 
   it('returns to the very list the person came from', () => {
     state.session = reader
     state.snapshot = { route: { kind: 'product', productId: 5, query: { page: 1 } }, href: '/catalog/products/5', returnTo: '/catalog/categories/4?page=3' }
     const html = renderToStaticMarkup(<App />)
-    expect(back.exec(html)?.slice(1)).toEqual(['Назад к категории', '/catalog/categories/4?page=3'])
+    expect(back.exec(html)?.slice(1)).toEqual(['/catalog/categories/4?page=3', 'Категория'])
   })
 
   it('has no «назад» on a page of a section, nor in place of a page the person may not see', () => {
@@ -324,23 +337,23 @@ describe('header row of a screen: «назад», the slots of a page, the headi
     }
     // A merge group is a moderator's page: a reader sees the refusal of the shell and no way back into it.
     expect(render(reader, { kind: 'merge', groupId: 2 }, '/catalog/merges/2')).not.toContain('ck-back')
-    expect(back.exec(render(moderator, { kind: 'merge', groupId: 2 }, '/catalog/merges/2'))?.slice(1)).toEqual(['Назад к дублям', '/catalog/merges'])
+    expect(back.exec(render(moderator, { kind: 'merge', groupId: 2 }, '/catalog/merges/2'))?.slice(1)).toEqual(['/catalog/merges', 'Дубли'])
   })
 
   it('closes a focus screen with «✕» after the heading and no «назад»', () => {
     const fresh = intro(render(reader, { kind: 'expense-new' }, '/receipts/new'))
-    expect(fresh).toMatch(new RegExp(`^<div class="intro">${slot}<h1 id="page-heading" tabindex="-1">Новая трата</h1>${slot}<a class="ck-close ck-round" aria-label="Закрыть" href="/"><svg[^>]*>.*</svg></a></div>$`))
+    expect(fresh).toMatch(new RegExp(`^<div class="intro" data-nav="focus">${slot}<h1 id="page-heading" tabindex="-1">Новая трата</h1>${slot}<a class="ck-close" aria-label="Закрыть" href="/"><svg[^>]*>.*</svg></a></div>$`))
     expect(fresh).not.toContain('ck-chat-link')
     const edit = intro(render(reader, { kind: 'expense-edit', receiptId: 9 }, '/receipts/9/edit'))
     expect(edit).toContain('<h1 id="page-heading" tabindex="-1">Изменить трату</h1>')
-    expect(edit).toContain('<a class="ck-close ck-round" aria-label="Закрыть" href="/receipts/9">')
+    expect(edit).toContain('<a class="ck-close" aria-label="Закрыть" href="/receipts/9">')
     expect(edit).not.toContain('ck-back')
   })
 
   it('keeps the note of the health page out of the pinned row', () => {
     const html = render(reader, { kind: 'health' }, '/health')
     expect(intro(html)).not.toContain('intro-note')
-    expect(html).toMatch(new RegExp(`</h1>${slot}${chat}</div><p class="intro-note intro-note-after">Сводка о состоянии служб.</p>`))
+    expect(html).toMatch(new RegExp(`</h1>${slot}${chat}</div><div class="ck-scroll-mark" aria-hidden="true"></div><p class="intro-note intro-note-after">Сводка о состоянии служб.</p>`))
   })
 
   it('offers «Чат с ИИ» from every page of a signed-in person: in the header strip and at the end of the row (2026-10-26)', () => {

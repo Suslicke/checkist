@@ -18,7 +18,8 @@ export const statementTexts = {
   modelAbsent: 'Исполнитель не запущен — модель сейчас не ответит. Выберите категории сами.',
   missing: (count: number) => `Без категории отмечено: ${count}. Выберите категорию или снимите отметку.`,
   asReceipt: 'Распознать как чек',
-  deleteQuestion: 'Убрать черновик? Сохранённые из него траты останутся.',
+  deleteTitle: 'Убрать черновик?',
+  deleteMessage: 'Сохранённые из него траты останутся. Ту же выписку можно загрузить снова.',
 } as const
 
 /** A refused upload, save or rule in words of the screen. */

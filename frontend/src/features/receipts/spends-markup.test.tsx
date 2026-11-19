@@ -9,7 +9,7 @@ import { OwnerChips, SpendDays } from './SpendDays'
 import { ownerChips } from './spends'
 import { setListIcons } from '../../lib/list-icons'
 
-const NBSP = ' '
+const NBSP = '\u00a0'
 const noop = () => {}
 // The rows of these tests name their categories themselves: the public example's own list is dropped.
 const base: ReceiptListItem = { ...(publicFixture('receipts.json') as Page<ReceiptListItem>).results[0], categories: undefined }
@@ -21,8 +21,14 @@ const rows: ReceiptListItem[] = [
   { ...base, id: 3, purchased_on: '2026-10-11', currency: 'EUR', total: '2.38', owner: 'andrey', owner_name: 'Андрей', category: null },
 ]
 /** The words of the meta line of every row, without the markup of its flags. */
-const metas = (html: string) => [...html.matchAll(/<span class="spends-row-meta">([\s\S]*?)<\/span><\/span><span class="spends-row-amount/g)]
+const metas = (html: string) => [...html.matchAll(/<span class="spends-row-meta"><span class="ck-stamp spends-stamp"[^>]*>[^<]*<\/span>([\s\S]*?)<\/span><\/span><span class="spends-row-amount/g)]
   .map((match) => match[1].replace(/<[^>]+>/g, ''))
+/** The provenance stamps of the rows, in order. */
+const stamps = (html: string) => [...html.matchAll(/<span class="ck-stamp spends-stamp" data-source="([a-z]+)">([^<]*)<\/span>/g)].map((match) => `${match[1]}: ${match[2]}`)
+const THIN = '\u202f'
+/** The markup of `<Money>` (components/Money.tsx) of an amount, as a row of the list or the size of the text. */
+const money = (int: string, frac: string, sign: string, size = 'inline') =>
+  `<span class="ck-money ck-money--${size}"><span class="ck-money-int">${int}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">${THIN}${sign}</span></span>`
 const page = (results: ReceiptListItem[]): Page<ReceiptListItem> => ({ count: results.length, page: 1, page_size: 50, pages: 1, results })
 const family = ownerChips({ kind: 'user', mode: 'accounts', user: { id: 1, username: 'andrey', is_staff: false },
   household: { id: 4, name: 'Семья', members: ['andrey', 'liza'],
@@ -33,17 +39,19 @@ describe('«Траты» on a phone (Vitest/SSR, not browser visual acceptance)'
     const html = renderToStaticMarkup(<SpendDays receipts={rows} today="2026-10-12" showOwner />)
     expect(html.match(/<h3>[^]*?<\/h3>/g)).toEqual([
       '<h3><time dateTime="2026-10-12">Сегодня</time></h3>', `<h3><time dateTime="2026-10-11">Вчера, 11${NBSP}окт</time></h3>`])
-    expect(html).toContain(`<span class="spends-day-sum ck-figures">20${NBSP}000${NBSP}₸</span>`)
-    expect(html).toContain(`<span class="spends-day-sum ck-figures">2,38${NBSP}€</span>`)
+    // The totals of a day and the amounts of the rows are Money of 2.0: exact, the currency as its sign.
+    expect(html).toContain(`<span class="spends-day-sum">${money(`20${THIN}000`, '', '₸')}</span>`)
+    expect(html).toContain(`<span class="spends-day-sum">${money('2', ',38', '€')}</span>`)
     expect(html.match(/<a class="spends-row" href="\/receipts\/\d+">/g)).toHaveLength(3)
-    // One card per day.
+    // One panel per day.
     expect(html.match(/<ul class="spends-rows">/g)).toHaveLength(2)
-    // Who, then on what; the badge says «по чеку», and so does the hidden word for a screen reader.
-    expect(html).toContain('<span class="spends-row-title">Magnum<span class="spends-hidden"> (по чеку)</span></span><span class="spends-row-meta">')
+    // The place, then the provenance stamp and who and on what; the amount in ink at the right.
+    expect(html).toContain('<span class="spends-row-title">Magnum</span><span class="spends-row-meta"><span class="ck-stamp spends-stamp" data-source="photo">Фото</span>')
     expect(metas(html)[0]).toBe(`Лиза · Продукты · 23${NBSP}позиции`)
-    expect(html).toContain(`<span class="spends-row-amount ck-figures">18${NBSP}940${NBSP}₸</span>`)
-    // A spend without a place is titled by its first line and says it has no receipt only to a screen reader.
-    expect(html).toContain('<span class="spends-row-title">Такси<span class="spends-hidden"> (трата без чека)</span></span>')
+    expect(html).toContain(`<span class="spends-row-amount">${money(`18${THIN}940`, '', '₸', 'row')}</span>`)
+    // A spend without a place is titled by its first line; its stamp says it was typed by hand.
+    expect(html).toContain('<span class="spends-row-title">Такси</span><span class="spends-row-meta"><span class="ck-stamp spends-stamp" data-source="manual">Вручную</span>')
+    expect(stamps(html)).toEqual(['photo: Фото', 'manual: Вручную', 'photo: Фото'])
   })
 
   it('tints the badge by the category colour and leaves it neutral without one; the category picture or a slip, a pencil or a card', () => {
@@ -74,7 +82,9 @@ describe('«Траты» on a phone (Vitest/SSR, not browser visual acceptance)'
     } finally {
       setListIcons('category')
     }
-    expect(html).toContain('<span class="spends-hidden"> (из выписки)</span>')
+    // The stamp of a statement names its bank; the meta line does not repeat it.
+    expect(stamps(html)).toContain('statement: Выписка Kaspi Gold')
+    expect(metas(html)[2]).toBe('')
     expect(html).not.toContain('liza')
   })
 
@@ -82,7 +92,7 @@ describe('«Траты» on a phone (Vitest/SSR, not browser visual acceptance)'
     const html = renderToStaticMarkup(<SpendDays receipts={[{ ...rows[1], hidden: true }]} today="2026-10-12" showOwner={false} />)
     expect(html).toContain('<a class="spends-row" data-hidden="" href="/receipts/2">')
     // The word of a hidden payment in the colour of a warning, the rest quiet.
-    expect(html).toContain('<span class="spends-row-meta"><span class="spends-row-flag">скрыто</span><span> · Транспорт</span></span>')
+    expect(html).toContain('<span class="spends-row-meta"><span class="ck-stamp spends-stamp" data-source="manual">Вручную</span><span class="spends-row-flag">скрыто</span><span> · Транспорт</span></span>')
     const review = renderToStaticMarkup(<SpendDays receipts={[{ ...rows[0], review_required: true }]} today="2026-10-12" showOwner={false} />)
     expect(review).toContain('<span class="spends-row-flag">требует проверки</span>')
   })
@@ -112,9 +122,9 @@ describe('family chips and the review banner', () => {
     const html = renderToStaticMarkup(<OwnerChips chips={family} query={{ page: 2, q: 'MILCH', owner: 'liza' }} />)
     expect(html).toContain('<div class="spends-chips"><div class="ck-chip-scroller"><div class="ck-chip-scroller-track" role="region" aria-label="Кто добавил" tabindex="0"><ul>')
     expect(html.match(/<a [^>]*>[^<]*<\/a>/g)).toEqual([
-      '<a class="spends-chip" href="/receipts?q=MILCH">Вся семья</a>',
-      '<a class="spends-chip" href="/receipts?q=MILCH&amp;owner=andrey">Андрей</a>',
-      '<a class="spends-chip" aria-current="true" href="/receipts?q=MILCH&amp;owner=liza">Лиза</a>',
+      '<a class="ck-chip" href="/receipts?q=MILCH">Вся семья</a>',
+      '<a class="ck-chip" href="/receipts?q=MILCH&amp;owner=andrey">Андрей</a>',
+      '<a class="ck-chip" aria-current="true" href="/receipts?q=MILCH&amp;owner=liza">Лиза</a>',
     ])
     expect(renderToStaticMarkup(<OwnerChips chips={[]} query={{ page: 1 }} />)).toBe('')
   })
@@ -123,8 +133,8 @@ describe('family chips and the review banner', () => {
     expect(renderToStaticMarkup(<ReviewBanner count={undefined} />)).toBe('')
     expect(renderToStaticMarkup(<ReviewBanner count={0} />)).toBe('')
     expect(renderToStaticMarkup(<ReviewBanner count={3} />))
-      .toBe(`<p class="spends-review"><a href="/recognition/jobs?needs_review=1"><span class="spends-review-text">3${NBSP}фото ждут проверки</span>`
-        + '<span class="spends-review-action" aria-hidden="true">Проверить</span></a></p>')
+      .toMatch(new RegExp('^<p class="spends-review"><a href="/recognition/jobs\\?needs_review=1"><span class="spends-review-badge" aria-hidden="true"><svg[^>]*>.*?</svg></span>'
+        + `<span class="spends-review-text">3${NBSP}фото ждут проверки</span><span class="spends-review-action" aria-hidden="true">Проверить</span></a></p>$`))
   })
 
   it('puts chips and the banner above the list and offers to reset an owner filter on an empty page', () => {
@@ -135,7 +145,7 @@ describe('family chips and the review banner', () => {
     // No big «Загрузить фото» / «Добавить трату» above the list: the «＋» of the navigation adds a spend.
     expect(html).not.toContain('receipt-primary')
     // «Обработка» stays as a quiet link at the end.
-    expect(html.endsWith('<p class="spends-jobs"><a href="/recognition/jobs">Обработка фото</a></p></div>')).toBe(true)
+    expect(html).toMatch(/<p class="spends-jobs"><a href="\/recognition\/jobs">Обработка фото<svg[^>]*>.*?<\/svg><\/a><\/p><\/div>$/)
   })
 
   it('keeps the heading of the list for a screen reader only: the days are the cards', () => {
@@ -150,7 +160,9 @@ describe('family chips and the review banner', () => {
     // The words of the search line (2026-10-13) are on the screen anyway: only the date is behind the funnel.
     const query = { page: 1, q: 'MILCH', date_from: '2026-10-01', owner: 'liza' }
     const phone = renderToStaticMarkup(<ReceiptsView narrow query={query} state={{ kind: 'ok', data: page([]) }} retry={noop} chips={family} />)
-    expect(phone).toMatch(/<div class="spends-toolbar"><div class="spends-chips">[\s\S]*<\/div><button type="button" class="spends-filters-toggle" aria-haspopup="dialog" aria-expanded="false" aria-label="Фильтры \(1\)"><svg [^>]*>[\s\S]*?<\/svg><span class="spends-filters-count" aria-hidden="true">1<\/span><\/button><\/div>/)
+    expect(phone).toMatch(/<div class="spends-toolbar"><div class="spends-chips">[\s\S]*<\/div><button type="button" class="ck-icon-button spends-filters-toggle" aria-haspopup="dialog" aria-expanded="false" aria-label="Фильтры \(1\)"><svg [^>]*>[\s\S]*?<\/svg><span class="spends-filters-count" aria-hidden="true">1<\/span><\/button><\/div>/)
+    // The search and the chips are one head that stays at the top of a phone.
+    expect(phone).toMatch(/<div class="spends-head"><form role="search" class="spends-search"[\s\S]*<div class="spends-toolbar">/)
     expect(phone).not.toContain('Применить')
     // Nothing filtered: the funnel alone.
     const plain = renderToStaticMarkup(<ReceiptsView narrow query={{ page: 1 }} state={{ kind: 'ok', data: page([]) }} retry={noop} chips={family} />)
@@ -177,12 +189,13 @@ describe('styles of «Траты» (text of the rules, not rendering)', () => {
   const css = readFileSync(new URL('./Receipts.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
   const rule = (selector: string) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find((match) => match[1].trim() === selector)?.[2].trim() ?? ''
 
-  it('draws a day as a quiet line over one card of the project', () => {
-    expect(rule('.spends-day-head')).toContain('color: var(--ck-text-muted);')
+  it('draws a day as a quiet line over one panel of 2.0: the surface, a line frame, no shadow', () => {
+    expect(rule('.spends-day-head')).toContain('color: var(--ck-ink-2);')
     expect(rule('.spends-day-head')).not.toContain('position')
-    expect(rule('.spends-rows')).toContain('border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow);')
-    expect(rule('.receipt-panel')).toContain('border-radius: var(--ck-radius); background: var(--ck-surface); box-shadow: var(--ck-card-shadow);')
-    expect(rule('.ck-sheet .receipt-panel')).toBe('padding: 0; border: 0; background: none; box-shadow: none;')
+    expect(rule('.spends-rows')).toContain('border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface);')
+    expect(rule('.receipt-panel')).toContain('border: 1px solid var(--ck-line); border-radius: var(--ck-radius-card); background: var(--ck-surface);')
+    expect(css).not.toContain('box-shadow: var(--ck-card-shadow)')
+    expect(rule('.ck-sheet .receipt-panel')).toBe('padding: 0; border: 0; background: none;')
   })
 
   it('cuts a long place or meta of a row with an ellipsis on one line and keeps the amount whole', () => {
@@ -194,28 +207,30 @@ describe('styles of «Траты» (text of the rules, not rendering)', () => {
     expect(rule('.spends-row-amount')).toContain('flex: none;')
   })
 
-  it('sets every font size of the screen with the scale of tokens', () => {
+  it('sets every font size of the screen with the scale of 2.0', () => {
     const sizes = [...css.matchAll(/font-size\s*:\s*([^;]+);/g)].map((match) => match[1].trim())
     expect(sizes.length).toBeGreaterThan(10)
-    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(xs|sm|base|lg|xl)\)$/)
+    for (const size of sizes) expect(size).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading)\)$/)
   })
 
-  it('never wraps an amount, a day total or a chip, and keeps touch targets at least 44px', () => {
-    for (const selector of ['.spends-row-amount', '.spends-day-sum', '.spends-chip']) expect(rule(selector), selector).toContain('white-space: nowrap')
-    expect(rule('.spends-chip')).toContain('min-height: 44px')
-    expect(Number(/min-height: (\d+)px/.exec(rule('.spends-review a'))?.[1])).toBeGreaterThanOrEqual(44)
+  it('never wraps an amount or a day total, and keeps touch targets at least a tap', () => {
+    for (const selector of ['.spends-row-amount', '.spends-day-sum']) expect(rule(selector), selector).toContain('white-space: nowrap')
+    expect(Number(/min-height: (\d+)px/.exec(rule('.spends-review a'))?.[1])).toBeGreaterThanOrEqual(48)
     expect(rule('.spends-row')).toContain('min-height: 64px')
-    expect(rule('.spends-filters-toggle')).toContain('width: 44px; height: 44px; min-height: 44px;')
+    expect(rule('.spends-search-field input')).toContain('min-height: var(--ck-tap)')
+    expect(rule('.spends-ask')).toContain('min-height: var(--ck-tap)')
   })
 
-  it('takes every colour from a token and gives each of the six category tones its colour and tint', () => {
+  it('takes every colour from a 2.0 token and gives each of the six category tones its colour and tint', () => {
     const spends = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((match) => match[1].includes('.spends-'))
     expect(spends.length).toBeGreaterThan(10)
     for (const [, selector, body] of spends) expect(body, selector).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i)
     for (let tone = 1; tone <= 6; tone += 1) {
       expect(rule(`.spends-badge[data-tone="${tone}"]`)).toBe(`background: var(--ck-cat-${tone}-tint); color: var(--ck-cat-${tone});`)
     }
-    expect(rule('.spends-chip[aria-current="true"]')).toBe('background: var(--ck-chip-selected-bg); border-color: var(--ck-chip-selected-bg); color: var(--ck-chip-selected-text);')
+    // Spending is ink, never red; the assistant speaks in gold.
+    expect(rule('.spends-row')).toContain('color: var(--ck-ink);')
+    expect(rule('.spends-ask')).toContain('background: var(--ck-gold-soft); color: var(--ck-gold-ink);')
   })
 
   it('defines the category tokens in both themes', () => {

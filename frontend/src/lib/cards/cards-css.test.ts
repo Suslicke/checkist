@@ -66,7 +66,7 @@ describe('card stylesheet guards (text of the rules, not rendering)', () => {
   })
 
   it('highlights the card a link points at and the total card', () => {
-    expect(rule('.ck-card:target')).toBe('background: var(--ck-accent-bg);')
+    expect(rule('.ck-card:target')).toBe('background: var(--ck-seal-soft);')
     const order = rules(css).map((item) => item.selector)
     expect(order.indexOf('.ck-card')).toBeLessThan(order.indexOf('.ck-card:target'))
     expect(rule('.ck-card[data-tone="total"] .ck-card-fact dd')).toBe('font-weight: 700;')
@@ -108,7 +108,7 @@ describe('card stylesheet guards: the heading, links and text facts', () => {
   it('paints a link of the heading and of a fact as a link, not as the text around it', () => {
     // App.css says `a { color: inherit; }`: a class in the selector outweighs it wherever the file stands in the build.
     for (const selector of ['.ck-card-title a', '.ck-card-fact a']) {
-      expect(rule(selector), selector).toBe('color: var(--ck-link); text-underline-offset: 3px;')
+      expect(rule(selector), selector).toBe('color: var(--ck-seal-ink); text-underline-offset: 3px;')
     }
     // The footer holds buttons and action links with the colours of their own classes.
     expect(rules(css).filter((item) => item.selector.includes('.ck-card-footer') && declares(item.body, 'color')).map((item) => item.selector)).toEqual([])
@@ -117,7 +117,7 @@ describe('card stylesheet guards: the heading, links and text facts', () => {
   it('gives a link of the heading and of a value the touch target of the table links, without outweighing a screen class', () => {
     const targets = [':where(.ck-card-title > a)', ':where(.ck-card-fact[data-kind="value"] dd a)']
     for (const selector of targets) {
-      expect(rule(selector), selector).toBe('display: inline-block; min-height: 44px; padding-block: 10px;')
+      expect(rule(selector), selector).toBe('display: inline-block; min-height: var(--ck-tap); padding-block: 10px;')
       expect(weightless(selector), selector).toBe(true)
     }
     // Only a direct child of the heading and a link of an unbreakable value: a link inside running text stays inline.

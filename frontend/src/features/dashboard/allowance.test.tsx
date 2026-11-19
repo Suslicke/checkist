@@ -7,7 +7,6 @@ import { allowanceView } from './dashboard-state'
 import { DashboardView } from './DashboardPage'
 import { LimitsView, MonthBudgetPanel } from './LimitsPage'
 
-const nb = (text: string) => text.replaceAll(' ', '\u00a0')
 /** Spaces of any width as one: the glue of money (lib/text.ts) is not what these tests check. */
 const plain = (text: string) => text.replace(/[\u00a0\u202f]/g, ' ')
 const words = (html: string) => plain(html.replace(/<svg\b.*?<\/svg>/g, '').replace(/<[^>]+>/g, ''))
@@ -39,14 +38,17 @@ describe('«Можно тратить в день» (2026-10-13)', () => {
       .toBe('Траты и 1 платёж к оплате больше дохода месяца 700 000 ₸')
   })
 
-  it('stands at the foot of the hero of the current month only, «Перерасход» in the overspend colour', () => {
+  it('stands in the line under the main number of the current month only, with how it was counted as a title', () => {
     const html = view({ allowance })
-    const hero = html.slice(html.indexOf('dash-hero'), html.indexOf('</section>', html.indexOf('dash-hero')))
-    expect(hero).toContain(`<span class="dash-hero-day" title="Бюджет месяца ${nb('700 000 ₸')} минус траты и ${nb('2 платежа к оплате')} (${nb('23 000 ₸')}), поровну на ${nb('19 дней')}">в день <b class="ck-figures">${nb('20 449,47 ₸')}</b>`)
-    expect(view({ allowance: { ...allowance, per_day: null, overspent: '100.00' } })).toContain('<span class="dash-hero-day dash-over"')
+    const sub = html.slice(html.indexOf('<p class="dash-hero-sub"'), html.indexOf('</p>', html.indexOf('<p class="dash-hero-sub"')))
+    expect(words(sub)).toContain('20 449,47 ₸ в день')
+    expect(plain(sub)).toContain('title="Бюджет месяца 700 000 ₸ минус траты и 2 платежа к оплате (23 000 ₸), поровну на 19 дней"')
+    // Gone below zero: never a negative day in the line (the number «В день» says «Перерасход» instead, home-hero.test.ts).
+    const over = view({ allowance: { ...allowance, per_day: null, overspent: '100.00' } })
+    expect(words(over.slice(over.indexOf('<p class="dash-hero-sub"'), over.indexOf('</p>', over.indexOf('<p class="dash-hero-sub"'))))).not.toContain('в день')
     // A past month: the server sends none, and a stale one is not drawn either.
-    expect(view({ allowance }, '2026-11')).not.toContain('dash-hero-day')
-    expect(view({ allowance: null })).not.toContain('dash-hero-day')
+    expect(words(view({ allowance }, '2026-11'))).not.toContain('в день')
+    expect(words(view({ allowance: null }))).not.toContain('в день')
   })
 })
 
@@ -54,12 +56,14 @@ describe('«Бюджет месяца» on «Главная» (2026-10-26: the g
   it('is the remainder of the ring and the line under it, not a row in «Лимиты»', () => {
     const html = view({ budget: { amount: '400000.00', currency: 'KZT', spent: '287450.00' } })
     const hero = html.slice(html.indexOf('dash-hero'), html.indexOf('</section>', html.indexOf('dash-hero')))
-    expect(words(hero)).toContain('Остаток бюджета112 550 ₸')
-    expect(words(hero)).toContain('из 400 000 ₸')
-    expect(words(hero)).toContain('72 % бюджета')
+    const ring = html.slice(html.indexOf('dash-where'), html.indexOf('</section>', html.indexOf('dash-where')))
+    expect(words(hero)).toContain('из 400 000 ₸ бюджета')
+    expect(words(ring)).toContain('Остаток бюджета112 550 ₸')
+    expect(words(ring)).toContain('72 %бюджета')
     expect(html.slice(html.indexOf('dash-limits'))).not.toContain('dash-budget')
     const over = view({ budget: { amount: '200000.00', currency: 'KZT', spent: '287450.00' } })
-    expect(words(over)).toContain('Сверх бюджета на 87 450 ₸')
+    expect(words(over)).toContain('сверх бюджета на 87 450 ₸')
+    expect(words(over)).toContain('Сверх бюджета87 450 ₸')
   })
 
   it('is not drawn in a month without spends, and is absent without a budget', () => {
@@ -107,9 +111,10 @@ describe('the budget panel of «Лимиты»', () => {
     const html = renderToStaticMarkup(<MonthBudgetPanel family onSave={save}
       state={{ kind: 'ok', budget: { amount: '700000.00', currency: 'KZT', base_currency: 'KZT' } }} />)
     expect(html).toContain('<h2 id="limits-budget-heading" class="limits-small-heading">Бюджет месяца</h2>')
-    expect(html).toContain(`<span class="limits-current ck-figures">${nb('700 000 ₸')}</span>`)
+    expect(html).toContain('<span class="limits-current"><span class="ck-money ck-money--inline"><span class="ck-money-int">700\u202f000</span><span class="ck-money-cur">\u202f₸</span></span></span>')
     expect(html).toContain('value="700000"')
-    expect(html).toContain('<button type="submit" class="limits-budget-save">Сохранить бюджет</button>')
+    // A tonal button: the save bar of the limits is the one seal of the screen.
+    expect(html).toContain('<button type="submit" class="ck-button-secondary limits-budget-save">Сохранить бюджет</button>')
     expect(html).toContain('>Убрать</button>')
     const none = renderToStaticMarkup(<MonthBudgetPanel family={false} onSave={save}
       state={{ kind: 'ok', budget: { amount: null, currency: null, base_currency: 'KZT' } }} />)

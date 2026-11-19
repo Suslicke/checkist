@@ -9,6 +9,8 @@ import { isPlannedAdvice, isPlannedMonth, isPlannedSpend } from '../../api/plann
 import { plannedAdviceFixture, plannedFixture, plannedMonthFixture } from '../../api/planned-test-support'
 import type { Category } from '../../api/types'
 import { buildRoute, parseRoute } from '../../navigation/routes'
+import { MoneyView } from '../../components/Money'
+import type { MoneyProps } from '../../components/Money'
 import { allowanceView } from '../dashboard/dashboard-state'
 import { DashboardView } from '../dashboard/DashboardPage'
 import PlannedCard from './PlannedCard'
@@ -20,8 +22,10 @@ import {
 
 const NBSP = String.fromCharCode(0xa0)
 /** Words are compared with ordinary spaces: `glue` puts no-break ones where a value must not break (checked once). */
-const plain = (text: string) => text.replaceAll(NBSP, ' ')
+const plain = (text: string) => text.replaceAll(NBSP, ' ').replaceAll('\u202f', ' ')
 const html = (node: ReactElement) => plain(renderToStaticMarkup(node).replace(/<svg\b.*?<\/svg>/g, ''))
+/** The markup of an amount as `Money` draws it (components/Money.tsx), spaces made plain. */
+const money = (value: string, currency = 'KZT', props: Partial<MoneyProps> = {}) => html(<MoneyView value={value} currency={currency} hidden={false} {...props} />)
 const data = plannedMonthFixture()
 const categories = [
   { id: 5, name: 'Жильё', path: [], parent_id: null, depth: 0 }, { id: 12, name: 'Одежда', path: [], parent_id: null, depth: 0 },
@@ -59,13 +63,13 @@ describe('words and widths of the plans', () => {
     expect(plain(rowMeta({ ...data.undated[0], category: null }).join(' · '))).toBe('Без категории · без срока · отложено 248 000 ₸ на депозите «Отпуск»')
   })
   it('pins the pill: more than planned, less than planned, the verdict of the model', () => {
-    expect(plain(pillOf(data.rows[1])?.text ?? '')).toBe('+7 400 ₸')
+    expect(plain(pillOf(data.rows[1])?.text ?? '')).toBe('+7 400 ₸ сверх плана')
     expect(pillOf(data.rows[1])?.kind).toBe('over')
-    expect(plain(pillOf(data.rows[3])?.text ?? '')).toBe('−2 000 ₸')
+    expect(plain(pillOf(data.rows[3])?.text ?? '')).toBe('−2 000 ₸ от плана')
     expect(pillOf(data.rows[3])?.kind).toBe('under')
     expect(pillOf({ ...data.rows[3], receipt: { ...data.rows[3].receipt!, total: '30000.00' } })).toBeNull()
-    expect(pillOf(data.undated[1])).toEqual({ kind: 'ai-wait', text: 'ИИ: подождать' })
-    expect(pillOf(data.rows[4])).toEqual({ kind: 'ai-drop', text: 'ИИ: отговаривает' })
+    expect(pillOf(data.undated[1])).toEqual({ kind: 'ai-wait', text: 'ИИ: лучше подождать' })
+    expect(pillOf(data.rows[4])).toEqual({ kind: 'ai-drop', text: 'ИИ: лучше не брать' })
     expect(pillOf(data.rows[0])).toBeNull()
     expect(pillOf(data.rows[2])).toBeNull()
   })
@@ -148,14 +152,15 @@ describe('/planned (Vitest/SSR, not browser visual acceptance)', () => {
   const page = html(<PlannedView data={data} />)
   it('shows the hero with the strip, the legend, the two actions and the months in a scroller', () => {
     expect(page).toContain('<h2 id="pl-hero-heading" class="pl-eyebrow">Октябрь</h2>')
-    expect(page).toContain('<p class="pl-hero-line"><span class="ck-hero-figure">285 000 ₸</span><span class="pl-hero-word">ещё ждём</span></p>')
+    expect(page).toContain(`<p class="pl-hero-line">${money('285000.00', 'KZT', { size: 'hero' })}<span class="pl-hero-word">ещё ждём</span></p>`)
+    expect(page.match(/ck-money--hero/g)).toHaveLength(1)
     expect(page).toContain('<span>из 360 000 ₸ запланированных</span><span> · 2 из 5 сделано</span><span> · учтено в «можно тратить в день»</span>')
     expect(page).toContain('<div class="pl-segments" role="img" aria-label="План в октябре по пунктам"><i class="pl-cat-6" style="flex:150000" title="Зимняя куртка"></i><i class="pl-cat-4 pl-seg-done" style="flex:52400" title="Подарок маме"></i>')
-    expect(page).toContain('<span><i aria-hidden="true"></i>сделано <b class="ck-figures">80 400 ₸</b></span><span><i class="pl-legend-open" aria-hidden="true"></i>ждём <b class="ck-figures">285 000 ₸</b></span>')
-    expect(page).toContain('<button type="button" class="pl-add" aria-haspopup="dialog">＋ Запланировать</button><button type="button" class="ck-button-secondary pl-ask">✦ Спросить ИИ</button>')
+    expect(page).toContain(`<span><i aria-hidden="true"></i>сделано ${money('80400.00')}</span><span><i class="pl-legend-open" aria-hidden="true"></i>ждём ${money('285000.00')}</span>`)
+    expect(page).toContain('<button type="button" class="pl-add" aria-haspopup="dialog">Запланировать</button><button type="button" class="ck-button-secondary pl-ask">Спросить ИИ</button>')
     expect(page).toContain('role="region" aria-label="Ближайшие месяцы" tabindex="0"')
-    expect(page).toContain('<a class="pl-month pl-month-now" aria-current="page" href="/planned?month=2026-10"><span class="pl-month-label">Октябрь</span><span class="pl-month-sum ck-figures">360 000 ₸</span><span class="pl-month-meta">5 планов · 2 сделано</span>')
-    expect(page).toContain('<a class="pl-month" href="/planned?month=2027-01"><span class="pl-month-label">Январь 2027</span><span class="pl-month-sum ck-figures pl-month-sum-empty">пока пусто</span><span class="pl-month-meta">＋ добавить</span><span class="pl-month-bar" aria-hidden="true"></span></a>')
+    expect(page).toContain(`<a class="pl-month pl-month-now" aria-current="page" href="/planned?month=2026-10"><span class="pl-month-label">Октябрь</span><span class="pl-month-sum">${money('360000.00')}</span><span class="pl-month-meta">5 планов · 2 сделано</span>`)
+    expect(page).toContain('<a class="pl-month" href="/planned?month=2027-01"><span class="pl-month-label">Январь 2027</span><span class="pl-month-sum pl-month-sum-empty">пока пусто</span><span class="pl-month-meta">＋ добавить</span><span class="pl-month-bar" aria-hidden="true"></span></a>')
     // A past month: no «учтено».
     expect(html(<PlannedView data={plannedMonthFixture({ month: '2026-09' })} />)).not.toContain('учтено в')
   })
@@ -168,13 +173,15 @@ describe('/planned (Vitest/SSR, not browser visual acceptance)', () => {
     expect(jacket).toContain('<span class="pl-meta"><span>Одежда · в октябре · отложено 57 000 ₸ на депозите «Зима»</span></span>')
     const gift = list.slice(list.indexOf('Подарок маме'), list.indexOf('Шины на зиму'))
     expect(page).toContain('pl-row-button pl-cat-4 pl-done"')
-    expect(gift).toContain('<span class="ck-row-amount ck-figures"><span class="pl-amount-plan">45 000 ₸</span>52 400 ₸</span>')
+    expect(gift).toContain(`<span class="ck-row-amount"><span class="pl-amount-plan">план ${money('45000.00')}</span>${money('52400.00', 'KZT', { size: 'row' })}</span>`)
     expect(gift).toContain('<b class="pl-rail-over" style="width:35%"></b><b class="pl-rail-fact" style="width:30%"></b>')
-    expect(gift).toContain('<span>Подарки · 24 октября · Technodom</span><span class="pl-pill pl-pill-over">+7 400 ₸</span>')
-    expect(page).toContain('<span class="pl-pill pl-pill-under">−2 000 ₸</span>')
-    expect(page).toContain('<span>Дом · в октябре · ничего не отложено</span><span class="pl-pill pl-pill-ai-drop">ИИ: отговаривает</span>')
-    expect(page).toContain('<h2 id="pl-undated-heading">Без срока</h2><span class="pl-head-meta ck-figures">540 000 ₸ · 3 плана</span>')
-    expect(page).toContain('<span>Техника · без срока · ничего не отложено</span><span class="pl-pill pl-pill-ai-wait">ИИ: подождать</span>')
+    expect(gift).toContain('<span>Подарки · 24 октября · Technodom</span><span class="pl-pill pl-pill-over">+7 400 ₸ сверх плана</span>')
+    expect(page).toContain('<span class="pl-pill pl-pill-under">−2 000 ₸ от плана</span>')
+    expect(page).toContain('<span>Дом · в октябре · ничего не отложено</span><span class="pl-pill pl-pill-ai-drop">ИИ: лучше не брать</span>')
+    expect(page).toContain(`<h2 id="pl-undated-heading">Без срока</h2><span class="pl-head-meta">${money('540000.00')} · 3 плана</span>`)
+    expect(page).toContain('<span>Техника · без срока · ничего не отложено</span><span class="pl-pill pl-pill-ai-wait">ИИ: лучше подождать</span>')
+    // A plan spent to the tenge shows no «план …» beside its spend.
+    expect(html(<PlannedView data={plannedMonthFixture({ rows: [{ ...data.rows[1], receipt: { ...data.rows[1].receipt!, total: '45000.00' } }] })} />)).not.toContain('pl-amount-plan')
     expect(page).toContain('<span>Путешествия · без срока · отложено 248 000 ₸ на депозите «Отпуск»</span>')
   })
   it('wraps the hero, the actions and the months in one boxless column before the lists in another', () => {
@@ -190,7 +197,7 @@ describe('/planned (Vitest/SSR, not browser visual acceptance)', () => {
       undated: [], base: { ...data.base, count: 0, done_count: 0, expected: '0.00', done: '0.00', left: '0.00', segments: [] },
     })
     const empty = html(<PlannedView data={{ ...older, rows: [] }} />)
-    expect(empty).toContain('<span class="ck-hero-figure">0 ₸</span><span class="pl-hero-word">планов</span>')
+    expect(empty).toContain(`${money('0', 'KZT', { size: 'hero' })}<span class="pl-hero-word">планов</span>`)
     expect(empty).toContain('В этом месяце планов нет.')
     expect(empty).toContain('Планы без срока не входят в месяц')
     expect(empty).not.toContain('pl-segments')
@@ -211,19 +218,22 @@ describe('/planned (Vitest/SSR, not browser visual acceptance)', () => {
     const edit = html(<PlannedForm plan={data.rows[2]} categories={categories} currency="USD" month="2026-10" busy={false} onSubmit={() => {}} />)
     expect(edit).toMatch(/<input id="[^"]+-date" type="date" aria-invalid="false" value="2026-10-20"\/>/)
     expect(edit).toContain('value="120 000"')
-    expect(edit).toContain('<button type="submit" class="pl-save">Сохранить · 120 000 ₸</button>')
+    expect(edit).toContain(`<button type="submit" class="pl-save">Сохранить · ${money('120000')}</button>`)
     // The calculator keys as in the spend form.
     expect(edit).toContain('<div class="expense-calc-keys" role="group" aria-label="Посчитать сумму"><button type="button" class="expense-calc-key" aria-label="Плюс">+</button>')
   })
   it('opens the sheet of a plan with its actions, a closed one with its spend and «Это не она»', () => {
     const noop = () => {}
     const open = html(<PlanSheet plan={data.rows[0]} month="2026-10" categories={categories} busy={false} failure={null} onPatch={noop} onDeposit={noop} onDelete={noop} />)
-    expect(open).toContain('<p class="pl-sheet-sum ck-figures">150 000 ₸</p><p class="pl-note">Одежда · в октябре · отложено 57 000 ₸ на депозите «Зима»</p>')
-    expect(open).toContain('<p class="pl-verdict pl-verdict-keep"><b>ИИ: берите</b> — Холода не ждут.</p>')
-    expect(open).toContain('<button type="button">Это она</button><a class="pl-link-button" href="/receipts/new?planned=1">Добавить трату</a><button type="button" class="ck-button-secondary">Как накопить</button><button type="button" class="ck-button-secondary">Перенести</button><button type="button" class="ck-button-secondary">Изменить</button><button type="button" class="ck-button-danger">Удалить</button>')
+    expect(open).toContain(`${money('150000.00', 'KZT', { size: 'display', className: 'pl-sheet-sum' })}<p class="pl-note">Одежда · в октябре · отложено 57 000 ₸ на депозите «Зима»</p>`)
+    // The assistant speaks in gold: its verdict as a card with its words.
+    expect(open).toContain('<div class="pl-verdict pl-verdict-keep"><b class="pl-verdict-who">ИИ: берите</b><p>Холода не ждут.</p></div>')
+    expect(open).toContain('<button type="button" class="pl-wide">Это она</button><a class="action-link pl-link-button" href="/receipts/new?planned=1">Добавить трату</a><button type="button" class="ck-button-secondary">Как накопить</button><button type="button" class="ck-button-secondary">Перенести</button><button type="button" class="ck-button-secondary">Изменить</button><button type="button" class="ck-button-danger">Удалить</button>')
+    // The deletion asks in a ConfirmDialog, closed until «Удалить».
+    expect(open).not.toContain('alertdialog')
     const done = html(<PlanSheet plan={data.rows[1]} month="2026-10" categories={categories} busy={false} failure={null} onPatch={noop} onDeposit={noop} onDelete={noop} />)
     expect(done).toContain('Закрыт тратой 52 400 ₸ 24 октября. <a class="pl-inline-link" href="/receipts/201">Открыть трату</a>')
-    expect(done).toContain('<button type="button" class="ck-button-secondary">Это не она</button>')
+    expect(done).toContain('<button type="button" class="ck-button-secondary pl-wide">Это не она</button>')
     expect(done).not.toContain('Как накопить')
   })
 })
@@ -249,12 +259,12 @@ describe('«Планируем в октябре» on «Главная» and the
   it('draws the card after the payments with the small strip, the legend and up to three rows; nothing without plans', () => {
     const names = new Map([[11, 'Транспорт'], [6, 'Дом']])
     const card = html(<PlannedCard planned={planned} month="2026-10" currency="KZT" current categoryNames={names} />)
-    expect(card).toContain('<h2 id="pl-dash-heading">Планируем в октябре</h2><a class="dash-card-link" href="/planned?month=2026-10">Все планы</a>')
+    expect(card).toContain('<h2 id="pl-dash-heading">Планируем в октябре</h2><a class="pl-card-link" href="/planned?month=2026-10">Все планы</a>')
     expect(card).toContain('<div class="pl-segments pl-segments-small" role="img" aria-label="План в октябре по пунктам">')
-    expect(card).toContain('<p class="pl-legend pl-dash-legend"><span>ещё ждём <b class="ck-figures">285 000 ₸</b></span><span><b>2 из 5</b> сделано</span><span>уже учтено в «можно тратить в день»</span></p>')
-    expect(card).toContain('<span class="pl-head"><span class="ck-row-title">Шины на зиму</span><span class="ck-row-amount ck-figures">120 000 ₸</span></span><span class="pl-meta">Транспорт</span>')
+    expect(card).toContain(`<p class="pl-legend pl-dash-legend"><span>ещё ждём ${money('285000.00')}</span><span><b>2 из 5</b> сделано</span><span>уже учтено в «можно тратить в день»</span></p>`)
+    expect(card).toContain(`<span class="pl-head"><span class="ck-row-title">Шины на зиму</span><span class="ck-row-amount">${money('120000.00', 'KZT', { size: 'row' })}</span></span><span class="pl-meta">Транспорт</span>`)
     // A category the dashboard does not name: the row without a second line.
-    expect(card).toContain('<span class="ck-row-title">Зимняя куртка</span><span class="ck-row-amount ck-figures">150 000 ₸</span></span></span></li>')
+    expect(card).toContain(`<span class="ck-row-title">Зимняя куртка</span><span class="ck-row-amount">${money('150000.00', 'KZT', { size: 'row' })}</span></span></span></li>`)
     expect(html(<PlannedCard planned={planned} month="2026-09" currency="KZT" current={false} categoryNames={names} />)).not.toContain('учтено')
     expect(html(<PlannedCard planned={null} month="2026-10" currency="KZT" current categoryNames={names} />)).toBe('')
     expect(html(<PlannedCard planned={{ ...planned, count: 0, rows: [], segments: [] }} month="2026-10" currency="KZT" current categoryNames={names} />)).toBe('')
@@ -314,6 +324,8 @@ describe('«Планы» at ≥ 960 (theme/desktop.css): lists at the left, hero
     const own = readFileSync(new URL('./Planned.css', import.meta.url), 'utf8')
     expect(own).not.toMatch(/#[0-9a-f]{3,8}\b|\brgba?\(/i)
     expect(own).not.toMatch(/@media \(min-width|animation|transition|@keyframes/)
-    for (const [, size] of own.matchAll(/font-size:\s*([^;]+);/g)) expect(size.trim()).toMatch(/^var\(--ck-text-(2xs|xs|sm|base|lg|xl|hero)\)$/)
+    for (const [, size] of own.matchAll(/font-size:\s*([^;]+);/g)) expect(size.trim()).toMatch(/^var\(--ck-text-(caption|label|body|field|title|heading|money-display|title-large|money-hero)\)$/)
+    // Only 2.0 names of the tokens.
+    for (const [, name] of own.matchAll(/var\((--ck-[a-z0-9-]+)/g)) expect(name).not.toMatch(/^--ck-(bg|accent|primary|link|border|divider|success|warning|info|neutral|disabled|radius$|radius-sm|radius-md|card-shadow|surface-raised|text-(xs|sm|base|lg|xl|hero|2xs|muted)$|text$)/)
   })
 })

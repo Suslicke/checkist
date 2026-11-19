@@ -23,12 +23,14 @@ import type { ReceiptRequestState } from './request'
 import { HiddenChip, OwnerChips, SpendDays } from './SpendDays'
 import type { SpendDelete } from './SpendDays'
 import SpendSearch from './SpendSearch'
-import { hiddenIds, undoDelete } from './undo-delete'
+import { UNDO_MS, hiddenIds, undoDelete } from './undo-delete'
 import type { Deletion } from './undo-delete'
 import { localToday, ownerChips, reviewJobsQuery, reviewText, rowTitle, spendsCount } from './spends'
 import type { OwnerChip } from './spends'
 import { activeFilterCount, hasFilters, money, ownerShown, receiptParams, receiptPlace, recognizedText, recognizedValue } from './state'
 import Sheet from '../../components/Sheet'
+import Snackbar from '../../components/Snackbar'
+import Icon from '../../components/Icon'
 import { filtersButtonLabel } from '../../components/filters-label'
 import '../../components/ResponsiveFilters.css'
 import { ManualMark } from './ManualMark'
@@ -61,11 +63,13 @@ export function ReceiptList({ receipts, showOwner = false }: { receipts: Receipt
 }
 
 
-/** «2 фото ждут проверки · Проверить» → the jobs that wait for a person. Nothing while unknown or zero. */
+/** «2 фото ждут проверки · Проверить» → the jobs that wait for a person: a row of a panel with the picture of a receipt,
+ * like the task rows of «Главная». Nothing while unknown or zero. */
 export function ReviewBanner({ count }: { count: number | undefined }) {
   if (!count) return null
   return <p className="spends-review">
     <Link to={{ kind: 'jobs', query: reviewJobsQuery }}>
+      <span className="spends-review-badge" aria-hidden="true"><Icon name="receipt" size={20} /></span>
       <span className="spends-review-text">{reviewText(count)}</span><span className="spends-review-action" aria-hidden="true">Проверить</span>
     </Link>
   </p>
@@ -74,30 +78,37 @@ export function ReviewBanner({ count }: { count: number | undefined }) {
 /** «Фильтры» of a phone beside the family chips: a round button with a funnel and the number of what is filtered.
  * Its name says the same in words («Фильтры (2)»). */
 export function FiltersToggle({ count, open, sheetId, onOpen }: { count: number; open: boolean; sheetId: string; onOpen: () => void }) {
-  return <button type="button" className="spends-filters-toggle" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? sheetId : undefined}
+  return <button type="button" className="ck-icon-button spends-filters-toggle" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? sheetId : undefined}
     aria-label={filtersButtonLabel(count)} onClick={onOpen}>
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M3 6h18M6 12h12M10 18h4" /></svg>
+    <Icon name="filter" size={20} />
     {count > 0 && <span className="spends-filters-count" aria-hidden="true">{count.toLocaleString('ru-RU')}</span>}
   </button>
 }
 
-/** «Удалено · Сбербанк [Отменить]» at the bottom of the screen while a deleted spend waits for the server (undo-delete.ts).
- * The live region is always there so that its text is announced; the focus inside it stops the time. */
+/** «Трата удалена · Сбербанк [Отменить]» at the bottom of the screen while a deleted spend waits for the server
+ * (undo-delete.ts): the shared Snackbar — the toast of iOS with the 5 s bar, the snackbar of Android. The live region
+ * around it is always there so that its text is announced; the focus inside it stops the time. The Snackbar asks to
+ * close when its 5 s are over; the time of the deletion itself is kept by undo-delete.ts (held while focused), so the
+ * request is never left to the toast. */
 export function UndoBar({ pending, onUndo, onHold, onRelease, focus = false }: {
   pending: Deletion | null; onUndo: () => void; onHold?: () => void; onRelease?: () => void
   /** The deletion came from a keyboard: the focus moves to «Отменить» (and the time waits while it is there). */
   focus?: boolean
 }) {
-  const button = useRef<HTMLButtonElement>(null)
-  useEffect(() => { if (pending && focus) button.current?.focus() }, [pending, focus])
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (pending && focus) box.current?.querySelector<HTMLButtonElement>('button')?.focus() }, [pending, focus])
   return <div className="spends-undo-region" role="status">
-    {pending && <div className="spends-undo" onFocus={onHold}
+    {pending && <div ref={box} className="spends-undo" onFocus={onHold}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onRelease?.() }}>
-      <span className="spends-undo-text">Удалено · {pending.title}</span>
-      <button ref={button} type="button" className="spends-undo-action" onClick={onUndo}>Отменить</button>
+      <Snackbar key={pending.id} message={`${undoMessage} · ${pending.title}`} action={{ label: 'Отменить', onClick: onUndo }}
+        countdownMs={UNDO_MS} onClose={noop} />
     </div>}
   </div>
 }
+
+/** The words of the toast: what happened, by the word of the action (docs/design-system README «Голос»). */
+export const undoMessage = 'Трата удалена'
+const noop = () => {}
 
 export function ReceiptsView({ query, state, retry, showOwner = false, narrow = false, chips = [], review, today = localToday(), pending, notice, head = false,
   hidden, onDelete, undo, failure }: {
@@ -136,18 +147,21 @@ export function ReceiptsView({ query, state, retry, showOwner = false, narrow = 
     <ReceiptFilters query={query} failure={state.kind === 'error' ? state : undefined} />
   </>
   // Adding a spend is the «＋» of the navigation; the list keeps only the way to the processing of photos, quietly.
-  const jobs = <p className="spends-jobs"><Link to="/recognition/jobs">Обработка фото</Link></p>
+  const jobs = <p className="spends-jobs"><Link to="/recognition/jobs">Обработка фото<Icon name="forward" size={16} /></Link></p>
   const results = state.kind === 'ok' ? state.data.results.filter((receipt) => !hidden?.has(receipt.id)) : []
   const removed = state.kind === 'ok' ? state.data.results.length - results.length : 0
   return <div className={`receipts-page spends-page${narrow ? ' spends-page-narrow' : ''}`}>
     {notice && <p className="expense-notice" role="status">{notice}</p>}
     {failure && <p className="receipt-warning spends-delete-failure" role="alert">{failure}</p>}
     {pending}
-    <SpendSearch query={query} failure={state.kind === 'error' ? state : undefined} />
-    {/* Who added it, and on a phone the round «Фильтры» at the end of the same line: the form opens in a sheet. */}
-    <div className="spends-toolbar">
-      <OwnerChips chips={chips} query={query} />
-      {narrow ? <FiltersToggle count={activeFilterCount(query)} open={filtersOpen} sheetId={sheetId} onOpen={() => setFiltersOpen(true)} /> : filters}
+    {/* The search and the chips stay at the top of a phone while the days scroll under them (Receipts.css). */}
+    <div className="spends-head">
+      <SpendSearch query={query} failure={state.kind === 'error' ? state : undefined} />
+      {/* Who added it, and on a phone the round «Фильтры» at the end of the same line: the form opens in a sheet. */}
+      <div className="spends-toolbar">
+        <OwnerChips chips={chips} query={query} />
+        {narrow ? <FiltersToggle count={activeFilterCount(query)} open={filtersOpen} sheetId={sheetId} onOpen={() => setFiltersOpen(true)} /> : filters}
+      </div>
     </div>
     {narrow && <Sheet open={filtersOpen} onClose={closeFilters} title="Фильтры" id={sheetId}>
       {/* A filter form submitted inside the sheet has done its work: the sheet closes after the form's own handler. */}

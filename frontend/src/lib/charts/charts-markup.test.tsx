@@ -60,7 +60,9 @@ describe('PieChart markup (Node, not pointer or focus behaviour)', () => {
   it('draws a single 100 % sector as a full ring', () => {
     const single = renderToStaticMarkup(<PieChart title="Одна категория" items={[items[0]]} />)
     expect(count(single, /<g class="ck-pie-slice /g)).toBe(1)
-    expect(single).toContain('d="M160 44A76 76 0 1 1 160 196A76 76 0 1 1 160 44ZM160 74A46 46 0 1 0 160 166A46 46 0 1 0 160 74Z"')
+    // The 2.0 donut: a ring 20 px wide around a hole of 112 px, wide enough for the sum in the middle.
+    expect(single).toContain('d="M160 44A76 76 0 1 1 160 196A76 76 0 1 1 160 44ZM160 64A56 56 0 1 0 160 176A56 56 0 1 0 160 64Z"')
+    expect(single).toContain('style="--ck-pie-hole:112px"')
     expect(single).toContain('>20,70 %</text>')
   })
   it('renders a message for no items and keeps the table when nothing is positive', () => {
@@ -85,6 +87,24 @@ describe('PieChart markup (Node, not pointer or focus behaviour)', () => {
     expect(markup).toContain('<th scope="col">Товар</th>')
     expect(markup).toContain('>10 %</text>')
     expect(markup).not.toContain('>10,00 %</text>')
+  })
+  it('draws the sums as Money when the chart knows the currency and an item its wire decimal; the text stays otherwise', () => {
+    const priced: PieChartItem[] = [{ ...items[0], amount: '412.30' }, items[1]]
+    const markup = renderToStaticMarkup(<PieChart title="Траты, EUR" items={priced} currency="EUR" centerLabel="Всего" centerValue="1 986,40 EUR" />)
+    const body = rows(markup).slice(1)
+    expect(body[0]).toMatch(/<td class="ck-chart-number"><span class="ck-money ck-money--row">.*412.*<\/span><\/td>/)
+    expect(body[1]).toContain('<td class="ck-chart-number">388,10 EUR</td>')
+    // Without the currency the decimal is not enough: the caller's text is the sum.
+    expect(renderToStaticMarkup(<PieChart title="Траты" items={priced} />)).not.toContain('ck-money')
+  })
+  it('gives an item that is a category its tone of «Главная» instead of a series colour; special rows keep theirs', () => {
+    const toned: PieChartItem[] = [{ ...items[0], categoryTone: 3 }, { ...items[1], categoryTone: 3 }, items[2], { ...items[3], categoryTone: 5 }]
+    const markup = renderToStaticMarkup(<PieChart title="Категории" items={toned} />)
+    expect(count(markup, /class="ck-pie-slice ck-chart-cat-3"/g)).toBe(2)
+    expect(markup).toContain('ck-pie-slice ck-chart-other')
+    expect(markup).toContain('ck-pie-slice ck-chart-muted')
+    expect(markup).not.toContain('ck-chart-cat-5')
+    expect(markup).toContain('<span class="ck-pie-swatch ck-chart-cat-3" aria-hidden="true"></span>')
   })
   it('escapes names instead of injecting markup', () => {
     const unsafe = renderToStaticMarkup(<PieChart title="<b>" items={[{ ...items[0], label: '<img src=x onerror=alert(1)>' }]} />)

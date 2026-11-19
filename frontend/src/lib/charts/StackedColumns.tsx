@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useId, useMemo } from 'react'
 import type { CSSProperties } from 'react'
 import { Card, CardList, useNarrow } from '../cards'
 import type { CardFact } from '../cards'
@@ -56,6 +56,13 @@ export interface StackedColumnsProps {
 const plotWidth = { fallback: 640, min: 240, max: 1200 }
 const heightFor = (width: number) => (width < 420 ? 220 : 280)
 
+/** The outline of a column with rounded top corners, as a clip path: the segments under it keep their plain rects. */
+function roundedTop(left: number, top: number, width: number, bottom: number): string {
+  const r = Math.max(0, Math.min(6, width / 2, bottom - top))
+  return `M${c(left)} ${c(bottom)}V${c(top + r)}A${c(r)} ${c(r)} 0 0 1 ${c(left + r)} ${c(top)}H${c(left + width - r)}`
+    + `A${c(r)} ${c(r)} 0 0 1 ${c(left + width)} ${c(top + r)}V${c(bottom)}Z`
+}
+
 function PlainLink({ to, children, ...rest }: ChartLinkProps) {
   return <a href={to} {...rest}>{children}</a>
 }
@@ -93,6 +100,7 @@ export default function StackedColumns({
   totalHeader = 'Итого', intervalHeader = 'Месяц', linkComponent: LinkComponent = PlainLink,
 }: StackedColumnsProps) {
   const [plotRef, width] = usePlotWidth<HTMLDivElement>(plotWidth)
+  const clipId = useId()
   const narrow = useNarrow()
   const height = heightFor(width)
   const tones = useMemo(() => new Map(legend.map((entry) => [entry.key, entry.tone])), [legend])
@@ -107,22 +115,13 @@ export default function StackedColumns({
 
   return (
     <div className="ck-chart ck-columns" role="group" aria-label={title}>
-      <ul className="ck-columns-legend" aria-label="Цвета на графике">
-        {legend.map((entry) => (
-          <li key={entry.key}>
-            <Swatch tone={entry.tone} />
-            <span className="ck-columns-label">{entry.label}</span>
-            {entry.note && <span className="ck-chart-note ck-columns-note"><span className="ck-chart-hidden"> · </span><span className="ck-chart-whole">{entry.note}</span></span>}
-          </li>
-        ))}
-      </ul>
       <div ref={plotRef} className="ck-columns-plot">
         <svg className="ck-columns-svg" viewBox={`0 0 ${layout.width} ${layout.height}`} aria-hidden="true" focusable="false">
           <g className="ck-chart-grid">
             {layout.yTicks.map((tick) => <line key={tick.position} x1={c(plot.left)} x2={c(plot.right)} y1={c(tick.position)} y2={c(tick.position)} />)}
           </g>
           {layout.columns.map((column) => column.x === activeX && (
-            <rect key={column.x} className="ck-columns-active" x={c(column.slotLeft)} y={c(plot.top)} width={c(column.slotWidth)} height={c(plot.bottom - plot.top)} />
+            <rect key={column.x} className="ck-columns-active" x={c(column.slotLeft)} y={c(plot.top)} width={c(column.slotWidth)} height={c(plot.bottom - plot.top)} rx="8" />
           ))}
           <g className="ck-chart-axis">
             <line x1={c(plot.left)} x2={c(plot.right)} y1={c(plot.bottom)} y2={c(plot.bottom)} />
@@ -134,8 +133,14 @@ export default function StackedColumns({
                 className={tick.x === activeX ? 'ck-columns-tick-active' : undefined}>{tick.text}</text>
             ))}
           </g>
-          {layout.columns.map((column) => (
-            <g key={column.x} className="ck-columns-stack" data-state={activeX === null ? undefined : column.x === activeX ? 'active' : 'dim'}>
+          <defs>
+            {layout.columns.map((column, index) => column.top < plot.bottom && (
+              <clipPath key={column.x} id={`${clipId}-${index}`}><path d={roundedTop(column.left, column.top, column.width, plot.bottom)} /></clipPath>
+            ))}
+          </defs>
+          {layout.columns.map((column, index) => (
+            <g key={column.x} className="ck-columns-stack" data-state={activeX === null ? undefined : column.x === activeX ? 'active' : 'dim'}
+              clipPath={column.top < plot.bottom ? `url(#${clipId}-${index})` : undefined}>
               {column.segments.map((segment) => (
                 <rect key={segment.key} className={`ck-columns-segment ck-columns-tone-${tones.get(segment.key) ?? 0}`}
                   x={c(column.left)} y={c(segment.y)} width={c(column.width)} height={c(segment.height)} />
@@ -161,6 +166,16 @@ export default function StackedColumns({
           })}
         </ol>
       </div>
+      {/* The colours are named under the drawing, as the rows of a list: the columns come first. */}
+      <ul className="ck-columns-legend" aria-label="Цвета на графике">
+        {legend.map((entry) => (
+          <li key={entry.key}>
+            <Swatch tone={entry.tone} />
+            <span className="ck-columns-label">{entry.label}</span>
+            {entry.note && <span className="ck-chart-note ck-columns-note"><span className="ck-chart-hidden"> · </span><span className="ck-chart-whole">{entry.note}</span></span>}
+          </li>
+        ))}
+      </ul>
       {valueAxisLabel && <p className="ck-chart-note">Вертикальная ось: {valueAxisLabel}.</p>}
       <details className="ck-line-table ck-columns-table">
         <summary>Таблица значений</summary>

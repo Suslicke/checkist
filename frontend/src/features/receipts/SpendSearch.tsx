@@ -26,7 +26,7 @@ export default function SpendSearch({ query, failure }: { query: ReceiptsQuery; 
     onSubmit={(event) => { event.preventDefault(); apply(text) }}>
     <div className="spends-search-line">
       <label className="spends-search-field" htmlFor={`${id}-q`}>
-        <Icon name="search" size={20} />
+        <Icon name="search" size={18} />
         <span className="spends-hidden">Найти трату</span>
         <input id={`${id}-q`} name="q" type="search" value={text} autoComplete="off" enterKeyHint="search"
           placeholder="Место, товар, комментарий, сумма" aria-invalid={error}
@@ -38,7 +38,8 @@ export default function SpendSearch({ query, failure }: { query: ReceiptsQuery; 
             if (!value && query.q) apply('')
           }} />
       </label>
-      {asked && <Link className="spends-ask" to={askHref(asked)}>Спросить</Link>}
+      {/* The assistant speaks in gold (Чекист 2.0): the same words, asked as a question. */}
+      {asked && <Link className="spends-ask" to={askHref(asked)}><Icon name="insight" size={18} />Спросить</Link>}
     </div>
     {error && <p className="receipt-field-error" id={`${id}-error`}>{filterMessages.q}</p>}
   </form>

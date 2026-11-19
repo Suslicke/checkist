@@ -97,12 +97,12 @@ describe('the network bar in the page (markup and rules, not rendering)', () => 
     expect(renderToStaticMarkup(<NetworkBar />)).toBe('')
   })
 
-  it('pins 3 px to the very top under the safe area, in the colour of the main action, on its layer, never taking a touch', () => {
+  it('pins 3 px to the very top under the safe area, in the colour of the brand, on its layer, never taking a touch', () => {
     const bar = css.slice(0, css.indexOf('@media'))
     expect(bar).toContain('position: fixed; top: env(safe-area-inset-top, 0px); right: 0; left: 0;')
     expect(bar).toContain('z-index: var(--ck-z-network-bar);')
     expect(bar).toContain('height: 3px;')
-    expect(bar).toContain('background: var(--ck-primary);')
+    expect(bar).toContain('background: var(--ck-seal);')
     expect(bar).toContain('pointer-events: none;')
   })
 

@@ -7,13 +7,14 @@ import { useQuickShot } from '../features/recognition/QuickShot'
 import Sheet from '../components/Sheet'
 import Icon from '../components/Icon'
 import type { IconName } from '../components/Icon'
-import { menuItems, ADD_AFTER } from './menu-items'
+import { menuItems } from './menu-items'
 import type { MenuGroup, MenuItem } from './menu-items'
 import { MORE_MENU_CLOSED, PRESS_END_EVENTS, moreMenuStep } from './more-menu'
 
 const ADD_SHEET_ID = 'main-add-sheet'
 
-/** A link of the menu: the word, and a picture that only the bottom bar and the list behind «Ещё» of a phone show. */
+/** A link of the menu: the word, and a picture that only the bottom bar of a phone shows (over the word; on Android in
+ * the pill of the current section). */
 function item({ key, to, label, current, account, icon }: MenuItem) {
   return <Link key={key} root className={account ? 'account-link' : undefined} to={to} aria-label={account ? `Аккаунт: ${label}` : undefined}
     aria-current={current ? 'page' : undefined}><Icon name={icon} />{label}</Link>
@@ -100,10 +101,12 @@ function MenuSection({ group }: { group: MenuGroup }) {
   </div>
 }
 
-/** «＋» of the phone's bar: a raised round button and a sheet from the bottom (components/Sheet) with «Снять чек»
- * (the system menu: camera, gallery or files), «Трата или доход» (one form with the switch at its top) and «Загрузить выписку». «Снять чек» opens the picker from the very press
- * (both fields stay mounted outside of the sheet); the chosen file goes to the upload page and is sent by itself.
- * The sheet is a modal dialog: Esc, the backdrop and its close button close it, the focus returns to «＋». */
+/** «＋» of the phone's bar — on iOS a round button beside the glass capsule, on Android the FAB over the navigation —
+ * and a sheet from the bottom (components/Sheet): «Снять чек» (the system menu: camera, gallery or files) is the one
+ * main action across the sheet, «Трата или доход» (one form with the switch at its top) and «Загрузить выписку» are tonal
+ * tiles under it. «Снять чек» opens the picker from the very press (the field stays mounted outside of the sheet); the
+ * chosen file goes to the upload page and is sent by itself. The sheet is a modal dialog: Esc, the backdrop and its
+ * close button close it, the focus returns to «＋». */
 function AddMenu() {
   const [open, setOpen] = useState(false)
   // One picker for the camera, the gallery and files: without `capture` the system menu offers all three.
@@ -114,11 +117,10 @@ function AddMenu() {
   const body = (icon: IconName, title: string, note: string) => <>
     <span className="main-add-icon"><Icon name={icon} /></span>
     <span className="main-add-text"><span className="main-add-title">{title}</span><span className="main-add-note">{note}</span></span>
-    <Icon name="forward" size={18} className="ck-icon main-add-chevron" />
   </>
   return (
     <div className="main-add">
-      {/* Hidden wherever the menu is a row of links. */}
+      {/* Hidden wherever the menu is a row of links; the last thing of the bar, as it stands on the screen. */}
       <button type="button" className="main-add-toggle" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? ADD_SHEET_ID : undefined}
         aria-label="Добавить: снять или загрузить чек, внести трату или доход, загрузить выписку" onClick={() => setOpen(true)}>
         <Icon name="plus" size={26} />
@@ -136,8 +138,9 @@ function AddMenu() {
 }
 
 /** The main menu of the shell: one `nav` for every width. In the header it is a row of links — «Главная · Траты ·
- * Деньги · Статистика» — with «Данные ▾» and «Настройки ▾»; on a phone the stylesheet pins it to the bottom of the
- * window: «Главная · Траты · ＋ · Деньги · Ещё», and «Ещё» is a link to its screen (`/more`, features/more) — the links
+ * Деньги · Статистика» — with «Данные ▾» and «Настройки ▾»; on a phone the stylesheet (shell.css) pins it to the bottom
+ * of the window: «Главная · Траты · Деньги · Ещё» and «＋» after them (iOS — a glass capsule and a round button beside
+ * it, Android — the navigation bar and the FAB), and «Ещё» is a link to its screen (`/more`, features/more) — the links
  * of the two sections live there, «Статистика» behind the tile of «Деньги».
  */
 export default function MainMenu({ session, route, menuRef }: { session: Session; route: Route; menuRef: RefObject<HTMLElement | null> }) {
@@ -147,9 +150,7 @@ export default function MainMenu({ session, route, menuRef }: { session: Session
 
   return (
     <nav className="main-navigation" aria-label="Основная навигация" ref={menuRef}>
-      {primary.slice(0, ADD_AFTER).map(item)}
-      {add && <AddMenu />}
-      {primary.slice(ADD_AFTER).map(item)}
+      {primary.map(item)}
       {more.length > 0 && <div className="main-more">
         {/* The bar of a phone only. The current section behind it is named: the mark alone is for the eye. */}
         <Link className="main-more-toggle" root to="/more" aria-current={onMore ? 'page' : undefined}
@@ -161,6 +162,7 @@ export default function MainMenu({ session, route, menuRef }: { session: Session
           {groups.map((group) => <MenuSection key={group.key} group={group} />)}
         </div>
       </div>}
+      {add && <AddMenu />}
     </nav>
   )
 }

@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react'
 import { excludedNote } from '../../lib/base-currency'
 import type { ReactNode } from 'react'
 import type { TrendsCategory, TrendsCategoryCurrency, TrendsCategoryOption, TrendsMonthly, TrendsMonthlyCurrency, TrendsPrices, TrendsPricesCurrency } from '../../api/trends'
+import Money from '../../components/Money'
 import RequestState from '../../components/RequestState'
 import { useLocalRequestFocus } from '../../components/useLocalRequestFocus'
 import { LineChart, StackedColumns } from '../../lib/charts'
@@ -11,7 +12,7 @@ import type { TrendsQuery } from '../../navigation'
 import { canRetry, failureMessage } from './receipts-state'
 import {
   categoryChart, categoryHeading, categoryHref, closeMonthHref, formatMonthStart, formatMonthTick, indexAxis, indexChart, indexSummary,
-  lastMonthChange, monthBreakdown, monthStart, monthlyChart, monthlySummary, moneyAxis, moverCounts, moverRows, optionLabel, partsChart,
+  lastMonthChange, monthBreakdown, monthStart, monthlyChart, moneyAxis, moverCounts, moverRows, optionLabel, partsChart,
 } from './trends-state'
 import { loadingOf } from './trends-state'
 import type { BlockState, ChangeBadge, MoverRow } from './trends-state'
@@ -66,7 +67,7 @@ function MonthDetails({ block, month, query }: { block: TrendsMonthlyCurrency; m
     <div className="trends-month" aria-live="polite">
       <div className="trends-month-head">
         <p className="trends-month-title"><time dateTime={monthStart(details.month)}>{details.title}</time></p>
-        <p className="trends-big">{details.total}</p>
+        <p className="trends-big"><Money value={details.totalValue} currency={block.currency} size="title" /></p>
       </div>
       {details.rows.length > 0 ? (
         <ul className="trends-rows">
@@ -77,7 +78,7 @@ function MonthDetails({ block, month, query }: { block: TrendsMonthlyCurrency; m
                 {row.href ? <Link className="trends-row-name" to={row.href}>{row.label}</Link> : <span className="trends-row-name">{row.label}</span>}
                 {row.bar > 0 && <span className="trends-row-bar" aria-hidden="true"><span style={{ width: `${row.bar}%` }} /></span>}
               </span>
-              <span className="trends-value">{row.amount}</span>
+              <span className="trends-value"><Money value={row.value} currency={block.currency} size="row" /></span>
             </li>
           ))}
         </ul>
@@ -93,14 +94,13 @@ function MonthDetails({ block, month, query }: { block: TrendsMonthlyCurrency; m
 function MonthlyCurrency({ block, query, several }: { block: TrendsMonthlyCurrency; query: TrendsQuery; several: boolean }) {
   const id = useId()
   const chart = useMemo(() => monthlyChart(block, query), [block, query])
-  const summary = monthlySummary(block)
   const title = `Траты по месяцам, ${block.currency}`
   return (
     <article className="stats-currency trends-currency" aria-labelledby={id}>
       <div className="trends-summary">
         <h4 id={id}>Всего за период{several && `, ${currencySymbol(block.currency)}`}</h4>
-        <p className="trends-big">{summary.total}</p>
-        <p className="stats-note">В среднем <span className="trends-value">{summary.average}</span> в месяц</p>
+        <p className="trends-big"><Money value={block.total} currency={block.currency} size="title" /></p>
+        <p className="stats-note">В среднем <span className="trends-value"><Money value={block.average} currency={block.currency} /></span> в месяц</p>
       </div>
       <StackedColumns title={title} columns={chart.columns} legend={chart.legend} activeX={query.month ? monthStart(query.month) : null}
         formatX={formatMonthStart} formatTick={formatMonthTick} formatValue={moneyAxis} valueAxisLabel={block.currency} linkComponent={Link} />
@@ -152,16 +152,16 @@ function CategoryCurrency({ block, several, name }: { block: TrendsCategoryCurre
   const series = useMemo(() => categoryChart(block), [block])
   const parts = useMemo(() => partsChart(block, name, block.months.map((entry) => entry.month)), [block, name])
   const change = lastMonthChange(block)
-  const summary = monthlySummary(block)
   return (
     <article className="stats-currency trends-currency" aria-labelledby={id}>
       <div className="trends-summary">
         <h4 id={id}>Последний месяц{several && `, ${currencySymbol(block.currency)}`}</h4>
         {change && <>
-          <p className="trends-big">{change.last}</p>
+          <p className="trends-big"><Money value={change.lastValue} currency={block.currency} size="title" /></p>
           <p className={`trends-compare trends-compare-${change.tone}`}>{change.text}</p>
         </>}
-        <p className="stats-note">В среднем <span className="trends-value">{summary.average}</span> в месяц, за период <span className="trends-value">{summary.total}</span></p>
+        <p className="stats-note">В среднем <span className="trends-value"><Money value={block.average} currency={block.currency} /></span> в месяц,
+          за период <span className="trends-value"><Money value={block.total} currency={block.currency} /></span></p>
       </div>
       <LineChart title={`${name}: траты по месяцам, ${block.currency}`} series={series} interval="month" zeroBaseline
         formatX={formatMonthStart} formatTick={formatMonthTick} formatValue={moneyAxis} valueAxisLabel={block.currency} intervalHeader="Месяц" />

@@ -1,4 +1,5 @@
-/** Line icons of the artifact design (2026-10-13): a 24 × 24 grid, a 2 px stroke in the colour of the text. */
+/** Line icons (Чекист 2.0, docs/design-system/README.md «Иконки»): a 24 × 24 grid, a 1.8 px stroke with round ends in the
+ * colour of the text. */
 const tag = <><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z" /><path d="M7 7h.01" /></>
 const paths = {
   home: <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
@@ -11,6 +12,8 @@ const paths = {
   pencil: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></>,
   receipt: <><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z" /><path d="M9 7h6M9 11h6M9 15h4" /></>,
   back: <path d="M15 18l-6-6 6-6" />,
+  // «←» of Android (platforms.md): «назад» in the same style; the chevron above is «‹» of iOS only.
+  'arrow-left': <path d="M20 12H4M10 18l-6-6 6-6" />,
   forward: <path d="M9 18l6-6-6-6" />,
   close: <path d="M18 6L6 18M6 6l12 12" />,
   catalog: tag,
@@ -32,6 +35,9 @@ const paths = {
   trash: <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />,
   down: <path d="M6 9l6 6 6-6" />,
   check: <path d="M20 6L9 17l-5-5" />,
+  // «Скрывать суммы» (components/PrivacyToggle.tsx): the eye shows the sums, the crossed eye hides them.
+  eye: <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
+  'eye-off': <path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.2 3.1M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.9 9.9 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />,
   filter: <path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" />,
   // How a spend came in (beside `receipt` and `pencil`): a bank card of a statement.
   card: <><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" /><path d="M2 10h20M6 15h4" /></>,
@@ -59,6 +65,6 @@ export type IconName = keyof typeof paths
 
 /** A picture beside a word: hidden from the screen reader, the word names the control. */
 export default function Icon({ name, size = 22, className = 'ck-icon' }: { name: IconName; size?: number; className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2"
+  return <svg className={className} viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths[name]}</svg>
 }

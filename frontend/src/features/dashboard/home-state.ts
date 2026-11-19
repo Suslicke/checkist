@@ -1,9 +1,10 @@
-import type { Dashboard, DashboardAllowance, DashboardAttention, DashboardBudget, DashboardCurrency, DashboardGoalsTile, DashboardPaymentsTile, DashboardPlanned, DashboardRecent } from '../../api/budget-types'
+import type { Dashboard, DashboardAttention, DashboardBudget, DashboardCurrency, DashboardGoalsTile, DashboardPaymentsTile, DashboardPlanned, DashboardRecent } from '../../api/budget-types'
 import type { Decimal } from '../../api/types'
 import type { IconName } from '../../components/Icon'
 import { categoryTone } from '../../lib/category-tone'
 import { NBSP, glue } from '../../lib/text'
-import { allowanceView, cents, daysLeftText, deviceDate, formatMoney, formatNumber, plural } from './dashboard-state'
+import { cents, deviceDate, formatMoney, formatNumber, plural } from './dashboard-state'
+import type { Phrase } from './home-hero'
 
 /** The words and the shares of the home of 2026-10-26 (the ring, the pulse, «Требует внимания», the tiles, «Сегодня и
  * вчера»): the server counts the money, this file turns it into legends and sentences. No network, no React. */
@@ -82,45 +83,20 @@ export function todayIn(month: string, date: string = deviceDate()): string | un
   return date.slice(0, 7) === month ? date : undefined
 }
 
-export type HeroFoot = {
-  /** «из 900 000 ₸ · ещё 6 дней» on the left; «Сверх бюджета на …» takes the overspend colour. */
-  left: string[]; leftOver: boolean
-  /** «в день 97 917 ₸» on the right with how it was counted as a title; «Перерасход …» in the overspend colour. */
-  right: { label: string; amount: string; over: boolean; title: string | null } | null
-}
+export type AttentionBadge = { icon: IconName; tone: 'over' | 'income' | 'ai' | 'plain' }
 
-/** The line of the hero: the budget, the days left and the day allowance (or the average day without a budget). */
-export function heroFoot(data: Dashboard, block: DashboardCurrency, current: boolean): HeroFoot {
-  const budget = data.budget && data.budget.currency === block.currency && cents(data.budget.amount) > 0n ? data.budget : null
-  const left: string[] = []
-  let leftOver = false
-  if (budget) {
-    const over = cents(block.spent) - cents(budget.amount)
-    if (over > 0n) { left.push(`Сверх бюджета на ${formatMoney(over, budget.currency)}`); leftOver = true } else left.push(`из ${formatMoney(budget.amount, budget.currency)}`)
-  }
-  if (current && data.days_left > 0) left.push(daysLeftText(data.days_left))
-  const allowance: DashboardAllowance | null | undefined = current ? data.allowance : null
-  let right: HeroFoot['right'] = null
-  if (allowance && allowance.currency === block.currency) {
-    const view = allowanceView(allowance)
-    right = { label: view.over ? 'Перерасход' : 'в день', amount: formatMoney(view.amount, allowance.currency), over: view.over, title: view.note }
-  } else if (!budget && data.average_day && cents(data.average_day) > 0n) {
-    right = { label: 'средний день', amount: formatMoney(data.average_day, block.currency), over: false, title: null }
-  }
-  return { left, leftOver, right }
-}
-
-export type AttentionBadge = { icon: IconName; tone: 'warn' | 'over' | 'success' | 'ai' | 'plain' }
-
-/** The picture and the colour of a row of «Требует внимания» by its kind; a kind this client does not know — plain. */
+/** The picture and the tone of a row of «Требует внимания» by its kind (Чекист 2.0): a payment overdue and a limit at
+ * 80 % or beyond — the over tone (the words of the row say so); a missing income — the income tone; the verdict of the
+ * assistant on a plan — gold; everything else, and a kind this client does not know — plain. */
 export function attentionBadge(kind: DashboardAttention['kind']): AttentionBadge {
   switch (kind) {
-    case 'payment_due': return { icon: 'repeat', tone: 'warn' }
+    case 'payment_due': return { icon: 'repeat', tone: 'plain' }
     case 'payment_overdue': return { icon: 'repeat', tone: 'over' }
-    case 'income_missing': return { icon: 'income', tone: 'success' }
-    case 'limit_near': return { icon: 'stats', tone: 'warn' }
+    case 'income_missing': return { icon: 'income', tone: 'income' }
+    case 'limit_near': return { icon: 'stats', tone: 'over' }
     case 'limit_over': return { icon: 'stats', tone: 'over' }
-    case 'plan_verdict': case 'plans_question': return { icon: 'insight', tone: 'ai' }
+    case 'plan_verdict': return { icon: 'insight', tone: 'ai' }
+    case 'plans_question': return { icon: 'repeat', tone: 'plain' }
     default: return { icon: 'more', tone: 'plain' }
   }
 }
@@ -130,9 +106,18 @@ export function attentionMoreText(count: number | undefined): string | null {
   return count && count > 0 ? glue('ещё', String(count)) : null
 }
 
-/** The second line of a row of «Требует внимания»: the server sends the words without the money and the money apart
- * (`amount`, `currency`), the client puts them together — the sum first («70 000 ₸ · Срок был 22 октября»), after the
- * words of a limit («Осталось до лимита · 11 500 ₸», «120 % лимита · 20 000 ₸»); no sum — the words alone. */
+/** The sum of a row of «Требует внимания» and the words under it: the overrun of a limit is «сверх лимита», what is
+ * left of a limit — «до лимита»; a payment or a plan is its own sum. No sum — nothing. */
+export function attentionAmount(row: DashboardAttention): { money: Decimal; currency: string; caption: string | null; over: boolean } | null {
+  if (!row.amount || !row.currency) return null
+  if (row.kind === 'limit_over') return { money: row.amount, currency: row.currency, caption: 'сверх лимита', over: true }
+  if (row.kind === 'limit_near') return { money: row.amount, currency: row.currency, caption: 'до лимита', over: false }
+  return { money: row.amount, currency: row.currency, caption: null, over: false }
+}
+
+/** The second line of a row of «Требует внимания» as one sentence (a title, a screen reader): the server sends the words
+ * without the money and the money apart (`amount`, `currency`), the client puts them together — the sum first
+ * («70 000 ₸ · Срок был 22 октября»), after the words of a limit («Осталось до лимита · 11 500 ₸»); no sum — the words alone. */
 export function attentionMeta(row: DashboardAttention): string {
   const money = row.amount && row.currency ? formatMoney(row.amount, row.currency) : null
   if (!money) return row.meta
@@ -149,50 +134,53 @@ export type TileView = {
   key: 'payments' | 'plans' | 'goals'
   title: string
   to: string
-  /** The big words: «2 из 5», «185 000 ₸», «62 %». */
-  value: string
+  /** The big words: «2 из 5», a sum, «62 %». */
+  value: Phrase
   /** The small line under them. */
-  note: string
-  /** The parts of the mini bar: a share each (`flex`) and whether it is filled. `tone` — the colour (0 — the track). */
-  bar: { key: string; flex: number; on: boolean; tone: number }[]
+  note: Phrase
+  /** The parts of the mini bar: a share each (`flex`) and whether it is filled (ink; a reached goal — gold). */
+  bar: { key: string; flex: number; on: boolean }[]
   /** What the drawing says to a screen reader. */
   label: string
+  /** Every goal is saved up: a milestone, in gold with the words of the note. */
+  reached?: boolean
 }
 
 /** «Платежи»: paid of all, what is still waited for, a part of the bar per payment. */
 export function paymentsTile(tile: DashboardPaymentsTile | null): TileView {
   if (!tile || tile.total === 0) {
-    return { key: 'payments', title: 'Платежи', to: '/recurring', value: 'Нет', note: 'добавить', bar: [], label: 'Регулярных платежей в месяце нет' }
+    return { key: 'payments', title: 'Платежи', to: '/recurring', value: ['Нет'], note: ['добавить'], bar: [], label: 'Регулярных платежей в месяце нет' }
   }
-  const bar = tile.segments.map((segment, index) => ({ key: String(index), flex: 1, on: segment.paid, tone: 2 }))
-  const note = cents(tile.left) > 0n ? `ждут ${formatMoney(tile.left, tile.currency)}` : 'все оплачены'
-  return { key: 'payments', title: 'Платежи', to: '/recurring', value: `${tile.paid} из ${tile.total}`, note, bar, label: `Оплачено ${tile.paid} из ${tile.total}` }
+  const bar = tile.segments.map((segment, index) => ({ key: String(index), flex: 1, on: segment.paid }))
+  const note: Phrase = cents(tile.left) > 0n ? ['ждут ', { money: tile.left, currency: tile.currency }] : ['все оплачены']
+  return { key: 'payments', title: 'Платежи', to: '/recurring', value: [`${tile.paid} из ${tile.total}`], note, bar, label: `Оплачено ${tile.paid} из ${tile.total}` }
 }
 
 /** «Планы»: what is still waited for, done of all, the plans of the month as parts of the bar (the done ones filled). */
 export function plansTile(plans: DashboardPlanned | null, currency: string, month: string): TileView {
   const to = `/planned?month=${month}`
   if (!plans || plans.count === 0) {
-    return { key: 'plans', title: 'Планы', to, value: 'Нет', note: 'без планов', bar: [], label: 'Планов на месяц нет' }
+    return { key: 'plans', title: 'Планы', to, value: ['Нет'], note: ['без планов'], bar: [], label: 'Планов на месяц нет' }
   }
-  const bar = plans.segments.map((segment) => ({ key: String(segment.id), flex: Math.max(centsOf(segment.amount), 0), on: segment.done, tone: categoryTone(segment.category_id) || 4 }))
+  const bar = plans.segments.map((segment) => ({ key: String(segment.id), flex: Math.max(centsOf(segment.amount), 0), on: segment.done }))
   return {
-    key: 'plans', title: 'Планы', to, value: formatMoney(plans.left, currency),
-    note: `ждём · ${plans.done_count} из ${plans.count}`, bar, label: `План месяца по пунктам, сделано ${plans.done_count} из ${plans.count}`,
+    key: 'plans', title: 'Планы', to, value: [{ money: plans.left, currency }],
+    note: [`ждём · ${plans.done_count} из ${plans.count}`], bar, label: `План месяца по пунктам, сделано ${plans.done_count} из ${plans.count}`,
   }
 }
 
 /** «Цели»: the share saved of every goal, how many and how much. */
 export function goalsTile(tile: DashboardGoalsTile | null): TileView {
   if (!tile || tile.count === 0) {
-    return { key: 'goals', title: 'Цели', to: '/goals', value: 'Нет целей', note: 'завести', bar: [], label: 'Целей нет' }
+    return { key: 'goals', title: 'Цели', to: '/goals', value: ['Нет целей'], note: ['завести'], bar: [], label: 'Целей нет' }
   }
   const share = shareOf(tile.share)
+  const reached = share >= 100
   return {
-    key: 'goals', title: 'Цели', to: '/goals', value: percentText(share),
-    note: `${glue(String(tile.count), plural(tile.count, 'цель', 'цели', 'целей'))} · ${formatMoney(tile.saved, tile.currency)}`,
-    bar: [{ key: 'saved', flex: share, on: true, tone: 3 }, { key: 'left', flex: Math.max(0, 100 - share), on: false, tone: 0 }],
-    label: `Накоплено ${percentText(share)} по всем целям`,
+    key: 'goals', title: 'Цели', to: '/goals', value: [percentText(share)],
+    note: reached ? [tile.count === 1 ? 'цель достигнута' : 'все цели достигнуты'] : [`${glue(String(tile.count), plural(tile.count, 'цель', 'цели', 'целей'))} · `, { money: tile.saved, currency: tile.currency }],
+    bar: [{ key: 'saved', flex: share, on: true }, { key: 'left', flex: Math.max(0, 100 - share), on: false }],
+    label: `Накоплено ${percentText(share)} по всем целям`, reached,
   }
 }
 
@@ -228,7 +216,18 @@ export function recentView(recent: DashboardRecent[], month: string, date: strin
   return { title: 'Сегодня и вчера', items, empty: items.length === 0 }
 }
 
-/** «92 % · 112 000 из 120 000» of a limit row; without a limit — what was spent. */
+/** The words under the bar of a limit (Чекист 2.0, LimitBar): the share, rounded half up, and from 80 % the state in
+ * words — «почти лимит», «лимит исчерпан» exactly at it, «сверх лимита»; the over tone goes with the words, never alone. No limit — none. */
+export function limitState(spent: Decimal, limit: Decimal | null): { percent: number; state: 'calm' | 'near' | 'over'; words: string } | null {
+  if (limit === null || cents(limit) <= 0n) return null
+  const total = cents(limit)
+  const used = cents(spent)
+  const percent = used <= 0n ? 0 : Number((used * 200n + total) / (total * 2n))
+  const state = used > total ? 'over' : percent >= 80 ? 'near' : 'calm'
+  return { percent, state, words: state === 'over' ? 'сверх лимита' : used === total ? 'лимит исчерпан' : state === 'near' ? 'почти лимит' : '' }
+}
+
+/** «92 % · 112 000 из 120 000» of a limit row as one sentence (a title, a screen reader); without a limit — what was spent. */
 export function limitLine(spent: Decimal, limit: Decimal | null, currency: string): { text: string; over: boolean } {
   if (limit === null || cents(limit) <= 0n) return { text: formatMoney(spent, currency), over: false }
   const total = cents(limit)
