@@ -299,23 +299,42 @@ describe('the sections of a part and the «＋» sheet (text of the rules)', () 
 describe('the move between pages (text of the rules)', () => {
   it('moves only under no reduced motion: no animation, transition or keyframes outside of that block', () => {
     expect(shell.replace(block(shell, motionQuery), '')).not.toMatch(/animation|transition|@keyframes/)
-    expect(motion).toContain(':root[data-nav-direction] .page { view-transition-name: ck-page; }')
   })
 
-  it('slides the page on iOS for 350 ms (in from the right, the old one 30 % to the left; back the other way)', () => {
-    expect(rule(`${ios}[data-nav-direction="forward"]::view-transition-new(ck-page)`, motion)).toBe('animation-name: ck-nav-from-right;')
-    expect(rule(`${ios}[data-nav-direction="forward"]::view-transition-old(ck-page)`, motion)).toBe('animation-name: ck-nav-to-left;')
-    expect(rule(`${ios}[data-nav-direction="back"]::view-transition-old(ck-page)`, motion)).toContain('animation-name: ck-nav-to-right;')
-    expect(rule(`${ios}[data-nav-direction="back"]::view-transition-new(ck-page)`, motion)).toBe('animation-name: ck-nav-from-left;')
-    expect(rule(`${ios}[data-nav-direction]::view-transition-new(ck-page)`, motion)).toBe('animation-duration: 350ms;')
+  it('moves the picture of the window (opaque, the size of the window), never the page box that drifts with the scroll', () => {
+    expect(motion).not.toMatch(/view-transition-name: ck-page|\(ck-page\)/)
+    expect(rule(':root[data-nav-direction]::view-transition-old(root)', motion)).toContain('animation-duration: 300ms;')
+    expect(rule(':root[data-nav-direction]::view-transition-old(root)', motion)).not.toContain('opacity: 0')
+  })
+
+  it('keeps the bars still over the moving window: the tab bar, the FAB and the header are pictures of their own, shown at once', () => {
+    expect(rule(':root[data-nav-direction] .brand-bar .main-navigation', motion)).toBe('view-transition-name: ck-tabbar;')
+    expect(rule(':root[data-nav-direction] .brand-bar .main-add', motion)).toBe('view-transition-name: ck-fab;')
+    expect(rule(':root[data-nav-direction] .brand-bar', motion)).toBe('view-transition-name: ck-header;')
+    for (const name of ['ck-tabbar', 'ck-fab', 'ck-header']) {
+      expect(rule(`:root[data-nav-direction]::view-transition-group(${name})`, motion), name).toBe('animation: none;')
+      expect(rule(`:root[data-nav-direction]::view-transition-new(${name})`, motion), name).toBe('animation: none;')
+      expect(rule(`:root[data-nav-direction]::view-transition-old(${name})`, motion), name).toBe('animation: none; opacity: 0;')
+    }
+    // Its own picture blurs nothing behind it: the iOS capsule is the solid surface for the time of the move.
+    expect(rule(`${ios}[data-nav-direction] .brand-bar .main-navigation::before`, motion)).toBe('background: var(--ck-surface);')
+  })
+
+  it('slides the window on iOS for 350 ms (in from the right, the old one 30 % to the left; back the other way), one over the other', () => {
+    expect(rule(`${ios}[data-nav-direction="forward"]::view-transition-new(root)`, motion)).toBe('animation-name: ck-nav-from-right;')
+    expect(rule(`${ios}[data-nav-direction="forward"]::view-transition-old(root)`, motion)).toBe('animation-name: ck-nav-to-left;')
+    expect(rule(`${ios}[data-nav-direction="back"]::view-transition-old(root)`, motion)).toBe('z-index: 1; animation-name: ck-nav-to-right;')
+    expect(rule(`${ios}[data-nav-direction="back"]::view-transition-new(root)`, motion)).toBe('animation-name: ck-nav-from-left;')
+    expect(rule(`${ios}[data-nav-direction]::view-transition-new(root)`, motion)).toBe('animation-duration: 350ms; mix-blend-mode: normal;')
     expect(motion).toMatch(/@keyframes ck-nav-to-left \{ to \{ transform: translateX\(-30%\); \} \}/)
   })
 
-  it('moves the page along the X axis of Material 3 on Android for 300 ms: 30 px and a cross-fade', () => {
-    expect(rule(':root[data-nav-direction]::view-transition-new(ck-page)', motion)).toContain('animation-duration: 300ms;')
-    expect(rule(`${android}[data-nav-direction="forward"]::view-transition-new(ck-page)`, motion)).toBe('animation-name: ck-axis-in-right;')
+  it('moves the window along the X axis of Material 3 on Android for 300 ms: 30 px and the cross-fade of the browser', () => {
+    expect(rule(':root[data-nav-direction]::view-transition-new(root)', motion)).toContain('animation-duration: 300ms;')
+    expect(rule(`${android}[data-nav-direction="forward"]::view-transition-new(root)`, motion)).toBe('animation-name: ck-axis-in-right;')
+    expect(rule(`${android}[data-nav-direction="back"]::view-transition-old(root)`, motion)).toBe('animation-name: ck-axis-out-right;')
     expect(motion).toMatch(/@keyframes ck-axis-in-right \{ from \{ opacity: 0; transform: translateX\(30px\); \} \}/)
-    // The bars and the background do not move or blend: only the page does.
-    expect(rule(':root[data-nav-direction]::view-transition-old(root)', motion)).toBe('animation: none; opacity: 0;')
+    // Android keeps the plus-lighter blending of the browser: two opaque windows fade into one whole picture.
+    expect(rules(motion).some((item) => item.selector.startsWith(android) && item.body.includes('mix-blend-mode'))).toBe(false)
   })
 })

@@ -265,7 +265,7 @@ footer { padding: var(--ck-space-5) 0 var(--ck-space-8); border-top: 1px solid v
 
 /* ---- Motion: only for a person who has not asked the system for less ----
    The bars change their state in 180 ms; «＋» is pressed to 97 %. A change of the page is a View Transition
-   (navigation/browser.ts sets `data-nav-direction` on <html> for its time): only the page moves — the bars stay —
+   (navigation/browser.ts sets `data-nav-direction` on <html> for its time): the window moves, the bars stay —
    iOS 350 ms, the new page in from the right and the old one 30 % to the left (back: the other way round); Android
    300 ms, the shared X axis of Material 3: 30 px and a cross-fade. */
 @media (prefers-reduced-motion: no-preference) {
@@ -275,22 +275,33 @@ footer { padding: var(--ck-space-5) 0 var(--ck-space-8); border-top: 1px solid v
   .brand-bar .main-add-toggle:active { transform: scale(0.97); }
   .brand-bar .main-add { transition: bottom var(--ck-dur-state) var(--ck-ease-out); }
 
-  :root[data-nav-direction] .page { view-transition-name: ck-page; }
-  /* The rest of the window (the bars, the background) changes at once: the old picture of it is not shown at all, so
-     nothing of the two is blended. */
-  :root[data-nav-direction]::view-transition-old(root) { animation: none; opacity: 0; }
-  :root[data-nav-direction]::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
-  :root[data-nav-direction]::view-transition-group(ck-page) { animation-duration: 300ms; animation-timing-function: var(--ck-ease-out); }
-  :root[data-nav-direction]::view-transition-old(ck-page), :root[data-nav-direction]::view-transition-new(ck-page) { mix-blend-mode: normal; animation-duration: 300ms; animation-timing-function: var(--ck-ease-out); animation-fill-mode: both; }
-  :root[data-platform="ios"][data-nav-direction]::view-transition-group(ck-page), :root[data-platform="ios"][data-nav-direction]::view-transition-old(ck-page), :root[data-platform="ios"][data-nav-direction]::view-transition-new(ck-page) { animation-duration: 350ms; }
-  :root[data-platform="ios"][data-nav-direction="forward"]::view-transition-old(ck-page) { animation-name: ck-nav-to-left; }
-  :root[data-platform="ios"][data-nav-direction="forward"]::view-transition-new(ck-page) { animation-name: ck-nav-from-right; }
-  :root[data-platform="ios"][data-nav-direction="back"]::view-transition-old(ck-page) { z-index: 1; animation-name: ck-nav-to-right; }
-  :root[data-platform="ios"][data-nav-direction="back"]::view-transition-new(ck-page) { animation-name: ck-nav-from-left; }
-  :root:not([data-platform="ios"])[data-nav-direction="forward"]::view-transition-old(ck-page) { animation-name: ck-axis-out-left; }
-  :root:not([data-platform="ios"])[data-nav-direction="forward"]::view-transition-new(ck-page) { animation-name: ck-axis-in-right; }
-  :root:not([data-platform="ios"])[data-nav-direction="back"]::view-transition-old(ck-page) { animation-name: ck-axis-out-right; }
-  :root:not([data-platform="ios"])[data-nav-direction="back"]::view-transition-new(ck-page) { animation-name: ck-axis-in-left; }
+  /* What moves is the picture of the window under the bars (the root: opaque and the size of the window, so the two
+     pages never show through each other and never drift up or down with the scroll and the height of the old one —
+     2026-11-20, frames of the stand). The bars stay: the bottom bar of a phone, the FAB of Android and the header of a
+     wide screen are pictures of their own, drawn over the moving window at once in their new state. An element without
+     a box (the header of a phone is `display: contents`) is simply not captured. */
+  :root[data-nav-direction] .brand-bar { view-transition-name: ck-header; }
+  :root[data-nav-direction] .brand-bar .main-navigation { view-transition-name: ck-tabbar; }
+  :root[data-nav-direction] .brand-bar .main-add { view-transition-name: ck-fab; }
+  /* A picture of its own blurs nothing behind it: for the move the glass of the iOS capsule is the solid surface — the
+     same tone as the glass over the paper (tokens.css), without the page showing through its words. */
+  :root[data-platform="ios"][data-nav-direction] .brand-bar .main-navigation::before { background: var(--ck-surface); }
+  :root[data-nav-direction]::view-transition-group(ck-header), :root[data-nav-direction]::view-transition-group(ck-tabbar), :root[data-nav-direction]::view-transition-group(ck-fab), :root[data-nav-direction]::view-transition-new(ck-header), :root[data-nav-direction]::view-transition-new(ck-tabbar), :root[data-nav-direction]::view-transition-new(ck-fab) { animation: none; }
+  :root[data-nav-direction]::view-transition-old(ck-header), :root[data-nav-direction]::view-transition-old(ck-tabbar), :root[data-nav-direction]::view-transition-old(ck-fab) { animation: none; opacity: 0; }
+  :root[data-nav-direction]::view-transition-group(root) { animation-duration: 300ms; animation-timing-function: var(--ck-ease-out); }
+  :root[data-nav-direction]::view-transition-old(root), :root[data-nav-direction]::view-transition-new(root) { animation-duration: 300ms; animation-timing-function: var(--ck-ease-out); animation-fill-mode: both; }
+  /* iOS slides one window over the other (never adds them up); Android keeps the blending of the browser, so the two
+     opaque windows cross-fade into one whole picture. */
+  :root[data-platform="ios"][data-nav-direction]::view-transition-group(root), :root[data-platform="ios"][data-nav-direction]::view-transition-old(root), :root[data-platform="ios"][data-nav-direction]::view-transition-new(root) { animation-duration: 350ms; }
+  :root[data-platform="ios"][data-nav-direction]::view-transition-old(root), :root[data-platform="ios"][data-nav-direction]::view-transition-new(root) { mix-blend-mode: normal; }
+  :root[data-platform="ios"][data-nav-direction="forward"]::view-transition-old(root) { animation-name: ck-nav-to-left; }
+  :root[data-platform="ios"][data-nav-direction="forward"]::view-transition-new(root) { animation-name: ck-nav-from-right; }
+  :root[data-platform="ios"][data-nav-direction="back"]::view-transition-old(root) { z-index: 1; animation-name: ck-nav-to-right; }
+  :root[data-platform="ios"][data-nav-direction="back"]::view-transition-new(root) { animation-name: ck-nav-from-left; }
+  :root:not([data-platform="ios"])[data-nav-direction="forward"]::view-transition-old(root) { animation-name: ck-axis-out-left; }
+  :root:not([data-platform="ios"])[data-nav-direction="forward"]::view-transition-new(root) { animation-name: ck-axis-in-right; }
+  :root:not([data-platform="ios"])[data-nav-direction="back"]::view-transition-old(root) { animation-name: ck-axis-out-right; }
+  :root:not([data-platform="ios"])[data-nav-direction="back"]::view-transition-new(root) { animation-name: ck-axis-in-left; }
   @keyframes ck-nav-from-right { from { transform: translateX(100%); } }
   @keyframes ck-nav-to-left { to { transform: translateX(-30%); } }
   @keyframes ck-nav-to-right { to { transform: translateX(100%); } }
