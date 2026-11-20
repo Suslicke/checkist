@@ -133,3 +133,12 @@ describe('the eye of «Скрывать суммы» (components/PrivacyToggle.t
     expect(html).toContain('aria-hidden="true"')
   })
 })
+
+describe('the stylesheet of «Скрывать суммы» (text of the rules)', () => {
+  it('blurs every sum and every picture of the page: a photo of a receipt prints its sums too', async () => {
+    const { readFileSync } = await import('node:fs')
+    const app = readFileSync(new URL('../App.css', import.meta.url), 'utf8')
+    expect(app).toContain(':root[data-privacy] .ck-money, :root[data-privacy] .ck-private { filter: blur(0.35em);')
+    expect(app).toContain(':root[data-privacy] main img { filter: blur(14px); }')
+  })
+})
