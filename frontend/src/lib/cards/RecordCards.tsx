@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { PrivateText } from '../../components/Private'
 import './Cards.css'
 
 export type CardFactKind = 'value' | 'text' | 'block'
@@ -7,7 +8,8 @@ export interface CardFact {
   key: string
   /** The heading of the table column this fact replaces. */
   label: string
-  /** null, undefined, false and an empty string mean "no fact": the pair is not rendered. */
+  /** null, undefined, false and an empty string mean "no fact": the pair is not rendered. A string is drawn through
+   * `<PrivateText>`: its amounts are hidden while «Скрывать суммы» is on. */
   value: ReactNode
   /** `value` (default) — one unbreakable value; `text` — free text; `block` — a list or a `dl` under the label. */
   kind?: CardFactKind
@@ -55,7 +57,7 @@ export function Card({ id, title, facts, footer, tone }: CardProps) {
           {shown.map((fact) => (
             <div className="ck-card-fact" data-kind={fact.kind ?? 'value'} key={fact.key}>
               <dt>{fact.label}</dt>
-              <dd className={fact.figure ? 'ck-figures' : undefined}>{fact.value}</dd>
+              <dd className={fact.figure ? 'ck-figures' : undefined}>{typeof fact.value === 'string' ? <PrivateText>{fact.value}</PrivateText> : fact.value}</dd>
             </div>
           ))}
         </dl>

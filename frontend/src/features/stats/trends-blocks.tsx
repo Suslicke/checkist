@@ -3,6 +3,7 @@ import { excludedNote } from '../../lib/base-currency'
 import type { ReactNode } from 'react'
 import type { TrendsCategory, TrendsCategoryCurrency, TrendsCategoryOption, TrendsMonthly, TrendsMonthlyCurrency, TrendsPrices, TrendsPricesCurrency } from '../../api/trends'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import { useLocalRequestFocus } from '../../components/useLocalRequestFocus'
 import { LineChart, StackedColumns } from '../../lib/charts'
@@ -53,7 +54,7 @@ export function Panel({ title, note, state, link, children }: {
         {link && <Link className="stats-panel-link" to={link.to}>{link.label}</Link>}
       </div>
       {children}
-      {note && <p className="stats-note stats-footnote">{note}</p>}
+      {note && <p className="stats-note stats-footnote"><PrivateText>{note}</PrivateText></p>}
     </section>
   )
 }
@@ -118,7 +119,7 @@ export function MonthlyBlock({ state, query, onRetry }: { state: BlockState<Tren
       ? <RequestState kind="empty" message="За это время трат нет. Снимите чек или добавьте трату — месяцы появятся здесь." />
       : <>
         {shown.data.currencies.map((block) => <MonthlyCurrency key={block.currency} block={block} query={query} several={shown.data.currencies.length > 1} />)}
-        {shown.data.excluded?.length ? <p className="stats-note">{excludedNote(shown.data.excluded)}</p> : null}
+        {shown.data.excluded?.length ? <p className="stats-note"><PrivateText>{excludedNote(shown.data.excluded)}</PrivateText></p> : null}
       </>
       break
     default: body = <Failure state={shown} onRetry={onRetry} />
@@ -158,7 +159,7 @@ function CategoryCurrency({ block, several, name }: { block: TrendsCategoryCurre
         <h4 id={id}>Последний месяц{several && `, ${currencySymbol(block.currency)}`}</h4>
         {change && <>
           <p className="trends-big"><Money value={change.lastValue} currency={block.currency} size="title" /></p>
-          <p className={`trends-compare trends-compare-${change.tone}`}>{change.text}</p>
+          <p className={`trends-compare trends-compare-${change.tone}`}><PrivateText>{change.text}</PrivateText></p>
         </>}
         <p className="stats-note">В среднем <span className="trends-value"><Money value={block.average} currency={block.currency} /></span> в месяц,
           за период <span className="trends-value"><Money value={block.total} currency={block.currency} /></span></p>
@@ -224,7 +225,7 @@ function Movers({ title, rows, tone }: { title: string; rows: readonly MoverRow[
               <span className={`trends-badge trends-badge-${tone === 'more' ? 'up' : 'down'}`}>
                 <span aria-hidden="true">{tone === 'more' ? '▲' : '▼'}</span> <span className="trends-value">{row.change}</span>
               </span>
-              <span className="trends-mover-prices"><span className="trends-value">{row.old}</span> → <span className="trends-value">{row.next}</span></span>
+              <span className="trends-mover-prices"><span className="trends-value"><PrivateText>{row.old}</PrivateText></span> → <span className="trends-value"><PrivateText>{row.next}</PrivateText></span></span>
               <span className="trends-mover-months stats-note">{row.oldMonth} → {row.newMonth}</span>
             </li>
           ))}
@@ -244,7 +245,7 @@ function PricesCurrency({ block, several }: { block: TrendsPricesCurrency; sever
     <article className="stats-currency trends-currency" aria-labelledby={id}>
       <div className="trends-summary">
         <h4 id={id}>Индекс цен семьи{several && `, ${currencySymbol(block.currency)}`}</h4>
-        {summary && <p className="trends-lead">{summary.text} <Badge badge={summary.badge} /></p>}
+        {summary && <p className="trends-lead"><PrivateText>{summary.text}</PrivateText> <Badge badge={summary.badge} /></p>}
         <p className="trends-counts">{moverCounts(block)}</p>
       </div>
       <LineChart title={`Индекс цен семьи, ${block.currency}`} series={series} interval="month"

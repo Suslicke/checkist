@@ -4,6 +4,7 @@ import { createIncomeCategory, getIncomeCategories, getIncomes } from '../../api
 import type { IncomeCategory, IncomeMonth } from '../../api/incomes'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import { categoryTone } from '../../lib/category-tone'
 import { baseTwin } from '../../lib/money'
@@ -49,7 +50,7 @@ export function IncomesView({ data, categories, notice = null, busy = false, fai
             <span className={`ck-row-badge ck-tone-${categoryTone(row.category.id) || 1}`} aria-hidden="true"><Icon name="income" size={20} /></span>
             <span className="ck-row-main">
               <span className="ck-row-title">{row.category.name}</span>
-              <span className="ck-row-meta">{[dayAndMonth(row.received_on), row.owner_name, twin, row.note].filter(Boolean).join(' · ')}</span>
+              <span className="ck-row-meta"><PrivateText>{[dayAndMonth(row.received_on), row.owner_name, twin, row.note].filter(Boolean).join(' · ')}</PrivateText></span>
             </span>
             <span className="ck-row-amount"><Money value={row.amount} currency={row.currency} size="row" tone="in" sign="plus" /></span>
           </Link></li>

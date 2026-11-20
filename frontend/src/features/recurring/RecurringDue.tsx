@@ -5,6 +5,7 @@ import { decideRecurring, getRecurringMonth, payRecurring } from '../../api/recu
 import type { RecurringDecisionKind, RecurringMonth, RecurringMonthPayment, RecurringQuestion } from '../../api/recurring'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import Sheet from '../../components/Sheet'
 import { formatMoney } from '../../lib/money'
 import { Link } from '../../navigation'
@@ -101,7 +102,7 @@ export function QuestionsCard({ questions, today, busy, onDecide }: { questions:
 
 export function NoticeLine({ notice }: { notice: Notice | null }) {
   if (!notice) return null
-  return <p className="rec-notice" role="status"><Icon name="check" size={18} className="ck-icon rec-notice-mark" /><span>{notice.text}
+  return <p className="rec-notice" role="status"><Icon name="check" size={18} className="ck-icon rec-notice-mark" /><span><PrivateText>{notice.text}</PrivateText>
     {notice.receiptId ? <> <Link className="rec-inline-link" to={`/receipts/${notice.receiptId}`}>Открыть трату</Link></> : null}</span></p>
 }
 
@@ -217,7 +218,7 @@ export default function RecurringDue({ month }: { month: string }) {
       onPay={(row) => { setPayFailure(null); setPaying(row) }} />
     <Sheet open={paying !== null} onClose={() => setPaying(null)} title={paying ? `Оплатил «${paying.name}»` : 'Оплатил'}>
       {paying && <>
-        <p className="rec-note">{payExpected(paying, loaded.data.today)}</p>
+        <p className="rec-note"><PrivateText>{payExpected(paying, loaded.data.today)}</PrivateText></p>
         <PayForm row={paying} today={loaded.data.today} busy={busy} failure={payFailure} onSubmit={(values) => pay(paying, values)}
           onCancel={() => setPaying(null)} />
       </>}

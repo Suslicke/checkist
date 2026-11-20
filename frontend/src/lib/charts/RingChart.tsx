@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ringSegments } from './ring.ts'
 import type { RingInput } from './ring.ts'
+import { hideAmounts, usePrivacy } from '../../theme/privacy'
 
 /** The box of the ring on «Главная», in CSS pixels, and the width of its stroke. */
 export const RING_SIZE = 132
@@ -16,8 +17,10 @@ export default function Ring({ items, remainder, label, children }: { items: rea
   const radius = (RING_SIZE - RING_STROKE) / 2
   const centre = RING_SIZE / 2
   const segments = ringSegments(items, remainder, radius)
+  // «Скрывать суммы»: the name of the drawing keeps its words, the screen reader hears «сумма скрыта» for each amount.
+  const hidden = usePrivacy()
   return <div className="ck-ring" style={{ width: RING_SIZE, height: RING_SIZE }}>
-    <svg className="ck-ring-svg" viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`} width={RING_SIZE} height={RING_SIZE} role="img" aria-label={label}>
+    <svg className="ck-ring-svg" viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`} width={RING_SIZE} height={RING_SIZE} role="img" aria-label={hidden ? hideAmounts(label) : label}>
       <circle className="ck-ring-track" cx={centre} cy={centre} r={radius} strokeWidth={RING_STROKE} />
       {segments.map((segment) => <circle key={segment.key} className={`ck-ring-segment ck-ring-tone-${segment.tone}`} cx={centre} cy={centre} r={radius}
         strokeWidth={RING_STROKE} strokeDasharray={segment.dasharray} strokeDashoffset={segment.dashoffset} />)}

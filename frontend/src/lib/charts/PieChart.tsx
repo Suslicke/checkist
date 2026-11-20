@@ -1,6 +1,7 @@
 import { Fragment, memo, useCallback, useEffect, useId, useReducer, useRef, useState } from 'react'
 import type { ComponentType, CSSProperties, Dispatch, MouseEvent, PointerEvent, ReactNode } from 'react'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import { layoutPieLabels, pieSlices, pieTones } from './pie.ts'
 import { seriesColors } from './line.ts'
 import { usePlotWidth } from './plot-width.ts'
@@ -176,7 +177,7 @@ const ChildRows = memo(function ChildRows({ valueOf, parentKey, rows, prefix, sw
               {prefix && <span className="ck-chart-hidden">{prefix}</span>}
               {child.href ? <LinkComponent to={child.href}>{child.label}</LinkComponent> : child.label}
             </span>
-            {child.note && <span className="ck-chart-note">{child.note}</span>}
+            {child.note && <span className="ck-chart-note"><PrivateText>{child.note}</PrivateText></span>}
           </span>
         </span>
       </th>
@@ -199,7 +200,7 @@ export default function PieChart({
   const lastPointerType = useRef('')
   const unpin = useCallback(() => dispatch({ type: 'unpin' }), [])
   const valueOf = useCallback<ValueOf>((entry) => (currency !== undefined && entry.amount !== undefined
-    ? <Money value={entry.amount} currency={currency} size="row" /> : entry.valueText), [currency])
+    ? <Money value={entry.amount} currency={currency} size="row" /> : <PrivateText>{entry.valueText}</PrivateText>), [currency])
   useOutsideTouch(rootRef, (highlight.pinned ?? null) !== null, unpin)
   if (items.length === 0) return <p className="ck-chart ck-chart-empty">{emptyMessage}</p>
 
@@ -306,7 +307,7 @@ export default function PieChart({
                       <span className={`ck-pie-swatch ${swatchClass}`} data-hatched={hatched ? 'true' : undefined} aria-hidden="true" />
                       <span className="ck-pie-name-text">
                         {item.href ? <LinkComponent to={item.href}>{item.label}</LinkComponent> : item.label}
-                        {item.note && <span className="ck-chart-note">{item.note}</span>}
+                        {item.note && <span className="ck-chart-note"><PrivateText>{item.note}</PrivateText></span>}
                         {!drawn && <span className="ck-chart-note">{excludedNote}</span>}
                         {drawn && barWidth(item) > 0 && (
                           <span className={`ck-pie-bar ${swatchClass}`} aria-hidden="true"><span style={{ width: `${barWidth(item)}%` }} /></span>

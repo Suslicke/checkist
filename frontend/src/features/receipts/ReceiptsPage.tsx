@@ -4,6 +4,7 @@ import { getReceipts } from '../../api/receipts'
 import type { Receipt, ReceiptListItem } from '../../api/receipts'
 import { getJobs } from '../../api/recognition'
 import type { Page } from '../../api/types'
+import { PrivateText } from '../../components/Private'
 import Pagination from '../../components/Pagination'
 import RequestState from '../../components/RequestState'
 import { useNarrow } from '../../lib/cards'
@@ -50,7 +51,7 @@ export function ReceiptList({ receipts, showOwner = false }: { receipts: Receipt
         : receipt.note && <p className="receipt-note">{receipt.note}</p>}
       <dl className="receipt-facts">
         <div><dt>Дата покупки</dt><dd><time dateTime={receipt.purchased_on}>{recognizedValue(formatPurchasedOn(receipt.purchased_on))}</time></dd></div>
-        <div><dt>Итог</dt><dd className="receipt-number receipt-total">{money(receipt.total, receipt.currency)}</dd></div>
+        <div><dt>Итог</dt><dd className="receipt-number receipt-total"><PrivateText>{money(receipt.total, receipt.currency)}</PrivateText></dd></div>
         <div><dt>Строк</dt><dd>{receipt.lines_count.toLocaleString('ru-RU')}</dd></div>
         <div><dt>Операция</dt><dd>{receipt.operation === 'refund' ? 'Возврат' : 'Продажа'}</dd></div>
         {showOwner && <div><dt>Добавил</dt><dd className="receipt-owner">{ownerName(receipt)}</dd></div>}

@@ -12,6 +12,7 @@ import { PeriodDate } from './period'
 import { axisNumber, intervalName, trendCharts } from './receipts-series'
 import { canRetry, coarserIntervals, failureMessage, hasPeriods, hasScope, intervalChoices, intervalHref, seriesParams, withoutScope } from './receipts-state'
 import type { SeriesState } from './receipts-state'
+import { PrivateText } from '../../components/Private'
 
 /** Divisions of the money axis: whole or with two decimals, like an amount — «2,50 / 3,00 / 3,50». */
 const moneyAxisNumber = (value: number, step?: number) => formatAxisTick(value, step, true)
@@ -62,7 +63,7 @@ function TrendBody({ state, query, onRetry }: TrendBlockProps) {
         <>
           {data.currencies.length > 1 && <p className="stats-note">Валюты не складываются: у каждой валюты чеков свои графики.</p>}
           {data.currencies.map((block) => <CurrencyTrend key={block.currency} block={block} interval={data.interval} />)}
-          {data.excluded?.length ? <p className="stats-note">{excludedNote(data.excluded)}</p> : null}
+          {data.excluded?.length ? <p className="stats-note"><PrivateText>{excludedNote(data.excluded)}</PrivateText></p> : null}
         </>
       )
     }

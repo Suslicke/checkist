@@ -10,6 +10,7 @@ import { methodLabels, methodShort } from '../../lib/payment-methods'
 import ChipScroller from '../../components/ChipScroller'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import Private from '../../components/Private'
 import { useSpendIcon } from '../../lib/list-icons'
 import { haptic } from '../../theme/platform'
 import { SWIPE_REVEAL, swipeEnd } from './undo-delete'
@@ -18,7 +19,7 @@ import { SWIPE_REVEAL, swipeEnd } from './undo-delete'
 /** «≈ 8 979 ₸» under «20 $»: a spend in another currency keeps its own amount, the totals count this converted one. */
 export function BaseTwin({ receipt }: { receipt: Pick<ReceiptListItem, 'currency' | 'base_total' | 'base_currency'> }) {
   const twin = baseTwin(receipt.currency, receipt.base_total, receipt.base_currency)
-  return twin ? <span className="spends-row-twin">{twin}</span> : null
+  return twin ? <Private className="spends-row-twin">{twin}</Private> : null
 }
 
 /** Deletes a spend by hand from «Траты»: `keyboard` — by its «Удалить» from a keyboard or a screen reader (a click without a

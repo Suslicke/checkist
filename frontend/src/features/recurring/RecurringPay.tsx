@@ -4,6 +4,7 @@ import type { RecurringMonthPayment, RecurringPayInput } from '../../api/recurri
 import Icon from '../../components/Icon'
 import MethodChips from '../../components/MethodChips'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import { lastMethod } from '../../lib/payment-methods'
 import { Link } from '../../navigation'
 import type { PaymentMethodValue } from '../../lib/payment-methods'
@@ -131,7 +132,7 @@ export function PaySection({ row, month, today, busy, failure, onPay }: {
       ? <PayForm row={row} today={today} busy={busy} failure={failure} onSubmit={(values) => onPay(row, values)} onCancel={() => setOpen(false)} />
       : <>
         <button type="button" className="rec-pay-main" onClick={() => setOpen(true)}><Icon name="check" size={20} />Оплатил</button>
-        <p className="rec-note">{payExpected(row, today)}</p>
+        <p className="rec-note"><PrivateText>{payExpected(row, today)}</PrivateText></p>
       </>)}
     <PaymentYear row={row} today={today} />
     <h3 className="rec-pay-heading">Изменить платёж</h3>

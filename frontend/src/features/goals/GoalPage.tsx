@@ -4,6 +4,7 @@ import type { Contribution, GoalDetail } from '../../api/goals'
 import type { LocalApiResult } from '../../api/types'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import { usePageTitle } from '../../components/page-header'
@@ -45,7 +46,7 @@ function DepositPanel({ goal, onReconcile }: { goal: GoalDetail; onReconcile: ()
       ? <LineChart title={`Рост депозита по месяцам, ${goal.currency}`} series={growthSeries(goal)} interval="month"
         formatX={formatMonthStart} formatTick={formatMonthTick} formatValue={moneyAxis} valueAxisLabel={goal.currency} intervalHeader="Месяц" />
       : <p className="goal-note">График появится после первого взноса.</p>}
-    {lines.map((line) => <p key={line} className="goal-line">{line}</p>)}
+    {lines.map((line) => <p key={line} className="goal-line"><PrivateText>{line}</PrivateText></p>)}
     <button type="button" className="ck-button-secondary goal-reconcile" aria-haspopup="dialog" onClick={onReconcile}>Сверить с банком</button>
   </section>
 }
@@ -60,7 +61,7 @@ function HistoryRow({ item, onEdit }: { item: Contribution; onEdit: (item: Contr
         {interest ? '%' : initials(item.user?.display_name ?? '?')}</span>
       <span className="ck-row-main">
         <span className="ck-row-title">{interest ? 'Сверка с банком' : item.user?.display_name ?? 'Взнос'}</span>
-        <span className="ck-row-meta">{contributionMeta({ ...item, user: null })}</span>
+        <span className="ck-row-meta"><PrivateText>{contributionMeta({ ...item, user: null })}</PrivateText></span>
       </span>
       <span className="ck-row-amount"><Money value={item.amount} currency={item.currency} size="row" sign={item.amount.startsWith('-') ? 'auto' : 'plus'}
         tone={interest && !item.amount.startsWith('-') ? 'in' : undefined} /></span>
@@ -83,16 +84,16 @@ export function GoalView({ goal, notice = null, onAdd = () => {}, onEditGoal = (
         <span style={{ width: `${barShare(goal)}%` }} />
       </div>
       {goal.reached && <p className="goal-reached"><Icon name="check" size={18} />Цель достигнута.</p>}
-      {pace && <p className="goal-line">{pace}</p>}
-      {deadline && <p className={`goal-line${goal.overdue ? ' goal-overdue' : ''}`}>{deadline}</p>}
+      {pace && <p className="goal-line"><PrivateText>{pace}</PrivateText></p>}
+      {deadline && <p className={`goal-line${goal.overdue ? ' goal-overdue' : ''}`}><PrivateText>{deadline}</PrivateText></p>}
       {goal.deposit && <p className="goal-line">≈ заработано процентами <Money value={goal.deposit.interest} currency={goal.currency} tone="in" /></p>}
-      {excluded && <p className="goal-note">{excluded}</p>}
+      {excluded && <p className="goal-note"><PrivateText>{excluded}</PrivateText></p>}
       <div className="goal-actions">
         <button type="button" aria-haspopup="dialog" onClick={onAdd}>Добавить взнос</button>
         <button type="button" className="ck-button-secondary" aria-haspopup="dialog" onClick={onEditGoal}>Изменить цель</button>
       </div>
     </section>
-    {notice && <p className="goal-notice" role="status"><Icon name="check" size={18} className="ck-icon goal-notice-mark" /><span>{notice}</span></p>}
+    {notice && <p className="goal-notice" role="status"><Icon name="check" size={18} className="ck-icon goal-notice-mark" /><span><PrivateText>{notice}</PrivateText></span></p>}
     <DepositPanel goal={goal} onReconcile={onReconcile} />
     <section className="ck-panel" aria-labelledby="goal-history-heading">
       <div className="ck-panel-head"><h2 id="goal-history-heading">{goal.deposit ? 'История' : 'Взносы'}</h2><span className="goal-count">{goal.contributions.length}</span></div>

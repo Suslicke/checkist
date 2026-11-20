@@ -11,6 +11,7 @@ import ChipScroller from '../../components/ChipScroller'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import Private, { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import { categoryIcon } from '../../lib/category-icons'
@@ -56,7 +57,7 @@ function Hero({ data }: { data: PlannedMonth }) {
       </>
       : <>
         <p className="pl-hero-line"><Money value={base.left} currency={data.currency} size="hero" /><span className="pl-hero-word">ещё ждём</span></p>
-        <p className="pl-hero-sub">{sub.map((part, index) => <span key={part}>{index > 0 && ' · '}{part}</span>)}</p>
+        <p className="pl-hero-sub">{sub.map((part, index) => <span key={part}>{index > 0 && ' · '}<PrivateText>{part}</PrivateText></span>)}</p>
         <Segments segments={segmentsOf(base.segments)} label={`План ${inMonth(data.month)} по пунктам`} />
         <p className="pl-legend">
           <span><i aria-hidden="true" />сделано <Money value={base.done} currency={data.currency} /></span>
@@ -73,7 +74,7 @@ function MonthCards({ data }: { data: PlannedMonth }) {
     {cards.map((card) => <Link key={card.month} className={`pl-month${card.now ? ' pl-month-now' : ''}`} to={monthHref(card.month)} aria-current={card.now ? 'page' : undefined}>
       <span className="pl-month-label">{card.label}</span>
       <span className={`pl-month-sum${card.empty ? ' pl-month-sum-empty' : ''}`}>{card.amount ? <Money value={card.amount} currency={data.currency} /> : 'пока пусто'}</span>
-      <span className="pl-month-meta">{card.meta}</span>
+      <span className="pl-month-meta"><PrivateText>{card.meta}</PrivateText></span>
       <span className="pl-month-bar" aria-hidden="true">{card.segments.map((segment) => <i key={segment.key} className={`pl-cat-${segment.tone}${segment.done ? ' pl-seg-done' : ''}`} style={{ flex: segment.flex }} />)}</span>
     </Link>)}
   </ChipScroller>
@@ -103,8 +104,8 @@ function PlanRow({ plan, largest, onOpen }: { plan: PlannedSpend; largest: bigin
           {rail.saved > 0 && <b className="pl-rail-saved" style={{ width: `${rail.saved}%` }} />}
         </span>
         <span className="pl-meta">
-          <span>{rowMeta(plan).join(' · ')}</span>
-          {pill && <span className={`pl-pill pl-pill-${pill.kind}`}>{pill.kind.startsWith('ai') && <Icon name="insight" size={14} />}{pill.text}</span>}
+          <span><PrivateText>{rowMeta(plan).join(' · ')}</PrivateText></span>
+          {pill && <span className={`pl-pill pl-pill-${pill.kind}`}>{pill.kind.startsWith('ai') && <Icon name="insight" size={14} />}<PrivateText>{pill.text}</PrivateText></span>}
         </span>
       </span>
     </button>
@@ -118,7 +119,7 @@ function PlanList({ plans, onOpen }: { plans: PlannedSpend[]; onOpen: (plan: Pla
 
 export function NoticeLine({ notice }: { notice: Notice | null }) {
   if (!notice) return null
-  return <p className="pl-notice" role="status"><Icon name="check" size={18} className="ck-icon pl-notice-mark" /><span>{notice.text}
+  return <p className="pl-notice" role="status"><Icon name="check" size={18} className="ck-icon pl-notice-mark" /><span><PrivateText>{notice.text}</PrivateText>
     {notice.receiptId ? <> <Link className="pl-inline-link" to={`/receipts/${notice.receiptId}`}>Открыть трату</Link></> : null}</span></p>
 }
 
@@ -329,7 +330,7 @@ function AdvicePanel({ plan, busy, failure, onDeposit, onCancel }: { plan: Plann
   const another = nextOption(advice, chosen)
   return <section className="pl-section pl-advice" aria-labelledby="pl-advice-heading">
     <h3 id="pl-advice-heading">Как накопить на «{plan.name}»</h3>
-    <p className="pl-advice-sub">{adviceSub(advice)}</p>
+    <p className="pl-advice-sub"><PrivateText>{adviceSub(advice)}</PrivateText></p>
     {advice.months !== null && advice.due && <div className="pl-timeline" aria-hidden="true"><span>сегодня</span><i><s>{monthsText(advice.months)}</s></i><span>{dayAndMonth(advice.due)}</span></div>}
     <ul className="pl-options" aria-label="Варианты">
       {advice.options.map((option) => {
@@ -338,9 +339,9 @@ function AdvicePanel({ plan, busy, failure, onDeposit, onCancel }: { plan: Plann
           {[1, 2, 3].map((level) => <b key={level} className={level <= view.risk ? 'pl-risk-on' : undefined} />)}</span>
         const body = <>
           <span className="pl-option-head"><span className="pl-option-name">{view.name}{risk}</span>
-            <span className="pl-option-sum">{view.amount ? <Money value={view.amount} currency={advice.currency} size="title" /> : view.sum}<small>{view.under}</small></span></span>
+            <span className="pl-option-sum">{view.amount ? <Money value={view.amount} currency={advice.currency} size="title" /> : <PrivateText>{view.sum}</PrivateText>}<small><PrivateText>{view.under}</PrivateText></small></span></span>
           {view.bar && <span className="pl-option-bar" aria-hidden="true"><i className="pl-option-in" style={{ flex: view.bar.in }} /><i className="pl-option-gain" style={{ flex: view.bar.gain }} /></span>}
-          {view.meta.length > 0 && <span className="pl-option-meta">{view.meta.map((item, index) => <span key={item}>{index === 0 && view.bar && <i className="pl-option-in" aria-hidden="true" />}{index === 1 && view.bar && <i className="pl-option-gain" aria-hidden="true" />}{item}</span>)}</span>}
+          {view.meta.length > 0 && <span className="pl-option-meta">{view.meta.map((item, index) => <span key={item}>{index === 0 && view.bar && <i className="pl-option-in" aria-hidden="true" />}{index === 1 && view.bar && <i className="pl-option-gain" aria-hidden="true" />}<PrivateText>{item}</PrivateText></span>)}</span>}
         </>
         return <li key={option.key} className={`pl-option${!view.available ? ' pl-option-off' : ''}${chosen === option.key ? ' pl-option-best' : ''}`}>
           {view.available
@@ -409,10 +410,10 @@ export function PlanSheet({ plan, month, categories, busy, failure, onPatch, onD
     onSubmit={(draft) => onPatch(draftBody(draft), `«${draft.name.trim()}» сохранён.`)} />
   return <div className="pl-sheet">
     <Money value={plan.amount} currency={plan.currency} size="display" className="pl-sheet-sum" />
-    <p className="pl-note">{rowMeta(plan).join(' · ')}{plan.note && ` · ${plan.note}`}</p>
+    <p className="pl-note"><PrivateText>{`${rowMeta(plan).join(' · ')}${plan.note ? ` · ${plan.note}` : ''}`}</PrivateText></p>
     {plan.ai && <div className={`pl-verdict pl-verdict-${plan.ai.verdict}`}>
-      <b className="pl-verdict-who"><Icon name="insight" size={16} />{verdictWords[plan.ai.verdict]}</b>{plan.ai.reason && <p>{plan.ai.reason}</p>}</div>}
-    {done && plan.receipt && <p className="pl-note">Закрыт тратой {formatMoney(plan.receipt.total, plan.receipt.currency)} {dayAndMonth(plan.receipt.purchased_on)}.
+      <b className="pl-verdict-who"><Icon name="insight" size={16} />{verdictWords[plan.ai.verdict]}</b>{plan.ai.reason && <p><PrivateText>{plan.ai.reason}</PrivateText></p>}</div>}
+    {done && plan.receipt && <p className="pl-note">Закрыт тратой <Private>{formatMoney(plan.receipt.total, plan.receipt.currency)}</Private> {dayAndMonth(plan.receipt.purchased_on)}.
       {' '}<Link className="pl-inline-link" to={`/receipts/${plan.receipt.id}`}>Открыть трату</Link></p>}
     {failure && <p className="pl-field-error" role="alert">{failure}</p>}
     <div className="pl-sheet-actions">

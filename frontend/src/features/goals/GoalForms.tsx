@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type { Contribution, Goal } from '../../api/goals'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import Private, { PrivateText } from '../../components/Private'
 import { currencySymbol } from '../../lib/money'
 import type { Person } from '../../lib/people'
 import { contributionDraftOf, contributionTitle, dayText, goalDraftOf, goalErrors, moneyValue } from './goals-state'
@@ -131,7 +132,7 @@ export function ReconcileForm({ currency, saved, today, busy, failure = null, on
     if (!wrong && draft.date) onSubmit(draft)
   }
   return <form className="goal-form" onSubmit={submit} noValidate>
-    <p className="goal-note">По расчёту сегодня на депозите <span className="ck-figures">{saved}</span>. Впишите остаток из приложения банка —
+    <p className="goal-note">По расчёту сегодня на депозите <Private className="ck-figures">{saved}</Private>. Впишите остаток из приложения банка —
       разница запишется в историю как проценты, и дальше расчёт пойдёт от него.</p>
     <div className="goal-fields">
       <Field id="goal-bank-balance" label={`Остаток в банке, ${currencySymbol(currency)}`} error={error ?? undefined}>
@@ -151,7 +152,7 @@ export function ReconcileForm({ currency, saved, today, busy, failure = null, on
 /** A record «проценты» is not edited, only removed: the next reconciliation counts from the rest. */
 export function InterestRecord({ item, busy, failure = null, onDelete }: { item: Contribution; busy: boolean; failure?: string | null; onDelete: () => void }) {
   return <div className="goal-form">
-    <p className="goal-note">{contributionTitle(item)} на {dayText(item.date)}. Это не взнос, а разница сверки депозита с банком: в «откладываете»
+    <p className="goal-note"><PrivateText>{contributionTitle(item)}</PrivateText> на {dayText(item.date)}. Это не взнос, а разница сверки депозита с банком: в «откладываете»
       она не входит.</p>
     {failure && <p className="goal-field-error" role="alert">{failure}</p>}
     <Remove question="Удалить эту сверку?" message="Следующая сверка посчитает проценты заново." label="Удалить сверку" busy={busy} onDelete={onDelete} />

@@ -17,6 +17,7 @@ import { categoryTone } from '../../lib/category-tone'
 import { useSpendIcon } from '../../lib/list-icons'
 import { spendSource as entrySource } from '../receipts/spends'
 import './Dashboard.css'
+import { PrivateText } from '../../components/Private'
 
 /** The source of a spend as a stamp (Чекист 2.0): «Фото» of a receipt, «Выписка» of a bank statement, «Вручную». */
 const stampOf = { photo: 'Фото', statement: 'Выписка', manual: 'Вручную' } as const
@@ -36,7 +37,7 @@ function SpendItem({ item, currency, tone, icon }: { item: CategorySpendItem; cu
       <span className={`ck-row-badge${tone > 0 ? ` ck-tone-${tone}` : ''}`} data-icon={picture} aria-hidden="true"><Icon name={picture} size={20} /></span>
       <span className="ck-row-main">
         <span className="ck-row-title">{spendTitle(item)}</span>
-        {note && <span className="cat-spend-note">{note}</span>}
+        {note && <span className="cat-spend-note"><PrivateText>{note}</PrivateText></span>}
         <span className="ck-row-meta cat-spend-meta"><span className="ck-stamp">{stampOf[source]}</span>
           <span className="cat-spend-meta-text"><time dateTime={item.purchased_on}>{dayAndMonth(item.purchased_on)}</time>{bank && ` · ${bank}`} · {item.owner_name}</span></span>
       </span>
@@ -80,7 +81,7 @@ function CurrencyBlock({ block, month, hero, categoryName, tone, icon, steps, no
       <p className="dash-label">{steps ? 'Потрачено' : `Потрачено ${inMonth(month)}`}{hero ? '' : `, ${currencySymbol(block.currency)}`}</p>
       <p className="dash-total"><Money size={hero ? 'hero' : 'display'} value={block.total} currency={block.currency} /></p>
       <p className="dash-note cat-spends-count">{glue(block.receipts_count.toLocaleString('ru-RU'), plural(block.receipts_count, 'чек или трата', 'чека или траты', 'чеков и трат'))}</p>
-      {note && <p className="dash-note">{note}</p>}
+      {note && <p className="dash-note"><PrivateText>{note}</PrivateText></p>}
       {parts.length > 0 && <ul className="cat-parts" aria-label="Из чего сложилось">
         {parts.map((part) => {
           const share = partShare(part, block.total)
@@ -125,7 +126,7 @@ export function CategorySpendsView({ data, today = deviceMonth(), slide }: Categ
         tone={tone} icon={category.icon} steps={index === 0 ? steps : undefined} note={index === 0 ? excludedNote(data.excluded) : undefined} />)
       : <>
         <section className="ck-panel dash-card cat-spends-total" aria-label="Месяц">{steps}
-          {data.excluded?.length ? <p className="dash-note">{excludedNote(data.excluded)}</p> : null}</section>
+          {data.excluded?.length ? <p className="dash-note"><PrivateText>{excludedNote(data.excluded)}</PrivateText></p> : null}</section>
         <RequestState kind="empty" title={`${capitalize(inMonth(month))} трат в этой категории ${month < today ? 'не было' : 'пока нет'}`}
           message="Траты появятся здесь, как только в категории будет хотя бы одна строка чека или трата."
           action={<Link className="action-link" to={month === today ? '/' : `/?month=${month}`}>На главную</Link>} />

@@ -1,6 +1,7 @@
 import { useId, useMemo } from 'react'
 import { excludedNote } from '../../lib/base-currency'
 import type { CompareCurrency, CompareProduct, ComparePriceIndex, ReceiptCompare } from '../../api/stats'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import { useLocalRequestFocus } from '../../components/useLocalRequestFocus'
 import { useNarrow } from '../../lib/cards'
@@ -64,7 +65,7 @@ function Decomposition({ block, result }: { block: CompareCurrency; result: Verd
                   <span className="stats-effect-title">{part.title}</span>
                   <span className="stats-effect-phrase">{part.phrase}{part.against && ' — действует против общего изменения'}</span>
                 </th>
-                <td className="stats-number">{signedAmount(part.amount, block.currency)}</td>
+                <td className="stats-number"><PrivateText>{signedAmount(part.amount, block.currency)}</PrivateText></td>
                 <td className="stats-number stats-effect-share">{part.percent === null ? '—' : signedPercent(part.percent)}</td>
               </tr>
             ))}
@@ -72,7 +73,7 @@ function Decomposition({ block, result }: { block: CompareCurrency; result: Verd
           <tfoot>
             <tr>
               <th scope="row">{effectsTotalTitle}</th>
-              <td className="stats-number">{signedAmount(block.change.avg_receipt, block.currency)}</td>
+              <td className="stats-number"><PrivateText>{signedAmount(block.change.avg_receipt, block.currency)}</PrivateText></td>
               <td className="stats-number stats-effect-share">
                 {block.change.avg_receipt_percent === null ? '—' : <>{signedPercent(block.change.avg_receipt_percent)} <span className="stats-number-note">к базовому чеку</span></>}
               </td>
@@ -80,7 +81,7 @@ function Decomposition({ block, result }: { block: CompareCurrency; result: Verd
           </tfoot>
         </table>
       </div>}
-      {result.note && <p className="stats-note">{result.note}</p>}
+      {result.note && <p className="stats-note"><PrivateText>{result.note}</PrivateText></p>}
     </section>
   )
 }
@@ -110,13 +111,13 @@ function Products({ block }: { block: CompareCurrency }) {
   const row = (item: CompareProduct) => (
     <tr key={`${item.product.id}-${item.unit}`}>
       <th scope="row"><Link to={{ kind: 'product', productId: item.product.id, query: { page: 1 } }}>{item.product.name}</Link></th>
-      <td className="stats-number">{formatPrice(item.base.price, currency, item.unit)}</td>
-      <td className="stats-number">{formatPrice(item.current.price, currency, item.unit)}</td>
+      <td className="stats-number"><PrivateText>{formatPrice(item.base.price, currency, item.unit)}</PrivateText></td>
+      <td className="stats-number"><PrivateText>{formatPrice(item.current.price, currency, item.unit)}</PrivateText></td>
       <td className="stats-number">{signedPercent(item.price_change_percent)}</td>
       <td className="stats-number">{formatQuantity(item.base.quantity, item.unit)}</td>
       <td className="stats-number">{formatQuantity(item.current.quantity, item.unit)}</td>
-      <td className="stats-number">{formatMoney(item.base.amount, currency)}</td>
-      <td className="stats-number">{formatMoney(item.current.amount, currency)}</td>
+      <td className="stats-number"><PrivateText>{formatMoney(item.base.amount, currency)}</PrivateText></td>
+      <td className="stats-number"><PrivateText>{formatMoney(item.current.amount, currency)}</PrivateText></td>
     </tr>
   )
   return (
@@ -151,7 +152,7 @@ export function CompareCurrencySection({ block, data }: { block: CompareCurrency
       <h5>{title}</h5>
       <p className="stats-note"><DateRange from={data[key].date_from} to={data[key].date_to} /></p>
       <dl className="stats-facts">
-        {sideFacts(block[key], block.currency).map(([label, value]) => <div key={label}><dt>{label}</dt><dd className="stats-number">{value}</dd></div>)}
+        {sideFacts(block[key], block.currency).map(([label, value]) => <div key={label}><dt>{label}</dt><dd className="stats-number"><PrivateText>{value}</PrivateText></dd></div>)}
       </dl>
     </section>
   )
@@ -159,20 +160,20 @@ export function CompareCurrencySection({ block, data }: { block: CompareCurrency
     <article className="stats-currency" aria-labelledby={id}>
       <h4 id={id}>Чеки в {currencySymbol(block.currency)}</h4>
       <div className="stats-verdict" data-kind={result.kind}>
-        <p className="stats-verdict-headline">{result.headline}</p>
-        {result.lead && <p>{result.lead}</p>}
+        <p className="stats-verdict-headline"><PrivateText>{result.headline}</PrivateText></p>
+        {result.lead && <p><PrivateText>{result.lead}</PrivateText></p>}
         {result.parts.length > 0 && <ul className="stats-verdict-parts">
           {result.parts.map((part) => (
             <li key={part.key}>
-              <strong>{signedAmount(part.amount, block.currency)}</strong>
+              <strong><PrivateText>{signedAmount(part.amount, block.currency)}</PrivateText></strong>
               {part.percent !== null && ` (${signedPercent(part.percent)} изменения)`} — {part.phrase}{part.against && ', против общего изменения'}
             </li>
           ))}
         </ul>}
-        {result.parts.length === 0 && result.note && <p className="stats-note">{result.note}</p>}
+        {result.parts.length === 0 && result.note && <p className="stats-note"><PrivateText>{result.note}</PrivateText></p>}
       </div>
       <div className="stats-sides">{side('Базовый период', 'base')}{side('Текущий период', 'current')}</div>
-      {refunds && <p className="stats-note">{refunds}</p>}
+      {refunds && <p className="stats-note"><PrivateText>{refunds}</PrivateText></p>}
       {result.parts.length > 0 && <Decomposition block={block} result={result} />}
       {block.price_index && <PriceIndex index={block.price_index} />}
       <Products block={block} />
@@ -205,7 +206,7 @@ function CompareBody({ state, query, onRetry }: CompareBlockProps) {
             Валюты не складываются и не пересчитываются: по каждой валюте чеков — свой разбор.
           </p>}
           {data.currencies.map((block) => <CompareCurrencySection key={block.currency} block={block} data={data} />)}
-          {data.excluded?.length ? <p className="stats-note">{excludedNote(data.excluded)}</p> : null}
+          {data.excluded?.length ? <p className="stats-note"><PrivateText>{excludedNote(data.excluded)}</PrivateText></p> : null}
         </>
       )
     }

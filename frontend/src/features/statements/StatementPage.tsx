@@ -8,11 +8,13 @@ import type { StatementDetail, StatementRow } from '../../api/statements'
 import type { Category } from '../../api/types'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import Money from '../../components/Money'
+import Private, { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import { usePageTitle } from '../../components/page-header'
 import { Link, navigate } from '../../navigation'
 import { formatMoney } from '../../lib/money'
 import { glue } from '../../lib/text'
+import { hideAmounts, usePrivacy } from '../../theme/privacy'
 import { createPollingRequest } from '../recognition/polling'
 import {
   asGoal, canBeGoal, categoryOptions, giftWord, isQuestionable, keepsPolling, missingCategory, periodText, reasonText, reviewNote,
@@ -88,11 +90,13 @@ function RowItem({ row, open, edits, options, byId, goals, onOpen, onToggle, onC
   const gift = asGoal(row)
   const editorId = `statement-row-${row.id}-edit`
   const amount = rowAmount(row)
+  const hidden = usePrivacy()
+  const checkLabel = `${gift ? 'Сохранить взносом' : 'Сохранить тратой'}: ${title}, ${amountText(row)}`
   return <li className={`statement-row${questionable && !edit?.touched ? ' statement-row-review' : ''}`} data-state={row.state} data-kind={row.kind} data-ai={row.ai ?? undefined}>
     <div className="statement-row-line">
       {editable
         ? <label className="statement-check-box">
-          <input type="checkbox" className="statement-check" checked={edit?.checked ?? false} aria-label={`${gift ? 'Сохранить взносом' : 'Сохранить тратой'}: ${title}, ${amountText(row)}`}
+          <input type="checkbox" className="statement-check" checked={edit?.checked ?? false} aria-label={hidden ? hideAmounts(checkLabel) : checkLabel}
             onChange={(event) => onToggle(row.id, event.target.checked)} />
         </label>
         : <span className="statement-check-box" aria-hidden="true" />}
@@ -100,16 +104,16 @@ function RowItem({ row, open, edits, options, byId, goals, onOpen, onToggle, onC
         onClick={() => onOpen(open ? null : row.id)}>
         <span className="ck-row-main">
           <span className="ck-row-title">{title}</span>
-          <span className="ck-row-meta">{rowMeta(row, edit, byId)}</span>
+          <span className="ck-row-meta"><PrivateText>{rowMeta(row, edit, byId)}</PrivateText></span>
         </span>
         <span className={`ck-row-amount${amount.income ? ' statement-income' : ''}`}>
           <Money value={amount.value} currency={row.currency} size="row" sign={amount.income ? 'plus' : 'auto'} tone={amount.income ? 'in' : undefined} /></span>
       </button>
     </div>
-    {note && <p className="statement-row-note">{note}</p>}
+    {note && <p className="statement-row-note"><PrivateText>{note}</PrivateText></p>}
     {open && <div className="statement-row-edit" id={editorId}>
       <p className="statement-details"><span>{row.operation}</span> {row.details}{row.mcc ? ` · MCC ${row.mcc}` : ''}</p>
-      {row.refund !== '0.00' && <p className="statement-details">С учётом возврата {formatMoney(row.refund, row.currency)}</p>}
+      {row.refund !== '0.00' && <p className="statement-details">С учётом возврата <Private>{formatMoney(row.refund, row.currency)}</Private></p>}
       {row.receipt_id !== null && <Link className="statement-saved-link" to={`/receipts/${row.receipt_id}`}>Открыть трату</Link>}
       {row.goal && (gift || row.contribution_id) && <p className="statement-details">Взнос в цель{' '}
         <Link className="statement-saved-link" to={`/goals/${row.goal.id}`}>«{row.goal.name}»</Link> — не трата.</p>}
@@ -176,7 +180,7 @@ export function StatementView(props: StatementViewProps) {
         {detail.ai.executor.state === 'absent' ? statementTexts.modelAbsent : statementTexts.modelWaiting(detail.ai.waiting)}
       </p>}
     </section>
-    {notice && <p className="statement-notice" role="status">{notice}</p>}
+    {notice && <p className="statement-notice" role="status"><PrivateText>{notice}</PrivateText></p>}
     {parts.toSave.length > 0 && <section className="ck-panel" aria-labelledby="statement-spends-heading">
       <div className="ck-panel-head"><h2 id="statement-spends-heading">Траты</h2></div>
       <Rows rows={parts.toSave} {...rowProps} />
@@ -204,7 +208,7 @@ export function StatementView(props: StatementViewProps) {
       {failure && <p className="statement-status statement-status-error" role="alert">{failure}</p>}
       {!failure && missing.length > 0 && <p className="statement-status">{statementTexts.missing(missing.length)}</p>}
       <button type="button" className="statement-save" disabled={saving || chosen.length === 0} onClick={onSave}>
-        {saving ? 'Сохраняю…' : saveLabel(detail.rows, edits)}
+        {saving ? 'Сохраняю…' : <PrivateText>{saveLabel(detail.rows, edits)}</PrivateText>}
       </button>
     </div>
     <div className="statement-footer">

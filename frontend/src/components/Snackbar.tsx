@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { CSSProperties } from 'react'
+import { PrivateText } from './Private'
 import { snackbarLifetime } from './snackbar-time'
 import './Snackbar.css'
 
@@ -34,7 +35,7 @@ export default function Snackbar({ message, action, countdownMs, onClose }: Snac
   const counting = countdownMs !== undefined && lifetime === countdownMs
   return (
     <div className="ck-snackbar" role="status" aria-live="polite" aria-atomic="true">
-      <span className="ck-snackbar-message">{message}</span>
+      <span className="ck-snackbar-message"><PrivateText>{message}</PrivateText></span>
       {action && <button type="button" className="ck-snackbar-action" onClick={action.onClick}>{action.label}</button>}
       {counting && <span className="ck-snackbar-count" aria-hidden="true" style={{ '--ck-snackbar-countdown': `${countdownMs}ms` } as CSSProperties} />}
     </div>

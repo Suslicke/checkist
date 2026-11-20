@@ -4,6 +4,7 @@ import type { MouseEvent } from 'react'
 import type { SpendingCurrency, SpendingGroupBy } from '../../api/stats'
 import { spendingGroupings } from '../../api/stats'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import { useLocalRequestFocus } from '../../components/useLocalRequestFocus'
 import { PieChart } from '../../lib/charts'
@@ -97,7 +98,7 @@ export function SpendingBlock({ view, groupBy, hero = false, totals }: {
   const heading = useId()
   const total = totals ? totals.receipts_total ?? totals.lines_paid : undefined
   const sum = (amount: string | undefined, text: string, size: 'display' | 'title' | 'inline') =>
-    amount === undefined ? text : <Money value={amount} currency={view.currency} size={size} />
+    amount === undefined ? <PrivateText>{text}</PrivateText> : <Money value={amount} currency={view.currency} size={size} />
   return <section className="spending-currency" aria-labelledby={heading}>
     <div className="spending-summary">
       <h3 id={heading} className="spending-summary-label">{view.total.label}, {currencySymbol(view.currency)}</h3>
@@ -111,7 +112,7 @@ export function SpendingBlock({ view, groupBy, hero = false, totals }: {
       centerValue={sum(totals?.lines_paid, view.center.value, 'inline')} currency={totals ? view.currency : undefined}
       headers={{ name: nameHeaders[groupBy], value: 'Сумма', share: 'Доля' }} linkComponent={Link}
       excludedNote="Сумма не положительная: в диаграмму не входит, доля не считается." />
-    <p className="spending-note">{view.difference}</p>
+    <p className="spending-note"><PrivateText>{view.difference}</PrivateText></p>
     {view.needsAdminHint && <p className="spending-note">
       «Не разобрано» и строки без товара показаны как есть, новых категорий статистика не придумывает. {unassignedHint}
     </p>}
@@ -178,7 +179,7 @@ export default function SpendingResults({ query, state, retry, last, genericName
           Суммы в разных валютах не складываются и не пересчитываются: у каждой валюты свой блок со своим итогом.
         </p>}
         {/* In the family's base currency: what has no rate of the National Bank yet is named, never silently left out. */}
-        {shown.data.excluded?.length ? <p className="spending-note spending-footnote">{excludedNote(shown.data.excluded)}</p> : null}
+        {shown.data.excluded?.length ? <p className="spending-note spending-footnote"><PrivateText>{excludedNote(shown.data.excluded)}</PrivateText></p> : null}
       </div>)}
   </section>
 }

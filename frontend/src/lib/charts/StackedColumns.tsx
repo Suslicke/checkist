@@ -2,6 +2,8 @@ import { useId, useMemo } from 'react'
 import type { CSSProperties } from 'react'
 import { Card, CardList, useNarrow } from '../cards'
 import type { CardFact } from '../cards'
+import { PrivateText } from '../../components/Private'
+import { hasAmount, hideAmounts, usePrivacy } from '../../theme/privacy'
 import { layoutColumns } from './columns.ts'
 import type { ChartLinkComponent, ChartLinkProps } from './PieChart.tsx'
 import { usePlotWidth } from './plot-width.ts'
@@ -112,6 +114,9 @@ export default function StackedColumns({
   const layout = useMemo(() => layoutColumns(sorted, { width, height, formatValue, formatTick }), [sorted, width, height, formatValue, formatTick])
   const { plot } = layout
   const tableLabel = `Таблица значений: ${title}`
+  // «Скрывать суммы»: columns of amounts show no numbers on the value axis; names and values hide their amounts.
+  const hidden = usePrivacy()
+  const amountAxis = hidden && sorted.some((column) => hasAmount(column.totalText))
 
   return (
     <div className="ck-chart ck-columns" role="group" aria-label={title}>
@@ -125,7 +130,7 @@ export default function StackedColumns({
           ))}
           <g className="ck-chart-axis">
             <line x1={c(plot.left)} x2={c(plot.right)} y1={c(plot.bottom)} y2={c(plot.bottom)} />
-            {layout.yTicks.map((tick) => (
+            {!amountAxis && layout.yTicks.map((tick) => (
               <text key={tick.position} x={c(plot.left - 6)} y={c(tick.position)} textAnchor="end" dominantBaseline="central">{tick.text}</text>
             ))}
             {layout.xTicks.map((tick) => (
@@ -155,7 +160,7 @@ export default function StackedColumns({
               left: `${(laid.slotLeft / layout.width) * 100}%`, width: `${(laid.slotWidth / layout.width) * 100}%`,
               top: `${(plot.top / layout.height) * 100}%`, height: `${((plot.bottom - plot.top) / layout.height) * 100}%`,
             }
-            const name = `${formatX(column.x)}: ${column.totalText}`
+            const name = `${formatX(column.x)}: ${hidden ? hideAmounts(column.totalText) : column.totalText}`
             return (
               <li key={column.x} style={style}>
                 {column.href
@@ -172,7 +177,7 @@ export default function StackedColumns({
           <li key={entry.key}>
             <Swatch tone={entry.tone} />
             <span className="ck-columns-label">{entry.label}</span>
-            {entry.note && <span className="ck-chart-note ck-columns-note"><span className="ck-chart-hidden"> · </span><span className="ck-chart-whole">{entry.note}</span></span>}
+            {entry.note && <span className="ck-chart-note ck-columns-note"><span className="ck-chart-hidden"> · </span><span className="ck-chart-whole"><PrivateText>{entry.note}</PrivateText></span></span>}
           </li>
         ))}
       </ul>
@@ -196,8 +201,8 @@ export default function StackedColumns({
                   return (
                     <tr key={column.x}>
                       <th scope="row"><time dateTime={column.x}>{formatX(column.x)}</time></th>
-                      {legend.map((entry) => <td key={entry.key} className="ck-chart-number">{values.get(entry.key) ?? '—'}</td>)}
-                      <td className="ck-chart-number">{column.totalText}</td>
+                      {legend.map((entry) => <td key={entry.key} className="ck-chart-number"><PrivateText>{values.get(entry.key) ?? '—'}</PrivateText></td>)}
+                      <td className="ck-chart-number"><PrivateText>{column.totalText}</PrivateText></td>
                     </tr>
                   )
                 })}

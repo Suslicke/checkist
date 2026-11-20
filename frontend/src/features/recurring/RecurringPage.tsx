@@ -11,6 +11,7 @@ import type { RecurringBase, RecurringMonth, RecurringMonthPayment, RecurringPay
 import type { Category, LocalApiResult } from '../../api/types'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import { StackedColumns } from '../../lib/charts'
@@ -52,7 +53,7 @@ function PaymentItem({ row, today, onEdit }: { row: RecurringMonthPayment; today
       <span className="ck-row-main">
         <span className="ck-row-title">{row.name}</span>
         <span className="ck-row-meta"><span className={`rec-state rec-meta-${row.state}`}>{stateText(row, today)}</span> · {row.store?.name ?? row.category.name}</span>
-        {change && <span className="ck-row-meta rec-change">{change}</span>}
+        {change && <span className="ck-row-meta rec-change"><PrivateText>{change}</PrivateText></span>}
         {row.state !== 'inactive' && <History row={row} />}
       </span>
       <span className="ck-row-amount"><Money value={row.paid?.total ?? row.amount} currency={row.currency} size="row"

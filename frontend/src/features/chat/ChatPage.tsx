@@ -4,6 +4,7 @@ import { confirmAction, createThread, deleteThread, getMessage, getThread, listT
 import type { ChatAction, ChatMessage, ThreadDetail, ThreadSummary } from '../../api/chat'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import Icon from '../../components/Icon'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import Skeleton from '../../components/Skeleton'
 import { usePageTitle } from '../../components/page-header'
@@ -37,16 +38,16 @@ function ModelBubble({ message, failure, busyAction, actionErrors, onConfirm, on
       <p className="chat-failed" role="alert">{failed}</p>
       <button type="button" className="ck-button-secondary chat-retry" onClick={() => onRetry(message)}>{chatTexts.retry}</button>
     </>}
-    {answer && paragraphs(answer.answer).map((paragraph, index) => <p key={index}>{modelText(paragraph)}</p>)}
+    {answer && paragraphs(answer.answer).map((paragraph, index) => <p key={index}><PrivateText>{modelText(paragraph)}</PrivateText></p>)}
     {answer && answer.verdicts.length > 0 && <div className="chat-verdicts">
       <h3>{chatTexts.verdicts}</h3>
       <ul className="chat-verdict-list">{answer.verdicts.map((item) => <li key={item.plan_id} className="chat-verdict-item">
         <span className={`chat-verdict chat-verdict-${verdictTones[item.verdict]}`}>{verdictWords[item.verdict]}</span>
         <span className="chat-verdict-name">{item.name ?? numbered('План', item.plan_id)}</span>
-        <span className="chat-verdict-why">{modelText(item.reason)}</span>
+        <span className="chat-verdict-why"><PrivateText>{modelText(item.reason)}</PrivateText></span>
       </li>)}</ul>
     </div>}
-    {answer && message.unverified.length > 0 && <p className="chat-unverified">{chatTexts.unverified} {message.unverified.join(', ')}.</p>}
+    {answer && message.unverified.length > 0 && <p className="chat-unverified">{chatTexts.unverified} <PrivateText numbers>{message.unverified.join(', ')}</PrivateText>.</p>}
     {answer && message.actions.length > 0 && <ul className="chat-actions">{message.actions.map((action: ChatAction, index) => {
       const key = actionKey(message, index)
       const done = isDone(action)
@@ -54,7 +55,7 @@ function ModelBubble({ message, failure, busyAction, actionErrors, onConfirm, on
         <button type="button" className={`chat-action${done ? ' chat-action-done' : ''}`} disabled={done || busyAction === key} aria-disabled={done || undefined}
           onClick={() => onConfirm(message, index)}>
           <Icon name="check" size={18} className="ck-icon chat-action-icon" />
-          <span>{busyAction === key ? chatTexts.sending : actionLabel(action)}</span>
+          <span><PrivateText>{busyAction === key ? chatTexts.sending : actionLabel(action)}</PrivateText></span>
         </button>
         {actionErrors[key] && <p className="chat-action-error" role="alert">{actionErrors[key]}</p>}
       </li>
@@ -126,8 +127,8 @@ export function ChatView({
       return <li key={item.id}>
         <Link className={`ck-row chat-thread${current ? ' chat-thread-current' : ''}`} to={threadHref(item.id)} aria-current={current ? 'page' : undefined}>
           <span className="ck-row-main">
-            <span className="ck-row-title">{threadTitle(item)}</span>
-            <span className="ck-row-meta">{item.last_answer_preview ? modelText(item.last_answer_preview) : chatTexts.noAnswer}</span>
+            <span className="ck-row-title"><PrivateText>{threadTitle(item)}</PrivateText></span>
+            <span className="ck-row-meta"><PrivateText>{item.last_answer_preview ? modelText(item.last_answer_preview) : chatTexts.noAnswer}</PrivateText></span>
           </span>
           <time className="chat-thread-date" dateTime={item.updated_at}>{threadDate(item.updated_at)}</time>
         </Link>
@@ -151,12 +152,12 @@ export function ChatView({
       {detail && <section className="chat-thread-panel" aria-labelledby="chat-thread-heading" aria-busy={waiting}>
         <div className="chat-thread-head">
           {/* The title of the thread is the heading of the page already (the top bar): here it only names the section. */}
-          <h2 id="chat-thread-heading" className="ck-visually-hidden">{threadTitle(detail.thread)}</h2>
+          <h2 id="chat-thread-heading" className="ck-visually-hidden"><PrivateText>{threadTitle(detail.thread)}</PrivateText></h2>
           <button type="button" className="chat-delete" disabled={deleteStep === 'busy'} onClick={() => onDelete('confirm')}>
             <Icon name="trash" size={18} className="ck-icon chat-delete-icon" />{deleteStep === 'busy' ? chatTexts.deleting : chatTexts.deleteThread}</button>
         </div>
         <ol className="chat-messages" aria-live="polite">{bubbles(detail.messages).map((bubble) => bubble.kind === 'person'
-          ? <li key={bubble.key} className="chat-bubble chat-bubble-person"><p>{bubble.text}</p></li>
+          ? <li key={bubble.key} className="chat-bubble chat-bubble-person"><p><PrivateText>{bubble.text}</PrivateText></p></li>
           : <ModelBubble key={bubble.key} message={bubble.message} failure={failures[bubble.message.id]} busyAction={busyAction} actionErrors={actionErrors}
             onConfirm={onConfirm} onRetry={onRetry} />)}</ol>
         {detail.messages.length > 0 && <p className="chat-note chat-thread-note">{chatTexts.note}</p>}

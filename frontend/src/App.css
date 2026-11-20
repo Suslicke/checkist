@@ -77,9 +77,9 @@ h1, h2, p, dd { margin: 0; }
 :where(button) .ck-money-frac, :where(button) .ck-money-cur, :where(.action-link) .ck-money-frac, :where(.action-link) .ck-money-cur { color: inherit; opacity: 0.85; }
 /* The twin of an amount in another currency: «≈ 8 979 ₸» beside «20 $». */
 .ck-twin { color: var(--ck-ink-2); font-size: var(--ck-text-label); font-weight: 500; white-space: nowrap; }
-/* «Скрывать суммы» (theme/privacy.ts): every sum is blurred and cannot be selected; Money gives the screen reader
-   «сумма скрыта» instead of the digits. */
-:root[data-privacy] .ck-money { filter: blur(0.35em); -webkit-user-select: none; user-select: none; }
+/* «Скрывать суммы» (theme/privacy.ts): every sum is blurred and cannot be selected — a `<Money>` and an amount written as
+   text (`.ck-private`, components/Private.tsx); both give the screen reader «сумма скрыта» instead of the digits. */
+:root[data-privacy] .ck-money, :root[data-privacy] .ck-private { filter: blur(0.35em); -webkit-user-select: none; user-select: none; }
 
 /* Buttons (components/Button): `button` and `.ck-btn` — the seal fill of the one main action of a screen; the tonal
    `.ck-button-secondary`, the word `.ck-button-ghost` and the outlined `.ck-button-danger` for the rest. A tap target of
@@ -246,7 +246,7 @@ main { padding-bottom: var(--ck-space-8); }
   button:where(:active:not(:disabled)) { transform: scale(0.97); }
   .ck-btn:where(:active), .action-link:where(:active) { transform: scale(0.97); }
   .ck-switch, .ck-switch::after { transition: background-color var(--ck-dur-state) var(--ck-ease-out), top var(--ck-dur-state) var(--ck-ease-out), left var(--ck-dur-state) var(--ck-ease-out), width var(--ck-dur-state) var(--ck-ease-out), height var(--ck-dur-state) var(--ck-ease-out); }
-  .ck-money { transition: filter var(--ck-dur-state) var(--ck-ease-out); }
+  .ck-money, .ck-private { transition: filter var(--ck-dur-state) var(--ck-ease-out); }
 }
 
 /* Forced colours: the drawn switch and a pressed icon button keep a frame of the system colours. */

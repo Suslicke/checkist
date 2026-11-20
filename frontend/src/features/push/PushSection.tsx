@@ -4,6 +4,7 @@ import { getPush, savePush, subscribePush, testPush, unsubscribePush, pushKinds 
 import type { PushKind, PushState, PushSubscriptionBody } from '../../api/push'
 import type { LocalApiResult } from '../../api/types'
 import Icon from '../../components/Icon'
+import { PrivateText } from '../../components/Private'
 import { formatMoney } from '../../lib/money'
 import { nativeSwitch } from '../auth/switch'
 import { DeviceRefusal, deviceSubscription, pushSupport, readDevice, subscribeDevice, unsubscribeDevice } from './push-device'
@@ -80,7 +81,7 @@ export function PushView({ state, onDevice, onKind, onThreshold, onTest }: PushV
               <label className="ck-switch-row push-kind" htmlFor={`push-${kind}-switch`}>
                 <span className="ck-row-main">
                   <span className="ck-row-title" id={`push-${kind}`}>{title}</span>
-                  <span className="ck-row-meta" id={`push-${kind}-meta`}>{meta(ready.push)}</span>
+                  <span className="ck-row-meta" id={`push-${kind}-meta`}><PrivateText>{meta(ready.push)}</PrivateText></span>
                 </span>
                 <input id={`push-${kind}-switch`} type="checkbox" role="switch" className="ck-switch" {...nativeSwitch} checked={on}
                   aria-labelledby={`push-${kind}`} aria-describedby={`push-${kind}-meta`} aria-disabled={busy || undefined} data-push-kind={kind}

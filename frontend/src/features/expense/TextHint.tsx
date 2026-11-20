@@ -5,6 +5,7 @@ import type { ManualParse, ManualParseDraft, ManualSuggestion } from '../../api/
 import ChipScroller from '../../components/ChipScroller'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import { createPollingRequest } from '../recognition/polling'
 import { todayISO } from './expense-form'
 import { isActive, PARSE_TEXT_MAX, PARSE_WAIT_MS, parseOutcome, parseTexts, requestFailureMessage } from './parse-text'
@@ -65,7 +66,7 @@ export function TextHintView({ text, view, onText, onSubmit, voice, suggestions 
     </ul>}
     {chips.length > 0 && <ChipScroller label="Частые траты" className="expense-frequent">
       <span className="expense-frequent-label" aria-hidden="true">Повторить:</span>
-      {chips.map((spend) => <button key={spend.receipt_id} type="button" className="ck-chip" onClick={() => onRepeat(spend)}>{chipText(spend)}</button>)}
+      {chips.map((spend) => <button key={spend.receipt_id} type="button" className="ck-chip" onClick={() => onRepeat(spend)}><PrivateText>{chipText(spend)}</PrivateText></button>)}
     </ChipScroller>}
   </form>
 }

@@ -9,6 +9,7 @@ import Money from '../../components/Money'
 import { HeaderSlot } from '../../components/PageHeader'
 import { usePageTitle } from '../../components/page-header'
 import PrivacyToggle from '../../components/PrivacyToggle'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import Sheet from '../../components/Sheet'
 import type { Person } from '../../lib/people'
@@ -20,6 +21,7 @@ import {
   formatMoney, hasLimit, initials, inMonth, monthIsEmpty, monthSlide, monthTitle, plural, progress, recentSource, relativeDay, shiftMonth,
 } from './dashboard-state'
 import { useSpendIcon } from '../../lib/list-icons'
+import { usePrivacy } from '../../theme/privacy'
 import type { MonthSlide } from './dashboard-state'
 import { categorySpendsHref } from './category-spends-state'
 import { currencySymbol } from '../../lib/money'
@@ -91,6 +93,8 @@ function PaceBar({ pace, currency }: { pace: Pace; currency: string }) {
 /** The one main number of the screen (`ck-money-hero`) with its label; a tap on the label opens «Главное число». */
 function Hero({ view, pace, scope, open, onOpen }: { view: HeroView; pace: Pace | null; scope: string; open: boolean; onOpen: () => void }) {
   const value = useRolled(view.value, scope)
+  // «Скрывать суммы»: the tooltip of the line under the number would show its sums as text — none then.
+  const hidden = usePrivacy()
   return <section className={`dash-hero is-${view.shown}`} aria-labelledby="dash-hero-label">
     <button type="button" className="dash-hero-pick" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? 'dash-figure-sheet' : undefined}
       aria-describedby="dash-hero-pick-hint" onClick={onOpen}>
@@ -103,8 +107,8 @@ function Hero({ view, pace, scope, open, onOpen }: { view: HeroView; pace: Pace 
         ? <><span className="dash-hero-wait" aria-hidden="true" /><span className="ck-visually-hidden">Загружаем</span></>
         : <Money value={value} currency={view.currency} size="hero" tone={view.over ? 'over' : undefined} />}
     </p>
-    {view.sub.length > 0 && <p className="dash-hero-sub" title={view.title}><Words phrases={view.sub} /></p>}
-    {view.note && <p className="dash-hero-note">{view.note}</p>}
+    {view.sub.length > 0 && <p className="dash-hero-sub" title={hidden ? undefined : view.title}><Words phrases={view.sub} /></p>}
+    {view.note && <p className="dash-hero-note"><PrivateText>{view.note}</PrivateText></p>}
     {pace && <PaceBar pace={pace} currency={view.currency} />}
   </section>
 }
@@ -122,7 +126,7 @@ function Pulse({ data, currency, current, date }: { data: Dashboard; currency: s
     </div>
     <p className="dash-pulse-x" aria-hidden="true">
       <span>{caption.start}</span>
-      <span className="dash-pulse-x-middle">{middle.map((part, index) => <span key={part} className={index === 0 && caption.middle.today ? 'dash-pulse-now' : undefined}>{index > 0 && ' · '}{part}</span>)}</span>
+      <span className="dash-pulse-x-middle">{middle.map((part, index) => <span key={part} className={index === 0 && caption.middle.today ? 'dash-pulse-now' : undefined}>{index > 0 && ' · '}<PrivateText>{part}</PrivateText></span>)}</span>
       <span>{caption.end}</span>
     </p>
   </div>
@@ -205,7 +209,8 @@ function Unconverted({ items }: { items: ExcludedSpends[] }) {
 function AttentionRow({ row }: { row: DashboardAttention }) {
   const badge = attentionBadge(row.kind)
   const amount = attentionAmount(row)
-  return <Link className="ck-row dash-attention-row" to={row.href} data-kind={row.kind} title={attentionMeta(row)}>
+  const hidden = usePrivacy()
+  return <Link className="ck-row dash-attention-row" to={row.href} data-kind={row.kind} title={hidden ? undefined : attentionMeta(row)}>
     <span className={`ck-row-badge dash-attention-badge is-${badge.tone}`} aria-hidden="true"><Icon name={badge.icon} size={20} /></span>
     <span className="ck-row-main">
       <span className="ck-row-title">{row.title}</span>

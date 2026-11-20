@@ -3,6 +3,8 @@ import type { FocusEvent, KeyboardEvent, PointerEvent } from 'react'
 import { cleanPoints, layoutLineChart, markerPath, periodStarts, seriesStyle } from './line.ts'
 import type { SeriesStyle } from './line.ts'
 import { useNarrow } from '../cards'
+import { PrivateText } from '../../components/Private'
+import { hasAmount, usePrivacy } from '../../theme/privacy'
 import LineValueCards from './LineValueCards.tsx'
 import { usePlotWidth } from './plot-width.ts'
 import { coordinate as c, nearestIndex } from './scale.ts'
@@ -102,6 +104,9 @@ export default function LineChart({
   })).filter((entry) => entry.points.length > 0), [series])
   const visible = useMemo(() => described.filter((entry) => !selection.hidden.includes(entry.item.key)), [described, selection.hidden])
   const height = heightFor(width)
+  // «Скрывать суммы»: a chart of amounts shows no numbers on its value axis, its values are blurred (Private.tsx).
+  const hidden = usePrivacy()
+  const amountAxis = hidden && described.some((entry) => entry.points.some((point) => hasAmount(point.valueText)))
   const layout = useMemo(() => layoutLineChart(
     visible.map((entry) => ({ key: entry.item.key, points: entry.points, endLabel: entry.endLabel })),
     { width, height, interval, connectGaps, zeroBaseline, formatValue, formatTick: formatTick ?? formatX },
@@ -194,7 +199,7 @@ export default function LineChart({
               <span className="ck-line-legend-text">
                 <span className="ck-line-badge">{entry.endLabel}</span>
                 {entry.item.label}
-                {entry.item.note && <span className="ck-chart-note"> · {entry.item.note}</span>}
+                {entry.item.note && <span className="ck-chart-note"> · <PrivateText>{entry.item.note}</PrivateText></span>}
               </span>
             </label>
           ))}
@@ -225,7 +230,7 @@ export default function LineChart({
           </g>
           <g className="ck-chart-axis">
             <line x1={c(plot.left)} x2={c(plot.right)} y1={c(plot.bottom)} y2={c(plot.bottom)} />
-            {layout.yTicks.map((tick) => (
+            {!amountAxis && layout.yTicks.map((tick) => (
               <text key={tick.position} x={c(plot.left - 6)} y={c(tick.position)} textAnchor="end" dominantBaseline="central">{tick.text}</text>
             ))}
             {layout.xTicks.map((tick) => (
@@ -273,7 +278,7 @@ export default function LineChart({
                 return (
                   <span key={visible[index].item.key} className="ck-line-tooltip-row">
                     <Swatch style={entry.style} />
-                    <strong>{wholeWords(value)}</strong>
+                    <strong>{hidden ? <PrivateText>{value}</PrivateText> : wholeWords(value)}</strong>
                     <span>{entry.label}</span>
                   </span>
                 )
@@ -297,7 +302,7 @@ export default function LineChart({
       <p className="ck-chart-note ck-line-keys" id={hintId}>
         Клавиши на графике: ← и → — соседний интервал, Home и End — первый и последний, Esc — снять выделение.
       </p>
-      <p className="ck-line-live" aria-live="polite" aria-atomic="true">{readout || 'Интервал не выбран.'}</p>
+      <p className="ck-line-live" aria-live="polite" aria-atomic="true"><PrivateText>{readout || 'Интервал не выбран.'}</PrivateText></p>
       <details className="ck-line-table">
         <summary>Таблица значений</summary>
         {/* A phone shows the same values as cards: an interval is a card, a series is a fact; no sideways scroll. */}
@@ -316,7 +321,7 @@ export default function LineChart({
                 <tr key={x}>
                   <th scope="row">{formatX(x)}</th>
                   {described.map((entry) => (
-                    <td key={entry.item.key} className="ck-chart-number">{entry.points.find((point) => point.x === x)?.valueText ?? '—'}</td>
+                    <td key={entry.item.key} className="ck-chart-number"><PrivateText>{entry.points.find((point) => point.x === x)?.valueText ?? '—'}</PrivateText></td>
                   ))}
                 </tr>
               ))}

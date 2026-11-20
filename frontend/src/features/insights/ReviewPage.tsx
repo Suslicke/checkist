@@ -3,9 +3,11 @@ import { getReview, getReviewRequest, requestReview } from '../../api/insights'
 import type { Figure, Review, ReviewFigures, ReviewMonth } from '../../api/insights'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import Private, { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import { formatCents, formatMoney } from '../../lib/money'
 import { buildRoute, Link } from '../../navigation'
+import { hideAmounts, usePrivacy } from '../../theme/privacy'
 import { cents, compareMonths, dashboardErrorMessage, deviceMonth, inMonth, monthTitle, plural, progress, shiftMonth } from '../dashboard/dashboard-state'
 import { StartChat } from '../chat/StartChat'
 import { follow } from './follow'
@@ -22,8 +24,10 @@ const madeAt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long',
 /** «▲ 73 893 ₸» beside an amount: more — the over tone, less — the income tone; the arrow and the words say it too. */
 export function DeltaBadge({ change, currency, label }: { change: string | null; currency: string; label: string }) {
   const value = delta(change, currency)
+  const hidden = usePrivacy()
   if (!value || value.tone === 'same') return null
-  return <span className={`ins-delta ins-delta-${value.tone}`} aria-label={`${label}: ${value.tone === 'more' ? 'больше' : 'меньше'} на ${value.text.slice(2)}`}>{value.text}</span>
+  const name = `${label}: ${value.tone === 'more' ? 'больше' : 'меньше'} на ${value.text.slice(2)}`
+  return <span className={`ins-delta ins-delta-${value.tone}`} aria-label={hidden ? hideAmounts(name) : name}><PrivateText>{value.text}</PrivateText></span>
 }
 
 /** «Август: 125 075 ₸ · среднее 120 305 ₸». */
@@ -38,11 +42,11 @@ function AiText({ review }: { review: Review }) {
   const answer = review.answer
   if (!answer) return null
   return <div className="ins-text">
-    <p>{modelText(answer.summary)}</p>
-    {answer.changes && <><h3>Что изменилось</h3><p>{modelText(answer.changes)}</p></>}
-    {answer.limits && <><h3>Лимиты</h3><p>{modelText(answer.limits)}</p></>}
-    {answer.advice.length > 0 && <><h3>Советы</h3><ol className="ins-advice">{answer.advice.map((item, index) => <li key={index}>{modelText(item)}</li>)}</ol></>}
-    {review.unverified.length > 0 && <p className="ins-unverified">{insightTexts.unverified} {review.unverified.join(', ')}.</p>}
+    <p><PrivateText>{modelText(answer.summary)}</PrivateText></p>
+    {answer.changes && <><h3>Что изменилось</h3><p><PrivateText>{modelText(answer.changes)}</PrivateText></p></>}
+    {answer.limits && <><h3>Лимиты</h3><p><PrivateText>{modelText(answer.limits)}</PrivateText></p></>}
+    {answer.advice.length > 0 && <><h3>Советы</h3><ol className="ins-advice">{answer.advice.map((item, index) => <li key={index}><PrivateText>{modelText(item)}</PrivateText></li>)}</ol></>}
+    {review.unverified.length > 0 && <p className="ins-unverified">{insightTexts.unverified} <PrivateText numbers>{review.unverified.join(', ')}</PrivateText>.</p>}
     <p className="ins-note">Текст написал ИИ {madeAt.format(new Date(review.created_at))} — он может ошибаться, цифры рядом считает сервер.</p>
   </div>
 }
@@ -64,9 +68,9 @@ function LimitRow({ item, currency }: { item: ReviewFigures['limits'][number]; c
   return <li className="ck-row ins-limit">
     <span className="ck-row-main">
       <span className="ck-row-title">{item.category}</span>
-      <span className="ck-row-meta ins-meta">Лимит {formatMoney(item.limit, currency)} · <span className={item.over || near ? 'ins-over' : undefined}>
-        {item.over ? `сверх на ${formatMoney(item.over, currency)}`
-          : `${near ? 'почти лимит, ' : ''}осталось ${formatCents(cents(item.limit) - cents(item.spent), currency)}`}</span></span>
+      <span className="ck-row-meta ins-meta">Лимит <Private>{formatMoney(item.limit, currency)}</Private> · <span className={item.over || near ? 'ins-over' : undefined}>
+        <PrivateText>{item.over ? `сверх на ${formatMoney(item.over, currency)}`
+          : `${near ? 'почти лимит, ' : ''}осталось ${formatCents(cents(item.limit) - cents(item.spent), currency)}`}</PrivateText></span></span>
     </span>
     <span className="ck-row-amount"><Money value={item.spent} currency={currency} size="row" /></span>
     {bar && <span className={`ck-bar ins-bar${item.over ? ' is-over' : near ? ' is-near' : ''}`} aria-hidden="true"><span style={{ width: `${bar.percent}%` }} /></span>}
@@ -90,10 +94,10 @@ export function ReviewView({ month, figures, review, status, onRefresh = () => {
         </div>
         <p className="ins-label">Потрачено {inMonth(month)}</p>
         <p className="ins-total"><Money value={figures.spent} currency={currency} size="hero" /></p>
-        {compare && <p className={`ins-compare ins-compare-${compare.tone}`}>{compare.text[0].toUpperCase() + compare.text.slice(1)}</p>}
+        {compare && <p className={`ins-compare ins-compare-${compare.tone}`}><PrivateText>{compare.text[0].toUpperCase() + compare.text.slice(1)}</PrivateText></p>}
         {figures.average !== null && <p className="ins-compare">Среднее прошлых месяцев — <Money value={figures.average} currency={currency} className="ins-value" />{' '}
           <DeltaBadge change={figures.change_average} currency={currency} label="К среднему" /></p>}
-        {figures.without_rate.length > 0 && <p className="ins-note">Без курса и не в цифрах: {figures.without_rate.map((item) => formatMoney(item.total, item.currency)).join(', ')}.</p>}
+        {figures.without_rate.length > 0 && <p className="ins-note">Без курса и не в цифрах: <PrivateText>{figures.without_rate.map((item) => formatMoney(item.total, item.currency)).join(', ')}</PrivateText>.</p>}
       </section>
 
       <section className="ck-panel ins-ai" aria-labelledby="ins-ai-heading" aria-busy={working}>
@@ -117,7 +121,7 @@ export function ReviewView({ month, figures, review, status, onRefresh = () => {
         <ul className="ck-list">{figures.categories.map((item) => <li key={item.id} className="ck-row">
           <span className="ck-row-main">
             <span className="ck-row-title">{item.name}</span>
-            <span className="ck-row-meta ins-meta">{compareMeta(item, month, currency)}</span>
+            <span className="ck-row-meta ins-meta"><PrivateText>{compareMeta(item, month, currency)}</PrivateText></span>
           </span>
           <span className="ins-amount">
             <span className="ck-row-amount"><Money value={item.spent} currency={currency} size="row" /></span>

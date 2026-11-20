@@ -3,6 +3,7 @@ import type { Page } from '../../api/types'
 import RequestState from '../../components/RequestState'
 import { formatPrice, formatPurchasedOn, formatQuantity } from '../../lib/format'
 import { formatMoney } from '../../lib/money'
+import Private from '../../components/Private'
 import { useNarrow } from '../../lib/cards'
 import { glue, numbered } from '../../lib/text'
 import { Link } from '../../navigation'
@@ -44,8 +45,8 @@ export default function MergeLines({ group, lines, onPage }: { group: MergeGroup
           <td><time dateTime={line.purchased_on}>{formatPurchasedOn(line.purchased_on)}</time></td>
           <td className="ck-merge-text">{line.store ? <>{line.store.name.trim() || 'Не указано'}<span className="ck-merge-subtext">{[line.store.city.trim(), line.store.country].filter(Boolean).join(' · ')}</span></> : 'Без места'}</td>
           <td className="ck-merge-number">{formatQuantity(line.quantity, line.unit)}</td>
-          <td className="ck-merge-number">{formatPrice(line.unit_price, line.currency)}</td>
-          <td className="ck-merge-number">{formatMoney(line.amount, line.currency)}</td>
+          <td className="ck-merge-number"><Private>{formatPrice(line.unit_price, line.currency)}</Private></td>
+          <td className="ck-merge-number"><Private>{formatMoney(line.amount, line.currency)}</Private></td>
           <td className="ck-merge-whole">{line.receipt_id === null ? 'Чужая покупка'
             : <><Link to={{ kind: 'receipt', receiptId: line.receipt_id }}>{numbered('Чек', line.receipt_id)}</Link><span className="ck-merge-subtext">{glue('позиция', line.position)}</span></>}</td>
         </tr>)}</tbody>

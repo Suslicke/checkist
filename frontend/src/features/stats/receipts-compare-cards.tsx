@@ -1,3 +1,4 @@
+import { PrivateText } from '../../components/Private'
 import type { CompareCurrency, CompareProduct } from '../../api/stats'
 import { Card, CardList } from '../../lib/cards'
 import type { CardFact } from '../../lib/cards'
@@ -54,7 +55,7 @@ export function EffectCards({ block, parts, columns, labelledBy }: { block: Comp
 function pair(key: string, label: string, base: string, current: string): CardFact {
   return {
     key, label, kind: 'text',
-    value: <><span className="stats-number">{glue(base, '→')}</span> <span className="stats-number">{current}</span></>,
+    value: <><span className="stats-number"><PrivateText>{glue(base, '→')}</PrivateText></span> <span className="stats-number"><PrivateText>{current}</PrivateText></span></>,
   }
 }
 

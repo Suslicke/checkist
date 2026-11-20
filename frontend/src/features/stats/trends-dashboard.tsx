@@ -3,12 +3,14 @@ import { useId, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import type { TrendsLimits, TrendsMonthly, TrendsMonthlyCurrency, TrendsPrices } from '../../api/trends'
 import Money from '../../components/Money'
+import { PrivateText } from '../../components/Private'
 import RequestState from '../../components/RequestState'
 import { categoryTone } from '../../lib/category-tone'
 import { useNarrow } from '../../lib/cards'
 import { sparkline } from '../../lib/charts/sparkline'
 import { currencySymbol } from '../../lib/money'
 import { Link } from '../../navigation'
+import { usePrivacy } from '../../theme/privacy'
 import type { TrendsQuery } from '../../navigation'
 import { Badge, Failure, Panel } from './trends-blocks'
 import { indexSummary, limitRows, loadingOf, monthName, monthRowHeadings, monthRows, moverCounts, spendSummary } from './trends-state'
@@ -73,7 +75,7 @@ export function SummaryStrip({ monthly, prices }: { monthly: BlockState<TrendsMo
           <article key={`index-${block.currency}`} className="trends-card">
             <p className="trends-card-label">Цены на те же товары{indices.length > 1 && <> · {currencySymbol(block.currency)}</>}</p>
             <p className="trends-big"><Badge badge={summary.badge} /></p>
-            <p className="trends-card-note">{summary.text}</p>
+            <p className="trends-card-note"><PrivateText>{summary.text}</PrivateText></p>
             <p className="trends-card-note">{moverCounts(block)}</p>
           </article>
         )
@@ -108,7 +110,7 @@ export function MonthRowCards({ rows, label, currency }: { rows: readonly MonthR
               <span className="trends-mm-head">
                 {row.depth === 0 && <span className="trends-dot" aria-hidden="true" />}
                 <span className="trends-mm-name">{row.name}</span>
-                <span className="trends-mm-last trends-value">{row.lastValue === null ? row.last : <Money value={row.lastValue} currency={currency} size="row" />}</span>
+                <span className="trends-mm-last trends-value">{row.lastValue === null ? <PrivateText>{row.last}</PrivateText> : <Money value={row.lastValue} currency={currency} size="row" />}</span>
               </span>
               <span className="trends-mm-meta">
                 <RowTrend row={row} />
@@ -120,14 +122,14 @@ export function MonthRowCards({ rows, label, currency }: { rows: readonly MonthR
                 {[...row.months].reverse().map((cell) => (
                   <li key={cell.month} className="trends-month-strip-row">
                     <time dateTime={`${cell.month}-01`}>{cell.title}</time>
-                    <span className="trends-value">{cell.amount}</span>
+                    <span className="trends-value"><PrivateText>{cell.amount}</PrivateText></span>
                     <span className="trends-month-strip-change">{cell.badge ? <Badge badge={cell.badge} /> : '—'}</span>
                   </li>
                 ))}
               </ol>
               <dl className="trends-mm-totals">
-                <div><dt>{monthColumns.total}</dt><dd className="trends-value">{row.total}</dd></div>
-                <div><dt>{monthColumns.average}</dt><dd className="trends-value">{row.average}</dd></div>
+                <div><dt>{monthColumns.total}</dt><dd className="trends-value"><PrivateText>{row.total}</PrivateText></dd></div>
+                <div><dt>{monthColumns.average}</dt><dd className="trends-value"><PrivateText>{row.average}</PrivateText></dd></div>
               </dl>
               <Link className="trends-link" to={row.href}>Категория во времени →</Link>
             </div>
@@ -172,9 +174,9 @@ function MonthToMonthCurrency({ block, query, several }: { block: TrendsMonthlyC
                   <tr key={row.key} className={row.depth > 0 ? 'trends-sub-row' : undefined}>
                     <th scope="row"><Link to={row.href}>{row.name}</Link></th>
                     <td><RowTrend row={row} /></td>
-                    {row.months.map((cell) => <td key={cell.month} className="trends-number">{cell.amount}</td>)}
-                    <td className="trends-number">{row.total}</td>
-                    <td className="trends-number">{row.average}</td>
+                    {row.months.map((cell) => <td key={cell.month} className="trends-number"><PrivateText>{cell.amount}</PrivateText></td>)}
+                    <td className="trends-number"><PrivateText>{row.total}</PrivateText></td>
+                    <td className="trends-number"><PrivateText>{row.average}</PrivateText></td>
                     <td className="trends-number">{row.badge ? <Badge badge={row.badge} /> : '—'}</td>
                   </tr>
                 ))}
@@ -207,12 +209,14 @@ export function MonthToMonthBlock({ state, query, onRetry }: { state: BlockState
  */
 function LimitMonth({ cell, currency }: { cell: LimitCell; currency: string }) {
   const level = cell.over ? ' is-over' : cell.near ? ' is-near' : ''
+  // «Скрывать суммы»: the tooltip would show the sums as text — none then.
+  const hidden = usePrivacy()
   return (
     <li className={`trends-cell${cell.over ? ' trends-cell-over' : ''}${cell.near ? ' trends-cell-near' : ''}${cell.none ? ' trends-cell-none' : ''}`}
-      title={`${cell.title}: ${cell.spent}${cell.none ? ', без лимита' : `, ${cell.percent} лимита ${cell.limit}`}${cell.change ? `; ${cell.change}` : ''}`}>
+      title={hidden ? undefined : `${cell.title}: ${cell.spent}${cell.none ? ', без лимита' : `, ${cell.percent} лимита ${cell.limit}`}${cell.change ? `; ${cell.change}` : ''}`}>
       <span className="trends-cell-month">
         <time dateTime={`${cell.month}-01`}>{cell.short}</time>
-        {cell.change && <span className="trends-cell-change"><span aria-hidden="true"> ◆</span><span className="trends-visually-hidden">, {cell.change}</span></span>}
+        {cell.change && <span className="trends-cell-change"><span aria-hidden="true"> ◆</span><span className="trends-visually-hidden">, <PrivateText numbers>{cell.change}</PrivateText></span></span>}
       </span>
       <span className={`trends-cell-bar ck-bar${level}`} aria-hidden="true"><span style={{ width: `${cell.fill}%` }} /></span>
       <span className="trends-cell-percent trends-value">{cell.over && <span aria-hidden="true">▲ </span>}{cell.percent}</span>
@@ -260,7 +264,7 @@ export function LimitsBlock({ state, onRetry }: { state: BlockState<TrendsLimits
                   {free > 0 && row.limitedCount > 0 && ` Без лимита: ${free} мес.`}
                 </p>
                 {row.changes.length > 0 && <ul className="trends-limit-changes" aria-label={`${row.name}: изменения лимита`}>
-                  {row.changes.map((text) => <li key={text}><span aria-hidden="true">◆ </span>{text}</li>)}
+                  {row.changes.map((text) => <li key={text}><span aria-hidden="true">◆ </span><PrivateText numbers>{text}</PrivateText></li>)}
                 </ul>}
               </div>
             </li>

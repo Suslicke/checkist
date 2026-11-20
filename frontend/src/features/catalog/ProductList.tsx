@@ -1,6 +1,7 @@
 import type { Product } from '../../api/types'
 import { useDesktop, useNarrow } from '../../lib/cards'
 import { formatPrice, formatPurchasedOn, formatQuantity } from '../../lib/format'
+import Private from '../../components/Private'
 import { Link } from '../../navigation'
 import { ClassificationBadge } from '../classification/ClassificationMarks'
 import { markFor } from '../classification/marks'
@@ -17,7 +18,7 @@ type Price = Product['prices'][number]
  * say «Страна: DE», the rows and the table just «DE»); a purchase without a place reads NO_PLACE everywhere. */
 function LastPurchase({ price: { country, currency, last }, place = country ?? NO_PLACE }: { price: Price; place?: string }) {
   return <>
-    <span className="ck-catalog-price">{formatPrice(last.paid_unit_price, currency)}</span>
+    <Private className="ck-catalog-price">{formatPrice(last.paid_unit_price, currency)}</Private>
     <span className="ck-catalog-note">{place} · <time dateTime={last.purchased_on}>{formatPurchasedOn(last.purchased_on)}</time>{last.manual && ` · ${MANUAL_MARK}`}</span>
   </>
 }

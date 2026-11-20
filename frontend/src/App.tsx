@@ -6,6 +6,7 @@ import RequestState from './components/RequestState'
 import ScreenBoundary, { ScreenFallback, ScreenSkeleton } from './components/ScreenBoundary'
 import NetworkBar from './components/NetworkBar'
 import Icon from './components/Icon'
+import { PrivateText } from './components/Private'
 import { PageHeaderContext } from './components/page-header'
 import type { PageHeaderSlots } from './components/page-header'
 // The screens come in parts of the build (screens.ts); only the sign-in is in the shell: a guest sees it first.
@@ -324,13 +325,13 @@ export default function App() {
         <main id="main" ref={content}>
           {/* The short bar of an iOS section root: pinned above the large title, it shows the title once the large one
               has gone under it. A picture of the heading: the screen reader reads the heading itself. */}
-          <div className="ck-topbar" data-nav={nav} ref={shortBar} aria-hidden="true"><span className="ck-topbar-title">{heading1}</span></div>
+          <div className="ck-topbar" data-nav={nav} ref={shortBar} aria-hidden="true"><span className="ck-topbar-title"><PrivateText>{heading1}</PrivateText></span></div>
           {/* The header row of the page: the top bar of a phone (iOS: «‹ Траты», the title in the middle; Android: «←» and
               the title on the left), the large title of an iOS section root, the heading of a wide screen. */}
           <div className="intro" data-nav={nav} ref={headerRow}>
             {action?.kind === 'back' && <BackLink action={action} name={backName(navigation, action)} />}
             <div className="intro-slot" ref={setHeadStart} />
-            <h1 id="page-heading" ref={heading} tabIndex={-1}>{heading1}</h1>
+            <h1 id="page-heading" ref={heading} tabIndex={-1}><PrivateText>{heading1}</PrivateText></h1>
             <div className="intro-slot" ref={setHeadEnd} />
             {signedIn && view === 'page' && !focus && <Link className="ck-chat-link ck-chat-link-page" to="/chat" aria-label="Чат с ИИ"><Icon name="insight" size={20} /></Link>}
             {action?.kind === 'close' && <Link className="ck-close" back={action.step} to={action.to} aria-label={action.label}><Icon name="close" size={20} /></Link>}

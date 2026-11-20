@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getIncomeSummary, INCOME_CHANGED } from '../../api/incomes'
 import type { IncomeSummary as Summary } from '../../api/incomes'
+import { PrivateText } from '../../components/Private'
 import { Link } from '../../navigation'
 import { summaryParts } from './incomes-state'
 import './Incomes.css'
@@ -14,7 +15,7 @@ export function IncomeSummaryView({ data }: { data: Summary }) {
     <dl className="inc-summary-list">
       {parts.map((part) => <div key={part.label} className="inc-summary-item">
         <dt>{part.label}</dt>
-        <dd className="ck-figures">{part.value}{part.note && <span className="inc-summary-note"> ({part.note})</span>}</dd>
+        <dd className="ck-figures"><PrivateText>{part.value}</PrivateText>{part.note && <span className="inc-summary-note"> ({part.note})</span>}</dd>
       </div>)}
     </dl>
     <Link className="inc-summary-link" to={`/incomes?month=${data.month}`}>Доходы</Link>

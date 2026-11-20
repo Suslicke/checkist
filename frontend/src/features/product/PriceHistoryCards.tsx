@@ -1,4 +1,5 @@
 import { Link } from '../../navigation'
+import Private from '../../components/Private'
 import type { PricePoint, Store } from '../../api/types'
 import { Card, CardList } from '../../lib/cards'
 import type { CardFact } from '../../lib/cards'
@@ -9,8 +10,9 @@ import { MANUAL_MARK, storeLabel } from './state'
 /** Headings of the history columns: the table and the cards show the same texts, in this order. */
 export type HistoryColumns = Record<'store' | 'date' | 'list' | 'paid' | 'normalized' | 'purchase', string>
 
-/** A price in the figures font of the money (`.ck-figures`): the same markup in a cell of the table and a fact of a card. */
-export const Figure = ({ children }: { children: string }) => <span className="ck-figures">{children}</span>
+/** A price in the figures font of the money (`.ck-figures`): the same markup in a cell of the table and a fact of a card;
+ * blurred while «Скрывать суммы» is on (`Private`). */
+export const Figure = ({ children }: { children: string }) => <Private className="ck-figures">{children}</Private>
 
 /** The phone view of the price history: one card per purchase, the store is its heading.
     A foreign purchase has no receipt or position: the card is identified by its place on the page. */

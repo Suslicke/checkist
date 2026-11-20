@@ -1,6 +1,7 @@
 import type { PriceSummary as SummaryData } from '../../api/types'
 import RequestState from '../../components/RequestState'
 import { useLocalRequestFocus } from '../../components/useLocalRequestFocus'
+import Private from '../../components/Private'
 import { formatPercent, formatPrice, formatPurchasedOn, formatUnit } from '../../lib/format'
 import ProductRequestState from './ProductRequestState'
 import { storeLabel } from './state'
@@ -24,11 +25,11 @@ export default function PriceSummary({ state, retry, reset }: {
             <p className="product-summary-unit">{group.currency} / {formatUnit(group.unit)}</p>
             <dl className="product-facts">
               <div><dt>Число покупок</dt><dd className="product-number">{group.total.count.toLocaleString('ru-RU')}</dd></div>
-              <div><dt>Минимальная</dt><dd className="product-number">{formatPrice(group.total.min, group.currency, group.unit)}</dd></div>
-              <div><dt>Максимальная</dt><dd className="product-number">{formatPrice(group.total.max, group.currency, group.unit)}</dd></div>
-              <div><dt>Средняя</dt><dd className="product-number">{formatPrice(group.total.avg, group.currency, group.unit)}</dd></div>
-              <div><dt>Первая цена</dt><dd className="product-number">{formatPrice(group.total.first.price, group.currency, group.unit)}<span className="product-subtext"><time dateTime={group.total.first.purchased_on}>{formatPurchasedOn(group.total.first.purchased_on)}</time></span></dd></div>
-              <div><dt>Последняя цена</dt><dd className="product-number">{formatPrice(group.total.last.price, group.currency, group.unit)}<span className="product-subtext"><time dateTime={group.total.last.purchased_on}>{formatPurchasedOn(group.total.last.purchased_on)}</time></span></dd></div>
+              <div><dt>Минимальная</dt><dd className="product-number"><Private>{formatPrice(group.total.min, group.currency, group.unit)}</Private></dd></div>
+              <div><dt>Максимальная</dt><dd className="product-number"><Private>{formatPrice(group.total.max, group.currency, group.unit)}</Private></dd></div>
+              <div><dt>Средняя</dt><dd className="product-number"><Private>{formatPrice(group.total.avg, group.currency, group.unit)}</Private></dd></div>
+              <div><dt>Первая цена</dt><dd className="product-number"><Private>{formatPrice(group.total.first.price, group.currency, group.unit)}</Private><span className="product-subtext"><time dateTime={group.total.first.purchased_on}>{formatPurchasedOn(group.total.first.purchased_on)}</time></span></dd></div>
+              <div><dt>Последняя цена</dt><dd className="product-number"><Private>{formatPrice(group.total.last.price, group.currency, group.unit)}</Private><span className="product-subtext"><time dateTime={group.total.last.purchased_on}>{formatPurchasedOn(group.total.last.purchased_on)}</time></span></dd></div>
               <div><dt>Изменение</dt><dd className="product-number">{group.total.change_percent === null ? <span className="product-cell-text">Нет данных для расчёта</span> : formatPercent(group.total.change_percent)}</dd></div>
             </dl>
           </li>

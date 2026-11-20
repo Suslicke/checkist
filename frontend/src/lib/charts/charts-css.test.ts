@@ -38,9 +38,10 @@ describe('stylesheet guards (text of the rules, not rendering)', () => {
     expect(rule(charts, '.ck-line-tooltip[data-side="right"]')).toBe('margin-left: 12px;')
     expect(rule(charts, '.ck-line-tooltip[data-side="left"]')).toBe('margin-right: 12px;')
     expect(rules(charts).filter((item) => item.selector.includes('ck-line-tooltip') && item.body.includes('transform'))).toEqual([])
-    // The gap takes its length from lineTooltipAnchor, and a value in the tooltip wraps only between whole words.
+    // The gap takes its length from lineTooltipAnchor, and a value in the tooltip wraps only between whole words (while
+    // «Скрывать суммы» is on, the value is blurred instead: an amount is one unbreakable piece then).
     expect(lineSource).toContain('<span className="ck-line-tooltip-gap" style={{ flexBasis:')
-    expect(lineSource).toContain('<strong>{wholeWords(value)}</strong>')
+    expect(lineSource).toContain('<strong>{hidden ? <PrivateText>{value}</PrivateText> : wholeWords(value)}</strong>')
   })
   it('never tears a value: numbers, whole words and interval names keep one line at every width', () => {
     expect(rule(charts, '.ck-chart-number')).toContain('white-space: nowrap')

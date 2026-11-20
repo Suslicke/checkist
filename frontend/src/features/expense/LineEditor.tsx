@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Category } from '../../api/types'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import Private, { PrivateText } from '../../components/Private'
 import { formatMoney } from '../../lib/money'
 import { categoryTree, LINES_MAX, sentIndexes } from './expense-form'
 import type { ExpenseErrors } from './expense-form'
@@ -96,9 +97,9 @@ export default function LineEditor({ lines, errors, chips, currency, onChange: c
           onClick={() => toggle(line.key)}>
           <span className="expense-line-text">
             <span className="expense-line-title">{summary.title}</span>
-            {summary.detail && <span className="expense-line-detail">{summary.detail}</span>}
+            {summary.detail && <span className="expense-line-detail"><PrivateText>{summary.detail}</PrivateText></span>}
           </span>
-          <span className="expense-line-sum">{summary.value === undefined ? summary.sum : <Money value={summary.value} currency={currency} size="row" />}</span>
+          <span className="expense-line-sum">{summary.value === undefined ? <PrivateText>{summary.sum}</PrivateText> : <Money value={summary.value} currency={currency} size="row" />}</span>
           <Chevron />
         </button>}
         {unfolded && <div id={id('fields')} className="expense-line-fields">
@@ -148,7 +149,7 @@ export default function LineEditor({ lines, errors, chips, currency, onChange: c
     {!hasService && lines.length < LINES_MAX - 1 && <button type="button" className="ck-button-ghost expense-add-line expense-add-service" onClick={addService}>
       <Icon name="plus" size={18} />Обслуживание %</button>}
     {extraDiscount && <p className="expense-hint-note expense-extra-discount">
-      Скидка на весь чек: −{formatMoney(extraDiscount, currency)}, уже вычтена из итога.</p>}
+      Скидка на весь чек: <Private>{`−${formatMoney(extraDiscount, currency)}`}</Private>, уже вычтена из итога.</p>}
     {errors.lines && <p className="expense-error" id={errorId('lines')}>{errors.lines}</p>}
   </div>
 }

@@ -3,6 +3,7 @@ import type { Discount, Line, Receipt, Tax } from '../../api/receipts'
 import type { ReceiptImage } from '../../api/recognition'
 import Icon from '../../components/Icon'
 import Money from '../../components/Money'
+import Private, { PrivateText } from '../../components/Private'
 import RecognitionIssues from '../../components/RecognitionIssues'
 import { imageLabels } from '../../lib/recognition-labels'
 import { formatObservedAt, formatPercent, formatQuantity } from '../../lib/format'
@@ -71,7 +72,7 @@ export function ReceiptHeader({ receipt, showOwner = false, photo, categories = 
     </div>
     <p className="receipt-head-total"><span className="receipt-head-label">Итог</span>
       <Money value={receipt.total} currency={receipt.currency} size="display" />
-      {twin && <span className="receipt-head-twin">{twin} по курсу Нацбанка на день покупки</span>}</p>
+      {twin && <span className="receipt-head-twin"><Private>{twin}</Private> по курсу Нацбанка на день покупки</span>}</p>
     {/* «сегодня, 19:42 · Анна · Фото · Kaspi Gold»: the facts of the moment as quiet chips; each keeps its name for a screen reader. */}
     <dl className="receipt-head-meta">
       {/* The time of a manual spend is the moment of entry, not of the purchase: only the date is shown. */}
@@ -123,7 +124,7 @@ export function CurrencyNote({ currency }: { currency?: string }) {
 /** «В чеке: …» under a line whose price was recalculated from its amount; nothing otherwise. */
 function PrintedNote({ line, currency }: { line: Line; currency?: string }) {
   const note = printedNote(line, currency)
-  return note ? <span className="receipt-note">{note}</span> : null
+  return note ? <span className="receipt-note"><PrivateText>{note}</PrivateText></span> : null
 }
 
 function LineRelations({ line, lines }: { line: Line; lines: Line[] }) {
@@ -159,11 +160,12 @@ function LineName({ line }: { line: Line }) {
     : <span className="receipt-printed-name">{name}</span>
 }
 
-/** One row of the paper: the words at the left, dotted leaders, the number at the right (it never wraps). */
+/** One row of the paper: the words at the left, dotted leaders, the number at the right (it never wraps). The number is
+ * an amount: «Скрывать суммы» blurs it in its mono type (`Private`), and the price of «2 шт × 1,29» in the words. */
 export function SlipRow({ label, value, className }: { label: ReactNode; value: string; className?: string }) {
   return <div className={className ? `receipt-slip-row ${className}` : 'receipt-slip-row'}>
-    <span className="receipt-slip-label">{label}</span>
-    <span className="receipt-slip-value"><span className="receipt-visually-hidden">: </span>{value}</span>
+    <span className="receipt-slip-label">{typeof label === 'string' ? <PrivateText>{label}</PrivateText> : label}</span>
+    <span className="receipt-slip-value"><span className="receipt-visually-hidden">: </span>{value === unknown ? value : <Private>{value}</Private>}</span>
   </div>
 }
 
@@ -187,7 +189,7 @@ export function ReceiptLines({ lines, currency, manual = false }: { lines: Line[
         <span className="receipt-position-badge" data-tone={line.category ? categoryTone(line.category.id) : undefined} aria-hidden="true" />
         <span className="receipt-position-main">
           <LineName line={line} />
-          {meta && <span className="receipt-note">{meta}</span>}
+          {meta && <span className="receipt-note"><PrivateText>{meta}</PrivateText></span>}
           <PrintedNote line={line} currency={currency} />
           <LineRelations line={line} lines={lines} />
         </span>
