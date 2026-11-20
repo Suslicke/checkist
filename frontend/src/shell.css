@@ -152,13 +152,16 @@ footer { padding: var(--ck-space-5) 0 var(--ck-space-8); border-top: 1px solid v
   /* «Назад»: iOS — the chevron and the name of the screen it leads to in the brand ink («‹ Траты»); Android — «←» as an
      icon button. The name stays the text of the link on both: the screen reader says «Назад: Траты». */
   .ck-back { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: var(--ck-tap); min-height: var(--ck-tap); margin: 0; padding: 0; border: 0; border-radius: var(--ck-radius-pill); background: none; color: var(--ck-ink); text-decoration: none; }
-  .ck-back-chevron, .ck-back-text { display: none; }
+  /* Android shows the arrow alone: the words stay the name of the link for the screen reader («Назад: Траты»), hidden
+     from the eye only — `display: none` left TalkBack an unnamed link. */
+  .ck-back-chevron { display: none; }
+  .ck-back-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   :root:not([data-platform="ios"]) .ck-back { width: 48px; height: 48px; border-radius: 50%; }
   :root:not([data-platform="ios"]) .ck-back:where(:hover) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
   :root[data-platform="ios"] .ck-back { justify-content: flex-start; max-width: 40%; padding-right: var(--ck-space-2); color: var(--ck-seal-ink); font-size: var(--ck-text-title); font-weight: 400; white-space: nowrap; }
   :root[data-platform="ios"] .ck-back-arrow { display: none; }
   :root[data-platform="ios"] .ck-back-chevron { display: block; flex: none; margin-right: -2px; stroke-width: 2.4; }
-  :root[data-platform="ios"] .ck-back-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  :root[data-platform="ios"] .ck-back-text { position: static; display: block; width: auto; height: auto; min-width: 0; overflow: hidden; clip-path: none; text-overflow: ellipsis; }
 
   /* «✕» of a focus screen: iOS — a small circle of surface-2 inside the 44 px target; Android — an icon button. */
   :root[data-platform="ios"] .ck-close { padding: 7px; border: 0; background: var(--ck-surface-2); background-clip: content-box; }

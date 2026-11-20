@@ -238,6 +238,10 @@ describe('the top bar of a phone (text of the rules)', () => {
     expect(rule(`${ios} .ck-back-arrow`, narrow)).toBe('display: none;')
     expect(rule('.ck-back-chevron', narrow)).toBe('display: none;')
     expect(rule(`${ios} .ck-back-text`, narrow)).toContain('display: block;')
+    // Android draws the arrow alone, but the words stay the name of the link (hidden from the eye, never display: none).
+    expect(rule('.ck-back-text', narrow)).toBe('position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;')
+    expect(rule(`${ios} .ck-back-text`, narrow)).toContain('position: static;')
+    expect(rule(`${ios} .ck-back-text`, narrow)).toContain('clip-path: none;')
   })
 
   it('draws the round controls of a page and «✕» as targets of a tap', () => {
