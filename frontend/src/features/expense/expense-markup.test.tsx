@@ -236,9 +236,12 @@ describe('a manual spend on the receipt screens', () => {
     expect(html).toContain('>Отмена</button>')
     expect(renderToStaticMarkup(<ManualSpendActions receiptId={90} initial={{ kind: 'failed', message: 'Сбой.' }} />)).toContain('role="alert">Сбой.</p>')
   })
-  it('keeps its bottom bar under the dialog on a phone', () => {
+  it('keeps its row of actions under the dialog on a phone, a row of the page and not a pinned bar', () => {
     const html = renderToStaticMarkup(<ManualSpendActions receiptId={90} narrow initial={{ kind: 'confirm' }} />)
-    expect(html.startsWith('<div class="receipt-actions expense-manual-actions ck-action-bar">')).toBe(true)
+    expect(html.startsWith('<div class="receipt-actions expense-manual-actions">')).toBe(true)
+    // The tiles stand in the toolbar of the page (Receipts.css, display: contents): the class of a pinned bar would lift
+    // the FAB of Android over an empty place (shell.css, :has(main .ck-action-bar)).
+    expect(html).not.toContain('ck-action-bar')
     expect(html).toContain('href="/receipts/90/edit">Изменить</a>')
     expect(html).toContain('Удалить трату?</h2>')
     expect(renderToStaticMarkup(<ManualSpendActions receiptId={90} narrow />)).not.toContain('alertdialog')

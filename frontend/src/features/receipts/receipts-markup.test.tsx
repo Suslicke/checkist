@@ -310,7 +310,9 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     const withPhoto = { ...receipt, preview_image_url: '/media/receipts/71.jpg', preview_thumb_url: '/media/receipts/71-thumb.jpg' }
     const phone = renderToStaticMarkup(<ReceiptView {...view} header={{ state: { kind: 'ok', data: withPhoto }, retry: noop }} narrow />)
     // The last things of the head, before the paper: the tiles, then «Спросить ИИ» in the gold of the assistant.
-    expect(phone).toContain('<div class="receipt-toolbar"><div class="receipt-actions receipt-delete-bar ck-action-bar"><a class="action-link receipt-primary" href="/receipts/71/edit">Изменить</a><button type="button" class="receipt-secondary" aria-label="Удалить чек" aria-expanded="false">Удалить</button></div></div><button type="button" class="receipt-ask chat-ask-spend" data-chat-start="spend"><svg')
+    expect(phone).toContain('<div class="receipt-toolbar"><div class="receipt-actions receipt-delete-bar"><a class="action-link receipt-primary" href="/receipts/71/edit">Изменить</a><button type="button" class="receipt-secondary" aria-label="Удалить чек" aria-expanded="false">Удалить</button></div></div><button type="button" class="receipt-ask chat-ask-spend" data-chat-start="spend"><svg')
+    // A row of tiles of the page, not a pinned bar: the class of one would lift the FAB of Android (shell.css).
+    expect(phone).not.toContain('ck-action-bar')
     expect(phone).toContain('</svg>Спросить ИИ об этой трате</button></section><div class="receipt-slip-wrap">')
     expect(phone.indexOf('receipt-toolbar')).toBeLessThan(phone.indexOf('id="receipt-images"'))
     expect(phone).toContain('<button type="button" class="receipt-photo-thumb" aria-haspopup="dialog" aria-expanded="false"><img src="/media/receipts/71-thumb.jpg" alt=""')

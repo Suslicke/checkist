@@ -28,7 +28,7 @@ export function ReceiptDeleteActions({ receiptId, initial = { kind: 'idle' }, in
   useEffect(() => { if (asking) choice.current?.focus() }, [asking])
 
   // «Изменить» — та же форма траты, что у траты вручную (единая форма, 2026-10-13); фото остаётся рядом для сверки.
-  const bar = <div className="receipt-actions receipt-delete-bar ck-action-bar">
+  const bar = <div className="receipt-actions receipt-delete-bar">
     <Link className="action-link receipt-primary" to={`/receipts/${receiptId}/edit`}>Изменить</Link>
     <button type="button" className="receipt-secondary" aria-label="Удалить чек" aria-expanded={step.kind !== 'idle'}
       onClick={() => setStep(step.kind === 'idle' ? askDelete() : { kind: 'idle' })}>Удалить</button>

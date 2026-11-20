@@ -55,7 +55,7 @@ function useSpendDeletion(receiptId: number, initial: DeleteStep, what = SPEND) 
 export function ManualSpendActions({ receiptId, initial = { kind: 'idle' } }: { receiptId: number; initial?: DeleteStep; narrow?: boolean }) {
   const { step, setStep, dialog } = useSpendDeletion(receiptId, initial)
   return <>
-    <div className="receipt-actions expense-manual-actions ck-action-bar">
+    <div className="receipt-actions expense-manual-actions">
       <Link className="action-link receipt-primary" to={`/receipts/${receiptId}/edit`}>Изменить</Link>
       <Link className="action-link receipt-secondary expense-repeat" to={`/receipts/new?repeat=${receiptId}`}>Повторить</Link>
       <button type="button" className="receipt-secondary" onClick={() => setStep({ kind: 'confirm' })}>Удалить</button>
