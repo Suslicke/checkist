@@ -2,8 +2,8 @@
    page, the state said in words with its picture; only a refusal of the server is said in the error colour, with its
    words. Colours — 2.0 tokens only (theme/tokens.css); font sizes — the 2.0 scale only. */
 
-/* The strip at the top of the window. iOS paints the page under its status bar (black-translucent): the strip starts
-   under it (env(safe-area-inset-top)). */
+/* The strip at the top of the window, below the cut-out of a phone held on its side or in a browser that paints under it
+   (env(safe-area-inset-top); 0 under the "default" status bar of an installed iPhone app). */
 .offline-banner {
   display: flex;
   align-items: flex-start;

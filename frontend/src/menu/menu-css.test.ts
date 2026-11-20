@@ -200,7 +200,7 @@ describe('the top bar of a phone (text of the rules)', () => {
     expect(intro).toContain('env(safe-area-inset-left, 0px)')
     expect(intro).toContain('env(safe-area-inset-right, 0px)')
     expect(intro).toContain('background: var(--ck-paper);')
-    expect(html).toContain('<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />')
+    expect(html).toContain('<meta name="apple-mobile-web-app-status-bar-style" content="default" />')
     expect(html).toContain('<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />')
   })
 

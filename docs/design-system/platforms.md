@@ -50,7 +50,7 @@ if (ios && 'switch' in HTMLInputElement.prototype) document.documentElement.data
 ## Текст, системные полосы, переходы
 
 - **Размер шрифта.** Все стили в rem. iOS: `html { font: -apple-system-body; }` и `body { font-family: var(--font-ui); }`, тогда 1 rem = 17 px по умолчанию и растёт с Dynamic Type. Android: корень 16 px, системный масштаб шрифта Chrome применяет сам.
-- **Системные полосы.** На обеих `viewport-fit=cover` и отступы `env(safe-area-inset-*)`. iOS: `apple-mobile-web-app-status-bar-style` равно `black-translucent`, полосу под часами красит сама страница. Android: от края до края; `theme-color` по теме (`<meta name="theme-color" media="(prefers-color-scheme: dark)">`), скрипт темы меняет его при выборе человека.
+- **Системные полосы.** На обеих `viewport-fit=cover` и отступы `env(safe-area-inset-*)`. iOS: `apple-mobile-web-app-status-bar-style` равно `default` — часы и батарея тёмные на светлой полосе системы, страница начинается под ней (`black-translucent` рисует их белыми и в светлой теме на бумаге 2.0 их не видно). Android: от края до края; `theme-color` по теме (`<meta name="theme-color" media="(prefers-color-scheme: dark)">`), скрипт темы меняет его при выборе человека.
 - **Переход между экранами.** View Transitions. iOS: новый экран въезжает справа, прежний уходит на 30 % влево, «назад» — наоборот, 350 мс. Android: общая ось X Material 3, сдвиг на 30 px с перекрёстным затуханием, 300 мс. Без движения — мгновенно.
 - **Установка и уведомления.** iOS: уведомления работают только у приложения с экрана «Домой» (iOS 16.4 и новее), поэтому в «Ещё» есть подсказка «Поделиться → На экран „Домой“». Android: системное предложение установки Chrome и значок `maskable`.
 

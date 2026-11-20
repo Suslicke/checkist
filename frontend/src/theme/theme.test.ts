@@ -332,7 +332,7 @@ describe('theme contract in the files', () => {
     expect(html).toContain('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@400..800&amp;family=Onest:wght@400..800&amp;family=JetBrains+Mono:wght@400..600&amp;display=swap" />')
     expect(html).not.toContain('Manrope')
     // The status bar of an installed app on iPhone is painted by the page (the top bar keeps the safe area).
-    expect(html).toContain('<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />')
+    expect(html).toContain('<meta name="apple-mobile-web-app-status-bar-style" content="default" />')
     expect(tokens).not.toContain('@font-face')
     expect(tokens).not.toMatch(/url\(/)
     expect(tokens).not.toContain('Oswald')

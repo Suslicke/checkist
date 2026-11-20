@@ -22,7 +22,7 @@
 .ck-shell-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .skip-link { position: absolute; top: var(--ck-space-2); left: var(--ck-space-2); z-index: var(--ck-z-skip-link); display: inline-flex; align-items: center; min-height: var(--ck-tap); padding: 0 var(--ck-space-4); border: 1px solid var(--ck-line); border-radius: var(--ck-radius-field); background: var(--ck-surface); color: var(--ck-ink); box-shadow: var(--ck-shadow-float); font-weight: 600; transform: translateY(-200%); }
-/* Below the status bar of an installed app on iPhone (black-translucent). */
+/* Below the cut-out of a phone (env(safe-area-inset-top): 0 under the "default" status bar of an installed iPhone app). */
 .skip-link:focus { transform: translateY(env(safe-area-inset-top, 0px)); }
 
 /* The header of a wide screen: the surface with a hairline under it, the logo, the menu and the actions in one row. Its

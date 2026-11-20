@@ -58,9 +58,10 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Чекист" />
-    <!-- "black-translucent": the page paints under the status bar of an installed app on iPhone; the top bar of the shell
-         (src/shell.css) keeps its content below it by env(safe-area-inset-top). -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- "default": iOS draws the clock and the battery dark on its own light bar and starts the page below it. "black-translucent"
+         would paint them white over the page in both themes — unreadable on the light paper of 2.0 (2026-11-20). The top bar of
+         the shell (src/shell.css) still adds env(safe-area-inset-top), which is 0 here and the cut-out height elsewhere. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <!-- Geologica (display), Onest (interface) and JetBrains Mono (the paper receipt), OFL 1.1, from Google Fonts: no
          Content-Security-Policy forbids it (deploy/Caddyfile, deploy/docker/Caddyfile); display=swap shows system-ui until
          the fonts arrive. One request, variable weights. -->
