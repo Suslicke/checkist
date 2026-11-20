@@ -24,7 +24,9 @@ describe('«Ещё» as a screen of its own (2026-10-13, Vitest/SSR, not browser
 
   it('shows the person and the family, then «Данные», «Настройки» and «Оформление»; the money sections are the screen «Деньги» (2026-10-26)', () => {
     const html = view(person)
-    expect(html).toContain('<a class="ck-panel more-profile" aria-label="Аккаунт: Андрей" href="/account"><span class="more-avatar" aria-hidden="true">А</span>')
+    // The name of the card is its words with «Аккаунт: » for the ear (label in name): no aria-label that hides the meta.
+    expect(html).toContain('<a class="ck-panel more-profile" href="/account"><span class="more-avatar" aria-hidden="true">А</span><span class="ck-row-main"><span class="more-profile-name"><span class="ck-visually-hidden">Аккаунт: </span>Андрей</span>')
+    expect(html).not.toMatch(/more-profile"[^>]*aria-label/)
     expect(html).toContain('Семья «Пустовые» · пароль и уведомления')
     expect(html).not.toContain('more-tiles')
     expect(html).not.toContain('href="/incomes"')

@@ -50,10 +50,11 @@ export default function MorePage() {
   const family = session.kind === 'user' ? session.household?.name : undefined
   const install = useSyncExternalStore(never, needsHomeScreen, () => false)
   return <div className="more ck-stack">
-    {account && <Link className="ck-panel more-profile" to={account.to} aria-label={`Аккаунт: ${name}`}>
+    {/* The name of the link is its words (WCAG 2.5.3, «label in name»): «Аккаунт: » for the ear only, then what the eye reads. */}
+    {account && <Link className="ck-panel more-profile" to={account.to}>
       <span className="more-avatar" aria-hidden="true">{initials(name)}</span>
       <span className="ck-row-main">
-        <span className="more-profile-name">{name}</span>
+        <span className="more-profile-name"><span className="ck-visually-hidden">Аккаунт: </span>{name}</span>
         <span className="ck-row-meta">{family ? `Семья «${family}» · пароль и уведомления` : 'Пароль и уведомления'}</span>
       </span>
       <Icon name="forward" size={18} className="ck-icon more-chevron" />

@@ -115,9 +115,11 @@
      ink-2 на paper 5,88 / 7,19, на surface 6,41 / 6,69, на surface-2 5,40 / 5,94
      on-seal на seal 6,22 / 5,03; seal-ink на paper 7,37 / 8,37, на seal-soft 6,72 / 6,90
      paper на ink (выбранный чип) 16,15 / 16,50; inv-action на ink 10,74 / 6,84
-     income на surface 5,20 / 8,73; over 4,90 / 8,32; error 7,42 / 7,21
-     на мягкой подложке своего тона: income 4,55 / 7,31; over 4,28 / 7,00 (в
-     светлой — только полужирным и со словом); error 6,24 / 6,17; gold-ink 6,19 / 8,56
+     income на surface 5,56 / 8,73, на surface-2 4,68 / 7,75; over на surface
+     5,39 / 8,32, на surface-2 4,54 / 7,40; error 7,42 / 7,21
+     на мягкой подложке своего тона: income 4,86 / 7,31; over 4,71 / 7,00;
+     error 6,24 / 6,17; gold-ink 6,19 / 8,56
+     (2026-11-20: светлые income и over темнее — Lighthouse нашёл 4,38 и 4,28)
      gold-ink на surface 6,56 / 10,50; focus на paper 5,29 / 11,30, на surface 5,76 / 10,50
      line-strong на surface 3,62 / 4,34, на paper 3,32 / 4,66
      over-bar на track 2,56 / 4,99 (полоса — не единственный признак: подпись словами)
@@ -292,9 +294,9 @@
   --ck-gold-ink: #7a5500;
   --ck-gold-soft: #fbf5ea;
 
-  --ck-income: #1e7a4c;
+  --ck-income: #1c7549;
   --ck-income-soft: #e7efea;
-  --ck-over: #b4530f;
+  --ck-over: #aa4e0e;
   --ck-over-bar: #d9701e;
   --ck-over-soft: #f6ebe4;
   --ck-error: #a3154a;
