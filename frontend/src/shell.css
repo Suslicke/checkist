@@ -158,7 +158,9 @@ footer { padding: var(--ck-space-5) 0 var(--ck-space-8); border-top: 1px solid v
   .ck-back-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   :root:not([data-platform="ios"]) .ck-back { width: 48px; height: 48px; border-radius: 50%; }
   :root:not([data-platform="ios"]) .ck-back:where(:hover) { background: color-mix(in oklab, var(--ck-ink) 8%, transparent); }
-  :root[data-platform="ios"] .ck-back { justify-content: flex-start; max-width: 40%; padding-right: var(--ck-space-2); color: var(--ck-seal-ink); font-size: var(--ck-text-title); font-weight: 400; white-space: nowrap; }
+  /* The label stays inside its half of the side room the centred title leaves (6.5rem): «‹ Обработка» never runs into
+     «Задание обработки»; a longer name ends with «…». */
+  :root[data-platform="ios"] .ck-back { justify-content: flex-start; max-width: calc(6.5rem - var(--ck-space-1)); padding-right: var(--ck-space-2); color: var(--ck-seal-ink); font-size: var(--ck-text-title); font-weight: 400; white-space: nowrap; }
   :root[data-platform="ios"] .ck-back-arrow { display: none; }
   :root[data-platform="ios"] .ck-back-chevron { display: block; flex: none; margin-right: -2px; stroke-width: 2.4; }
   :root[data-platform="ios"] .ck-back-text { position: static; display: block; width: auto; height: auto; min-width: 0; overflow: hidden; clip-path: none; text-overflow: ellipsis; }
