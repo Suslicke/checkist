@@ -17,8 +17,10 @@ const THIN = String.fromCharCode(0x202f)
  * (U+00A0 in words, U+202F inside an amount of `Money`). */
 const plain = (text: string) => text.replaceAll(NBSP, ' ').replaceAll(THIN, ' ')
 const html = (node: ReactElement) => plain(renderToStaticMarkup(node).replace(/<svg\b.*?<\/svg>/g, ''))
+/** <Money> repeats its amount for a screen reader as one phrase beside the digits; a person sees the digits once. */
+const once = (markup: string) => markup.replace(/(<span class="ck-money-digits" aria-hidden="true">(?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+<\/span>)<span class="ck-visually-hidden">[^<]*<\/span>/g, '$1')
 /** The text of the markup; the parts of one amount of `Money` (the whole, the kopecks, the sign) read as one word. */
-const words = (markup: string) => markup.replace(/<\/span><span class="ck-money-(?:frac|cur)">/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+const words = (markup: string) => once(markup).replace(/<\/span><span class="ck-money-(?:frac|cur)">/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
 const executor = { available: true, state: 'idle' as const, last_seen_at: null }
 const figure = { spent: '540679.83', previous: '469463.83', average: '446531.58', change_previous: '71216.00', change_average: '94148.25' }

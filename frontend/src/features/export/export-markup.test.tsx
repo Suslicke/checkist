@@ -90,7 +90,7 @@ describe('«Выгрузка» markup (Vitest/SSR, not browser visual acceptance
     const html = render()
     expect(html).toContain('<p class="export-preview" aria-live="polite"><span>Будет выгружено: </span><span class="ck-figures">2 чека</span>')
     // A sum of the preview is Money: the digits and the currency sign in their own parts, never wrapped.
-    expect(html).toMatch(/<span class="ck-money ck-money--inline"><span class="ck-money-int">5\u202f790<\/span><span class="ck-money-cur">\u202f₸<\/span><\/span>/u)
+    expect(html).toMatch(/<span class="ck-money ck-money--inline"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">5\u202f790<\/span><span class="ck-money-cur">\u202f₸<\/span><\/span><span class="ck-visually-hidden">5\u202f790\u202f₸<\/span><\/span>/u)
     expect(html).toContain('<div class="export-actions ck-action-bar">')
     expect(html).toContain('href="/api/export/?from=2026-10-01&amp;to=2026-10-31&amp;include=receipts%2Clines%2Ccategories%2Cstores%2Climits%2Csummary&amp;download=1" download=""><svg class="export-icon"')
     expect(html).toContain('target="_blank" rel="noopener">Открыть</a>')

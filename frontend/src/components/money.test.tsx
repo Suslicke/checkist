@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import Money, { MoneyView } from './Money'
+import type { MoneyProps } from './Money'
 import { MINUS, THIN_NBSP, moneyParts } from './money-parts'
 
 const T = THIN_NBSP
@@ -41,21 +42,51 @@ describe('parts of an amount (pure, strings only)', () => {
 describe('markup of a sum (Node server render)', () => {
   it('draws 312 418,40 ₸ as the whole part, the kopecks and the currency sign', () => {
     expect(renderToStaticMarkup(<Money value="312418.40" currency="KZT" size="hero" />)).toBe(
-      `<span class="ck-money ck-money--hero"><span class="ck-money-int">312${T}418</span><span class="ck-money-frac">,40</span>`
-      + `<span class="ck-money-cur">${T}₸</span></span>`,
+      `<span class="ck-money ck-money--hero"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">312${T}418</span>`
+      + `<span class="ck-money-frac">,40</span><span class="ck-money-cur">${T}₸</span></span><span class="ck-visually-hidden">312${T}418,40${T}₸</span></span>`,
     )
+  })
+
+  it('gives a screen reader the amount as one phrase: the styled parts are hidden from it, one plain string stands beside them', () => {
+    // TalkBack read «465 162», «,41», «₸» as three stops (Android tree of Chrome, 2026-11-20): the parts are aria-hidden, and
+    // the only words left to it are the same amount as plain text — or «сумма скрыта» while «Скрывать суммы» is on.
+    const shape = /^<span class="[^"]+"><span class="ck-money-digits" aria-hidden="true">((?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+)<\/span><span class="ck-visually-hidden">([^<]*)<\/span><\/span>$/
+    const read = (hidden: boolean, props: MoneyProps) => {
+      const html = renderToStaticMarkup(<MoneyView {...props} hidden={hidden} />)
+      const match = shape.exec(html)
+      expect(match, html).not.toBeNull()
+      expect(html.match(/aria-hidden=/g)).toHaveLength(1)
+      expect(html.match(/ck-visually-hidden/g)).toHaveLength(1)
+      return { seen: match![1].replace(/<[^>]+>/g, ''), heard: match![2] }
+    }
+    const amounts: [MoneyProps, string][] = [
+      [{ value: '465162.41', currency: 'KZT', size: 'hero' }, `465${T}162,41${T}₸`],
+      [{ value: '-120', currency: 'KZT', size: 'row' }, `${MINUS}120${T}₸`],
+      [{ value: '3400', currency: 'KZT', sign: 'minus' }, `${MINUS}3${T}400${T}₸`],
+      [{ value: '650000', currency: 'KZT', sign: 'plus', tone: 'in', size: 'display' }, `+650${T}000${T}₸`],
+      [{ value: '8978.80', currency: 'KZT', approx: true, className: 'ck-twin' }, `≈\u00a08${T}978,80${T}₸`],
+      [{ value: '20', currency: 'USD' }, `20${T}$`],
+      [{ value: '0.4' }, '0,40'],
+    ]
+    for (const [props, amount] of amounts) {
+      const shown = read(false, props)
+      expect(shown).toEqual({ seen: amount, heard: amount })
+      const hidden = read(true, props)
+      // The digits stay (blurred by CSS); a screen reader hears that a sum is hidden, never the sum.
+      expect(hidden).toEqual({ seen: amount, heard: 'сумма скрыта' })
+    }
   })
 
   it('draws a round amount without kopecks, inline by default', () => {
     expect(renderToStaticMarkup(<Money value="110000" currency="KZT" />))
-      .toBe(`<span class="ck-money ck-money--inline"><span class="ck-money-int">110${T}000</span><span class="ck-money-cur">${T}₸</span></span>`)
+      .toBe(`<span class="ck-money ck-money--inline"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">110${T}000</span><span class="ck-money-cur">${T}₸</span></span><span class="ck-visually-hidden">110${T}000${T}₸</span></span>`)
   })
 
   it('draws a negative amount with U+2212 and an amount without a currency as the number alone', () => {
     expect(renderToStaticMarkup(<Money value="-120" currency="KZT" size="row" />)).toBe(
-      `<span class="ck-money ck-money--row"><span class="ck-money-sign">${MINUS}</span><span class="ck-money-int">120</span><span class="ck-money-cur">${T}₸</span></span>`,
+      `<span class="ck-money ck-money--row"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-sign">${MINUS}</span><span class="ck-money-int">120</span><span class="ck-money-cur">${T}₸</span></span><span class="ck-visually-hidden">${MINUS}120${T}₸</span></span>`,
     )
-    expect(renderToStaticMarkup(<Money value="15.5" />)).toBe('<span class="ck-money ck-money--inline"><span class="ck-money-int">15</span><span class="ck-money-frac">,50</span></span>')
+    expect(renderToStaticMarkup(<Money value="15.5" />)).toBe('<span class="ck-money ck-money--inline"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">15</span><span class="ck-money-frac">,50</span></span><span class="ck-visually-hidden">15,50</span></span>')
   })
 
   it('draws a dash for an absent value', () => {
@@ -65,10 +96,10 @@ describe('markup of a sum (Node server render)', () => {
 
   it('marks a converted amount with «≈ » and an income with «+» in its tone', () => {
     expect(renderToStaticMarkup(<Money value="8979" currency="KZT" approx className="ck-twin" />)).toBe(
-      `<span class="ck-money ck-money--inline ck-twin"><span class="ck-money-approx">≈\u00a0</span><span class="ck-money-int">8${T}979</span><span class="ck-money-cur">${T}₸</span></span>`,
+      `<span class="ck-money ck-money--inline ck-twin"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-approx">≈\u00a0</span><span class="ck-money-int">8${T}979</span><span class="ck-money-cur">${T}₸</span></span><span class="ck-visually-hidden">≈\u00a08${T}979${T}₸</span></span>`,
     )
     expect(renderToStaticMarkup(<Money value="650000" currency="KZT" sign="plus" tone="in" size="display" />)).toBe(
-      `<span class="ck-money ck-money--display ck-money--in"><span class="ck-money-sign">+</span><span class="ck-money-int">650${T}000</span><span class="ck-money-cur">${T}₸</span></span>`,
+      `<span class="ck-money ck-money--display ck-money--in"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-sign">+</span><span class="ck-money-int">650${T}000</span><span class="ck-money-cur">${T}₸</span></span><span class="ck-visually-hidden">+650${T}000${T}₸</span></span>`,
     )
   })
 

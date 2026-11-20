@@ -56,7 +56,7 @@ describe('swipe and «Удалено · Отменить» (2026-10-13)', () => 
     const html = renderToStaticMarkup(<ReceiptsView query={{ page: 1 }} state={{ kind: 'ok', data: page([photo, manual]) }} retry={noop}
       hidden={new Set([2])} onDelete={noop} today="2026-10-12" />)
     expect(html).not.toContain('href="/receipts/2"')
-    expect(html).toContain('<span class="spends-day-sum"><span class="ck-money ck-money--inline"><span class="ck-money-int">18\u202f940</span><span class="ck-money-cur">\u202f₸</span></span></span>')
+    expect(html).toContain('<span class="spends-day-sum"><span class="ck-money ck-money--inline"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">18\u202f940</span><span class="ck-money-cur">\u202f₸</span></span><span class="ck-visually-hidden">18\u202f940\u202f₸</span></span></span>')
     expect(html).toContain(`1${NBSP}трата · Страница 1 из 1`)
   })
 

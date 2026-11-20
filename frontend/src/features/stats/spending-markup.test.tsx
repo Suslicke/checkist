@@ -16,8 +16,10 @@ import { shortAnswer } from './spending-tail-test-support'
 const read = (name: string) => statsFixture(name) as Spending
 const noop = () => {}
 const count = (html: string, pattern: RegExp) => (html.match(pattern) ?? []).length
+/** <Money> repeats its amount for a screen reader as one phrase beside the digits; a person sees the digits once. */
+const once = (markup: string) => markup.replace(/(<span class="ck-money-digits" aria-hidden="true">(?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+<\/span>)<span class="ck-visually-hidden">[^<]*<\/span>/g, '$1')
 /** The words of the markup: a sum drawn by Money reads as one value, «13 041,07 €». */
-const text = (html: string) => html.replace(/<span class="ck-money-(?:int|frac|cur|sign|approx)">([^<]*)<\/span>/g, '$1')
+const text = (html: string) => once(html).replace(/<span class="ck-money-(?:int|frac|cur|sign|approx)">([^<]*)<\/span>/g, '$1')
   .replace(/<[^>]+>/g, ' ').replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ')
 
 const countries: CountryEntry[] = [
@@ -48,7 +50,7 @@ describe('spending screen markup (Vitest/SSR — not what the browser shows, foc
     expect(plain).toContain('Итого по чекам, € 13 041,07 € 373 чека')
     expect(plain).toContain('Итого по чекам, ₸ 438 091,92 ₸')
     // Чекист 2.0: the sums are Money; the first total is the main number of the screen (display), the other a title.
-    expect(html).toContain('<p class="spending-total spending-total-main"><span class="ck-money ck-money--display"><span class="ck-money-int">13\u202f041</span><span class="ck-money-frac">,07</span>')
+    expect(html).toContain('<p class="spending-total spending-total-main"><span class="ck-money ck-money--display"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">13\u202f041</span><span class="ck-money-frac">,07</span>')
     expect(count(html, /ck-money--display/g)).toBe(1)
     expect(html).toContain('<p class="spending-total"><span class="ck-money ck-money--title">')
     expect(plain).toContain('Продукты питания 2 240 строк · 372 чека. 5 590,75 € 42,73 %')

@@ -5,8 +5,10 @@ import { incomeSeries } from '../incomes/incomes-state'
 import { IncomeStatsBlocks } from './IncomesStatsPage'
 
 const plain = (markup: string) => markup.replace(/[\u00a0\u202f]/g, ' ')
+/** <Money> repeats its amount for a screen reader as one phrase beside the digits; a person sees the digits once. */
+const once = (markup: string) => markup.replace(/(<span class="ck-money-digits" aria-hidden="true">(?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+<\/span>)<span class="ck-visually-hidden">[^<]*<\/span>/g, '$1')
 /** The words of the markup: a sum drawn by Money reads as one value, «+950 000 ₸». */
-const text = (markup: string) => plain(markup.replace(/<span class="ck-money-(?:int|frac|cur|sign|approx)">([^<]*)<\/span>/g, '$1'))
+const text = (markup: string) => plain(once(markup).replace(/<span class="ck-money-(?:int|frac|cur|sign|approx)">([^<]*)<\/span>/g, '$1'))
   .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 const stats = (patch: Partial<IncomeStats> = {}): IncomeStats => ({
   months: 12, month_from: '2025-11', month_to: '2026-10', base_currency: 'KZT', income: '1000000.00', spent: '200000.00',

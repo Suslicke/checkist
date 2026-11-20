@@ -26,9 +26,11 @@ const metas = (html: string) => [...html.matchAll(/<span class="spends-row-meta"
 /** The provenance stamps of the rows, in order. */
 const stamps = (html: string) => [...html.matchAll(/<span class="ck-stamp spends-stamp" data-source="([a-z]+)">([^<]*)<\/span>/g)].map((match) => `${match[1]}: ${match[2]}`)
 const THIN = '\u202f'
-/** The markup of `<Money>` (components/Money.tsx) of an amount, as a row of the list or the size of the text. */
+/** The markup of `<Money>` (components/Money.tsx) of an amount, as a row of the list or the size of the text: the parts
+ * hidden from a screen reader, which hears the same amount as one phrase beside them. */
 const money = (int: string, frac: string, sign: string, size = 'inline') =>
-  `<span class="ck-money ck-money--${size}"><span class="ck-money-int">${int}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">${THIN}${sign}</span></span>`
+  `<span class="ck-money ck-money--${size}"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">${int}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}`
+  + `<span class="ck-money-cur">${THIN}${sign}</span></span><span class="ck-visually-hidden">${int}${frac}${THIN}${sign}</span></span>`
 const page = (results: ReceiptListItem[]): Page<ReceiptListItem> => ({ count: results.length, page: 1, page_size: 50, pages: 1, results })
 const family = ownerChips({ kind: 'user', mode: 'accounts', user: { id: 1, username: 'andrey', is_staff: false },
   household: { id: 4, name: 'Семья', members: ['andrey', 'liza'],

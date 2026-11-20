@@ -11,9 +11,12 @@ import { categoryFixture, limitsFixture, monthlyFixture, pricesFixture, suggeste
 const noop = () => {}
 /** Markup as a person reads it: non-breaking spaces as ordinary ones. */
 const html = (node: React.ReactElement) => renderToStaticMarkup(node).replace(/[\u00a0\u202f]/g, ' ')
+/** <Money> repeats its amount for a screen reader as one phrase beside the digits; a person sees the digits once. */
+const once = (markup: string) => markup.replace(/(<span class="ck-money-digits" aria-hidden="true">(?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+<\/span>)<span class="ck-visually-hidden">[^<]*<\/span>/g, '$1')
 /** The words of the markup: a sum drawn by Money reads as one value, «179,73 €». */
-const text = (markup: string) => markup
+const text = (markup: string) => once(markup)
   .replace(/<span class="ck-money-(?:int|frac|cur|sign|approx)">([^<]*)<\/span>/g, '$1')
+  .replace(/<span class="ck-money-digits" aria-hidden="true">([^<]*)<\/span>/g, '$1')
   .replace(/<span class="ck-money[^"]*">([^<]*)<\/span>/g, '$1')
   .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 const ok = <T,>(data: T) => ({ kind: 'ok' as const, data })

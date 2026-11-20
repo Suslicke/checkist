@@ -152,13 +152,14 @@ function WhereCard({ block, data, current, date }: { block: DashboardCurrency; d
           <i className="dash-legend-swatch" aria-hidden="true" />
           {row.categoryId === null ? <span className="dash-legend-name">{row.name}</span>
             : <Link className="dash-legend-name" to={categorySpendsHref(row.categoryId, data.month)}>{row.name}</Link>}
-          <Money className="dash-legend-amount" value={row.amount} currency={block.currency} />
+          {/* A space between the name and the sum: a screen reader would join «Жильё187 990 ₸» without it. */}
+          {' '}<Money className="dash-legend-amount" value={row.amount} currency={block.currency} />
         </li>)}
         {legend.more > 0 && <li className="dash-legend-row dash-legend-rest"><i className="dash-legend-swatch" aria-hidden="true" /><Link className="dash-legend-name" to="/stats">ещё {legend.more}</Link></li>}
         {legend.remainder !== null && <li className={`dash-legend-row dash-legend-rest${over ? ' is-over' : ''}`}>
           <i className="dash-legend-swatch" aria-hidden="true" />
           <span className="dash-legend-name">{over ? 'Сверх бюджета' : 'Остаток бюджета'}</span>
-          <Money className="dash-legend-amount" value={decimalOf(over ? -legend.remainder! : legend.remainder!)} currency={block.currency} tone={over ? 'over' : undefined} />
+          {' '}<Money className="dash-legend-amount" value={decimalOf(over ? -legend.remainder! : legend.remainder!)} currency={block.currency} tone={over ? 'over' : undefined} />
         </li>}
       </ul>
     </div>

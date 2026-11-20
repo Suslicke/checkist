@@ -116,7 +116,7 @@ describe('«Деньги» markup (Vitest/SSR, not browser visual acceptance)', 
     expect(money(card.slice(card.indexOf('ck-money--display'), card.indexOf('money-flow')))).toContain('381 055 ₸')
     expect(card).toContain('<div class="money-flow" role="img" aria-label="Поток месяца: потрачено')
     expect(card).toContain('<i class="money-flow-spent" style="flex:12750000"></i><i class="money-flow-payments" style="flex:35644500"></i><i class="money-flow-plans" style="flex:18500000"></i><i class="money-flow-free" style="flex:38105500"></i>')
-    expect(card).toContain('<div class="money-line money-line-income"><dt><i class="money-key money-key-income" aria-hidden="true"></i>Доход</dt><dd><span class="ck-money ck-money--row ck-money--in"><span class="ck-money-sign">+</span>')
+    expect(card).toContain('<div class="money-line money-line-income"><dt><i class="money-key money-key-income" aria-hidden="true"></i>Доход</dt><dd><span class="ck-money ck-money--row ck-money--in"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-sign">+</span>')
     expect(card).toContain('<dt><i class="money-key money-key-aside" aria-hidden="true"></i>Отложено в цели</dt>')
     const over = view({ ...moneyFixture(), income: null, flow: { ...moneyFixture().flow, free: '-2500.00' } })
     expect(over).toContain('<div class="money-figure is-over"><h2 id="money-month-heading" class="money-figure-label">Перерасход в\u00a0октябре</h2><span class="ck-money ck-money--display ck-money--over">')
@@ -131,7 +131,7 @@ describe('«Деньги» markup (Vitest/SSR, not browser visual acceptance)', 
       ['incomes', '/incomes?month=2026-10'], ['payments', '/recurring'], ['plans', '/planned?month=2026-10'], ['goals', '/goals'],
     ])
     expect(hub).toContain('<span class="ck-row-badge money-tile-icon money-tone-in" aria-hidden="true"></span><span class="money-tile-title">Доходы</span>')
-    expect(hub).toContain('<span class="money-tile-value"><span class="ck-money ck-money--title ck-money--in"><span class="ck-money-sign">+</span>')
+    expect(hub).toContain('<span class="money-tile-value"><span class="ck-money ck-money--title ck-money--in"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-sign">+</span>')
     expect(hub).toContain(`<span class="money-tile-note">2 из 5 оплачено · Аренда ${nb('через 2 дня')}</span>`)
     expect(hub).toContain(`<span class="money-tile-value">${nb('62 %')}</span><span class="ck-bar money-tile-bar" aria-hidden="true"><span style="width:62%"></span></span>`)
     expect(hub).toContain(`<span class="money-tile-note">«Зима» ${nb('38 %')} · «Отпуск» ${nb('83 %')}</span>`)

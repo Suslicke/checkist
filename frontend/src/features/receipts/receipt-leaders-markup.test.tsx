@@ -135,7 +135,7 @@ describe('the lines of a receipt as its paper slip (Vitest/SSR, not browser visu
     expect(html).toContain('<span class="receipt-printed-name">Капучино</span><span class="receipt-note">Кафе</span>')
     expect(html).toContain(`<span class="receipt-note">2\u00a0шт × 300,00\u00a0₸</span>`)
     // The amount of a position is a Money of 2.0, with its currency.
-    expect(html).toContain('<span class="receipt-position-amount"><span class="receipt-visually-hidden">Сумма: </span><span class="ck-money ck-money--row"><span class="ck-money-int">1\u202f500</span><span class="ck-money-cur">\u202f₸</span></span></span>')
+    expect(html).toContain('<span class="receipt-position-amount"><span class="receipt-visually-hidden">Сумма: </span><span class="ck-money ck-money--row"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">1\u202f500</span><span class="ck-money-cur">\u202f₸</span></span><span class="ck-visually-hidden">1\u202f500\u202f₸</span></span></span>')
   })
 
   it('has no date in a line: nothing of a date outside <time>', () => {

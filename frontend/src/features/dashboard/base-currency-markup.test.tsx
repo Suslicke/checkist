@@ -16,9 +16,18 @@ import { legacyLimit } from './limits-state'
 
 const nb = (text: string) => text.replaceAll(' ', '\u00a0')
 const noop = () => {}
+/** <Money> repeats its amount for a screen reader as one phrase beside the digits; a person sees the digits once. */
+const seen = (html: string) => html.replace(/(<span class="ck-money-digits" aria-hidden="true">(?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+<\/span>)<span class="ck-visually-hidden">[^<]*<\/span>/g, '$1')
 /** What a person reads: no tags, one kind of space (the markup of other screens is theirs to change). */
-const words = (html: string) => html.replace(/<svg\b.*?<\/svg>/g, '').replace(/<[^>]+>/g, '').replace(/[\u00a0\u202f]/g, ' ')
-const money = (int: string, sign: string, frac = '') => `<span class="ck-money-int">${int.replaceAll(' ', '\u202f')}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f${sign}</span>`
+const words = (html: string) => seen(html.replace(/<svg\b.*?<\/svg>/g, '')).replace(/<[^>]+>/g, '').replace(/[\u00a0\u202f]/g, ' ')
+/** The inside of <Money>: the parts hidden from a screen reader («≈ » first for a converted amount), and the same amount as
+ * the one phrase it hears. */
+const money = (int: string, sign: string, frac = '', approx = false) => {
+  const whole = int.replaceAll(' ', '\u202f')
+  const near = approx ? '≈\u00a0' : ''
+  return `<span class="ck-money-digits" aria-hidden="true">${approx ? `<span class="ck-money-approx">${near}</span>` : ''}<span class="ck-money-int">${whole}</span>`
+    + `${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f${sign}</span></span><span class="ck-visually-hidden">${near}${whole}${frac}\u202f${sign}</span>`
+}
 
 describe('money in the family base currency (2026-10-13)', () => {
   it('shows the converted twin beside an amount in another currency only', () => {
@@ -48,7 +57,7 @@ describe('«Главная» in the base currency', () => {
   }
   it('shows «20 $» with «≈ 8 978,80 ₸» under it, and the spends without a rate in their own card', () => {
     const html = renderToStaticMarkup(<DashboardView data={data()} today="2026-10" date="2026-10-12" />)
-    expect(html).toContain(`<span class="ck-row-amount dash-recent-amount"><span class="ck-money ck-money--row">${money('20', '$')}</span><span class="ck-money ck-money--inline ck-twin"><span class="ck-money-approx">≈\u00a0</span>${money('8 978', '₸', ',80')}</span></span>`)
+    expect(html).toContain(`<span class="ck-row-amount dash-recent-amount"><span class="ck-money ck-money--row">${money('20', '$')}</span><span class="ck-money ck-money--inline ck-twin">${money('8 978', '₸', ',80', true)}</span></span>`)
     expect(html).toContain(`<span class="ck-row-amount dash-recent-amount"><span class="ck-money ck-money--row">${money('4 500', '₸')}</span></span>`)
     expect(html).toContain('<h2 id="dash-unconverted-heading">Без курса</h2>')
     expect(html).toContain('Нет курса Нацбанка на дату покупки — не в итоге')
@@ -98,7 +107,7 @@ describe('«Лимиты» only in the base currency', () => {
     expect(html).toContain('выбирает главный в семье')
   })
   it('shows a limit of another currency converted, ready to move to the base one', () => {
-    expect(html).toContain(`<span class="limits-current"><span class="ck-money ck-money--inline">${money('50', '$')}</span> · <span class="ck-money ck-money--inline ck-twin"><span class="ck-money-approx">≈\u00a0</span>${money('22 447', '₸')}</span></span>`)
+    expect(html).toContain(`<span class="limits-current"><span class="ck-money ck-money--inline">${money('50', '$')}</span> · <span class="ck-money ck-money--inline ck-twin">${money('22 447', '₸', '', true)}</span></span>`)
     expect(html).toContain('aria-label="Удалить лимит «Кафе»"')
     expect(legacyLimit([limitFixture(), usd], 8, 'KZT')).toBe(usd)
     expect(legacyLimit([limitFixture(), usd, { ...usd, id: 10, currency: 'KZT' }], 8, 'KZT')).toBeUndefined()

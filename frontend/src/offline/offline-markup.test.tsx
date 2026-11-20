@@ -100,7 +100,7 @@ describe('pending spends on «Чеки»', () => {
     // The day in words (docs/design-system README «Голос»).
     expect(markup).toContain('<time dateTime="2026-10-12">12\u00a0октября</time>')
     // The amounts are Money of 2.0, exact.
-    expect(markup).toContain('<span class="pending-spend-amount"><span class="ck-money ck-money--row"><span class="ck-money-int">450</span><span class="ck-money-cur">\u202f₸</span></span></span>')
+    expect(markup).toContain('<span class="pending-spend-amount"><span class="ck-money ck-money--row"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">450</span><span class="ck-money-cur">\u202f₸</span></span><span class="ck-visually-hidden">450\u202f₸</span></span></span>')
     expect(markup).toContain('<span class="ck-money-int">1\u202f200</span><span class="ck-money-frac">,50</span>')
     expect(markup.match(/>Исправить</g)).toHaveLength(2)
     expect(markup.match(/>Удалить</g)).toHaveLength(2)

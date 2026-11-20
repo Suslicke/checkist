@@ -14,8 +14,13 @@ const view = (data: Dashboard = dashboardFixture(), today = '2026-10', date = '2
 const between = (html: string, start: string, end: string) => html.slice(html.indexOf(start), html.indexOf(end, html.indexOf(start)))
 /** The pictures (components/Icon) are left out where an expectation reads the words. */
 const noIcons = (html: string) => html.replace(/<svg\b.*?<\/svg>/g, '')
-/** An amount as `Money` draws it: groups and the sign apart by U+202F. */
-const money = (int: string, frac = '', sign = '₸') => `<span class="ck-money-int">${int.replaceAll(' ', '\u202f')}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f${sign}</span>`
+/** An amount as `Money` draws it: groups and the sign apart by U+202F, the parts hidden from a screen reader, which hears
+ * the same amount as one phrase beside them. */
+const money = (int: string, frac = '', sign = '₸') => {
+  const whole = int.replaceAll(' ', '\u202f')
+  return `<span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">${whole}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f${sign}</span></span>`
+    + `<span class="ck-visually-hidden">${whole}${frac}\u202f${sign}</span>`
+}
 const inline = (int: string, frac = '', sign = '₸') => `<span class="ck-money ck-money--inline">${money(int, frac, sign)}</span>`
 
 describe('«Главная» markup (Vitest/SSR, not browser visual acceptance)', () => {

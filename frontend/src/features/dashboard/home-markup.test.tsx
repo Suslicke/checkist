@@ -10,9 +10,16 @@ const view = (data: Dashboard = homeFixture(), today = '2026-10', date = '2026-1
   renderToStaticMarkup(<DashboardView data={data} today={today} date={date} {...extra} />)
 const between = (html: string, start: string, end: string) => html.slice(html.indexOf(start), html.indexOf(end, html.indexOf(start)))
 const noIcons = (html: string) => html.replace(/<svg\b.*?<\/svg>/g, '')
+/** <Money> repeats its amount for a screen reader as one phrase beside the digits; a person sees the digits once. */
+const seen = (html: string) => html.replace(/(<span class="ck-money-digits" aria-hidden="true">(?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+<\/span>)<span class="ck-visually-hidden">[^<]*<\/span>/g, '$1')
 /** What a person reads: no tags, one kind of space. */
-const words = (html: string) => noIcons(html).replace(/<[^>]+>/g, ' ').replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ').trim()
-const money = (int: string, frac = '') => `<span class="ck-money-int">${int.replaceAll(' ', '\u202f')}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f₸</span>`
+const words = (html: string) => seen(noIcons(html)).replace(/<[^>]+>/g, ' ').replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ').trim()
+/** The inside of <Money> in tenge: the parts hidden from a screen reader, and the same amount as the one phrase it hears. */
+const money = (int: string, frac = '') => {
+  const whole = int.replaceAll(' ', '\u202f')
+  return `<span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">${whole}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f₸</span></span>`
+    + `<span class="ck-visually-hidden">${whole}${frac}\u202f₸</span>`
+}
 
 describe('«Главная» of Чекист 2.0 (Vitest/SSR, not browser visual acceptance)', () => {
   it('puts the month as the heading, the round steps after it («›» only while a later month is past), «Скрыть суммы» on the current month and the family', () => {
@@ -102,13 +109,13 @@ describe('«Главная» of Чекист 2.0 (Vitest/SSR, not browser visual
     const data = homeFixture()
     data.currencies[0].categories.push({ category_id: 14, name: 'Аптека', spent: '700.00', limit: null, limit_id: null })
     const legend = noIcons(between(view(data), '<ul class="dash-legend"', '</ul>'))
-    expect(legend).toContain(`<li class="dash-legend-row ck-tone-3"><i class="dash-legend-swatch" aria-hidden="true"></i><a class="dash-legend-name" href="/spends/category/3?month=2026-10">Продукты</a><span class="ck-money ck-money--inline dash-legend-amount">${money('92 300')}</span></li>`)
+    expect(legend).toContain(`<li class="dash-legend-row ck-tone-3"><i class="dash-legend-swatch" aria-hidden="true"></i><a class="dash-legend-name" href="/spends/category/3?month=2026-10">Продукты</a> <span class="ck-money ck-money--inline dash-legend-amount">${money('92 300')}</span></li>`)
     expect(legend.match(/dash-legend-row ck-tone-/g)).toHaveLength(4)
     expect(legend).not.toContain('Аптека')
     expect(legend).toContain('<a class="dash-legend-name" href="/stats">ещё 1</a>')
-    expect(legend).toContain(`<span class="dash-legend-name">Остаток бюджета</span><span class="ck-money ck-money--inline dash-legend-amount">${money('612 550')}</span>`)
+    expect(legend).toContain(`<span class="dash-legend-name">Остаток бюджета</span> <span class="ck-money ck-money--inline dash-legend-amount">${money('612 550')}</span>`)
     const over = noIcons(between(view({ ...data, budget: { amount: '200000.00', currency: 'KZT', spent: '287450.00' } }), '<ul class="dash-legend"', '</ul>'))
-    expect(over).toContain(`<span class="dash-legend-name">Сверх бюджета</span><span class="ck-money ck-money--inline ck-money--over dash-legend-amount">${money('87 450')}</span>`)
+    expect(over).toContain(`<span class="dash-legend-name">Сверх бюджета</span> <span class="ck-money ck-money--inline ck-money--over dash-legend-amount">${money('87 450')}</span>`)
   })
 
   it('draws the pulse: a bar a day, the days with spends, today, the days ahead flat, the dashed average day', () => {

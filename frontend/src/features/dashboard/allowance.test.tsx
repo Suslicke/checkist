@@ -9,7 +9,9 @@ import { LimitsView, MonthBudgetPanel } from './LimitsPage'
 
 /** Spaces of any width as one: the glue of money (lib/text.ts) is not what these tests check. */
 const plain = (text: string) => text.replace(/[\u00a0\u202f]/g, ' ')
-const words = (html: string) => plain(html.replace(/<svg\b.*?<\/svg>/g, '').replace(/<[^>]+>/g, ''))
+/** <Money> repeats its amount for a screen reader as one phrase beside the digits; a person sees the digits once. */
+const once = (html: string) => html.replace(/(<span class="ck-money-digits" aria-hidden="true">(?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+<\/span>)<span class="ck-visually-hidden">[^<]*<\/span>/g, '$1')
+const words = (html: string) => plain(once(html.replace(/<svg\b.*?<\/svg>/g, '')).replace(/<[^>]+>/g, ''))
 const seen = (value: { note: string }) => ({ ...value, note: plain(value.note) })
 const noop = () => {}
 const save = async () => undefined
@@ -58,12 +60,12 @@ describe('«Бюджет месяца» on «Главная» (2026-10-26: the g
     const hero = html.slice(html.indexOf('dash-hero'), html.indexOf('</section>', html.indexOf('dash-hero')))
     const ring = html.slice(html.indexOf('dash-where'), html.indexOf('</section>', html.indexOf('dash-where')))
     expect(words(hero)).toContain('из 400 000 ₸ бюджета')
-    expect(words(ring)).toContain('Остаток бюджета112 550 ₸')
+    expect(words(ring)).toContain('Остаток бюджета 112 550 ₸')
     expect(words(ring)).toContain('72 %бюджета')
     expect(html.slice(html.indexOf('dash-limits'))).not.toContain('dash-budget')
     const over = view({ budget: { amount: '200000.00', currency: 'KZT', spent: '287450.00' } })
     expect(words(over)).toContain('сверх бюджета на 87 450 ₸')
-    expect(words(over)).toContain('Сверх бюджета87 450 ₸')
+    expect(words(over)).toContain('Сверх бюджета 87 450 ₸')
   })
 
   it('is not drawn in a month without spends, and is absent without a budget', () => {
@@ -111,7 +113,7 @@ describe('the budget panel of «Лимиты»', () => {
     const html = renderToStaticMarkup(<MonthBudgetPanel family onSave={save}
       state={{ kind: 'ok', budget: { amount: '700000.00', currency: 'KZT', base_currency: 'KZT' } }} />)
     expect(html).toContain('<h2 id="limits-budget-heading" class="limits-small-heading">Бюджет месяца</h2>')
-    expect(html).toContain('<span class="limits-current"><span class="ck-money ck-money--inline"><span class="ck-money-int">700\u202f000</span><span class="ck-money-cur">\u202f₸</span></span></span>')
+    expect(html).toContain('<span class="limits-current"><span class="ck-money ck-money--inline"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">700\u202f000</span><span class="ck-money-cur">\u202f₸</span></span><span class="ck-visually-hidden">700\u202f000\u202f₸</span></span></span>')
     expect(html).toContain('value="700000"')
     // A tonal button: the save bar of the limits is the one seal of the screen.
     expect(html).toContain('<button type="submit" class="ck-button-secondary limits-budget-save">Сохранить бюджет</button>')

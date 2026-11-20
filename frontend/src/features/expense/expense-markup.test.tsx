@@ -110,14 +110,15 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
     expect(html).toContain('<option value="kg">кг</option>')
     // The exact sum stays in the field; the save button names it exactly by <Money>, kopecks when there are any.
     expect(html).toContain('<button type="submit" class="ck-btn-block expense-save">Сохранить · <span class="ck-money ck-money--inline">'
-      + '<span class="ck-money-int">350</span><span class="ck-money-frac">,50</span><span class="ck-money-cur">\u202f₸</span></span></button>')
+      + '<span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">350</span><span class="ck-money-frac">,50</span><span class="ck-money-cur">\u202f₸</span></span>'
+      + '<span class="ck-visually-hidden">350,50\u202f₸</span></span></button>')
   })
   it('folds every line into a card on a phone and unfolds a line with a message', () => {
     const panini = { ...newLine(), name: 'Панини', quantity: '2', price: '1790', amount: '3580' }
     const draft = { ...emptyDraft('KZT', '2026-10-12'), lines: [panini, { ...newLine(), name: 'Сок', amount: 'x' }] }
     const html = form(draft, { narrow: true, errors: { 'lines.1.amount': messages.lineAmount } }).replace(/[\u00a0\u202f]/g, ' ')
     expect(html).toContain('<span class="expense-line-title">Панини</span><span class="expense-line-detail">2 шт × 1 790,00 ₸</span></span>'
-      + '<span class="expense-line-sum"><span class="ck-money ck-money--row"><span class="ck-money-int">3 580</span><span class="ck-money-cur"> ₸</span></span></span>')
+      + '<span class="expense-line-sum"><span class="ck-money ck-money--row"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">3 580</span><span class="ck-money-cur"> ₸</span></span><span class="ck-visually-hidden">3 580 ₸</span></span></span>')
     expect(html).toMatch(/<button type="button" class="expense-line-summary" aria-expanded="false" aria-controls="expense-line-\d+-fields">/)
     expect(html).not.toContain(`id="expense-line-${panini.key}-name"`)
     // The line with a message is open, its field marked.
@@ -133,7 +134,7 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
     expect(html).toMatch(/<a class="expense-source-link" href="\/receipts\/7">Открыть чек с фото<svg[^>]*aria-hidden="true"/)
     expect(html).toContain('Скидка на весь чек: −50 ₸, уже вычтена из итога.')
     expect(html).toMatch(/<option value=""[^>]*>Как у товара<\/option>/)
-    expect(html).toContain('Сохранить · <span class="ck-money ck-money--inline"><span class="ck-money-int">850</span><span class="ck-money-cur"> ₸</span></span>')
+    expect(html).toContain('Сохранить · <span class="ck-money ck-money--inline"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">850</span><span class="ck-money-cur"> ₸</span></span><span class="ck-visually-hidden">850 ₸</span></span>')
     const statement = form({ ...emptyDraft('KZT', '2026-10-12'), amount: '1800', category: 1, method: 'kaspi_gold', statement: 'Выписка Kaspi Gold' })
     expect(statement).toMatch(/<p class="expense-source-mark" role="note"><svg[^>]*aria-hidden="true"[^>]*>.*?<\/svg>Из выписки: Kaspi Gold<\/p>/)
     expect(statement).toContain('<p class="expense-method-fixed">Kaspi Gold — банк выписки</p>')
@@ -141,7 +142,8 @@ describe('«Добавить трату» form (Vitest/SSR, not browser visual a
   it('names the exact amount on the save button, chooses the date by chips and keeps the calendar', () => {
     const html = form({ ...emptyDraft('KZT', '2026-10-11'), amount: '4500,40' }, { today: '2026-10-12' })
     expect(html).toContain('<button type="submit" class="ck-btn-block expense-save">Сохранить · <span class="ck-money ck-money--inline">'
-      + '<span class="ck-money-int">4\u202f500</span><span class="ck-money-frac">,40</span><span class="ck-money-cur">\u202f₸</span></span></button>')
+      + '<span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">4\u202f500</span><span class="ck-money-frac">,40</span><span class="ck-money-cur">\u202f₸</span></span>'
+      + '<span class="ck-visually-hidden">4\u202f500,40\u202f₸</span></span></button>')
     expect(html).toContain('<button type="button" class="ck-chip expense-day" aria-pressed="false">Сегодня</button>')
     expect(html).toContain('<button type="button" class="ck-chip expense-day" aria-pressed="true">Вчера</button>')
     expect(html).toContain('<div class="expense-row" role="group" aria-labelledby="expense-when-label"><span id="expense-when-label" class="expense-row-label">Когда</span>')

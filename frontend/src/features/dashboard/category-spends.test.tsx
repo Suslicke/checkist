@@ -90,7 +90,12 @@ describe('the route of «Траты категории»', () => {
 describe('«Траты категории» markup (Vitest/SSR, not browser visual acceptance)', () => {
   const view = (data = fixture(), today = '2026-10') => renderToStaticMarkup(<CategorySpendsView data={data} today={today} />)
   const noIcons = (html: string) => html.replace(/<svg\b.*?<\/svg>/g, '')
-  const money = (int: string, frac = '') => `<span class="ck-money-int">${int.replaceAll(' ', '\u202f')}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f₸</span>`
+  /** The inside of <Money> in tenge: the parts hidden from a screen reader, and the same amount as the one phrase it hears. */
+  const money = (int: string, frac = '') => {
+    const whole = int.replaceAll(' ', '\u202f')
+    return `<span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">${whole}</span>${frac ? `<span class="ck-money-frac">${frac}</span>` : ''}<span class="ck-money-cur">\u202f₸</span></span>`
+      + `<span class="ck-visually-hidden">${whole}${frac}\u202f₸</span>`
+  }
   it('heads with the path, the month and its steps in the first card, and the hero total', () => {
     const html = noIcons(view())
     expect(html).toContain('<nav class="cat-crumbs" aria-label="Категории выше"><a href="/spends/category/5?month=2026-10">Развлечения</a></nav>')

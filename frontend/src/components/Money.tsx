@@ -42,8 +42,11 @@ export function MoneyView({ value, currency, size = 'inline', sign = 'auto', app
     {parts.frac && <span className="ck-money-frac">{parts.frac}</span>}
     {symbol && <span className="ck-money-cur">{THIN_NBSP}{symbol}</span>}
   </>
-  if (!hidden) return <span className={classes}>{digits}</span>
-  return <span className={classes}><span className="ck-money-digits" aria-hidden="true">{digits}</span><span className="ck-visually-hidden">сумма скрыта</span></span>
+  // A screen reader hears the amount as one phrase: the styled parts (whole, kopecks, sign) would be three stops of
+  // TalkBack and VoiceOver (seen in the Android tree of Chrome, 2026-11-20), so they are hidden from it and one plain string
+  // stands beside them — the digits, or «сумма скрыта» while sums are hidden.
+  const spoken = hidden ? 'сумма скрыта' : `${approx ? `≈${NBSP}` : ''}${parts.sign}${parts.int}${parts.frac}${symbol ? `${THIN_NBSP}${symbol}` : ''}`
+  return <span className={classes}><span className="ck-money-digits" aria-hidden="true">{digits}</span><span className="ck-visually-hidden">{spoken}</span></span>
 }
 
 /**

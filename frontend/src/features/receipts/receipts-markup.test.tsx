@@ -193,8 +193,8 @@ describe('receipt screens (Vitest/SSR, not browser visual acceptance)', () => {
     expect(html.match(/Не распознано/g)).toHaveLength(2)
     expect(html).toContain('Возврат')
     // The amounts are Money of 2.0: the minus U+2212, the kopecks apart; a zero stays a zero.
-    expect(html).toContain('<span class="ck-money ck-money--display"><span class="ck-money-sign">\u2212</span><span class="ck-money-int">2</span><span class="ck-money-frac">,38</span><span class="ck-money-cur">\u202f€</span></span>')
-    expect(html).toContain('<dt>Сумма скидок</dt><dd class="receipt-number"><span class="ck-money ck-money--inline"><span class="ck-money-int">0</span><span class="ck-money-cur">\u202f€</span></span></dd>')
+    expect(html).toContain('<span class="ck-money ck-money--display"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-sign">\u2212</span><span class="ck-money-int">2</span><span class="ck-money-frac">,38</span><span class="ck-money-cur">\u202f€</span></span><span class="ck-visually-hidden">\u22122,38\u202f€</span></span>')
+    expect(html).toContain('<dt>Сумма скидок</dt><dd class="receipt-number"><span class="ck-money ck-money--inline"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">0</span><span class="ck-money-cur">\u202f€</span></span><span class="ck-visually-hidden">0\u202f€</span></span></dd>')
     expect(renderToStaticMarkup(<ReceiptTaxes taxes={[{ ...taxes.results[0], tax_rate: { ...taxes.results[0].tax_rate, kind: 'exempt', rate: null }, tax_code: '' }]} currency="EUR" />)).toContain('Без НДС')
   })
   it('empty unfiltered list invites first upload, filtered list offers reset', () => {

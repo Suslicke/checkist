@@ -62,8 +62,10 @@ describe('«История изменений» markup', () => {
     expect(html).toContain('<option value="">Все категории</option>')
     expect(html).toContain('<option value="2" selected="">Продукты › Молочное</option>')
     expect(html).toContain('<time dateTime="2026-09-20T12:00:00Z">20.09.2026</time>')
-    // The sums by Money: «120 000 → 150 000 ₸» as a person reads it.
-    expect(html.replace(/<[^>]+>/g, '').replace(/[\u00a0\u202f]/g, ' ')).toContain('120 000 → 150 000 ₸')
+    // The sums by Money: «120 000 → 150 000 ₸» as a person reads it (each Money repeats its amount for a screen reader as
+    // one phrase beside the digits; a person sees the digits once).
+    const seen = html.replace(/(<span class="ck-money-digits" aria-hidden="true">(?:<span class="ck-money-[a-z]+">[^<]*<\/span>)+<\/span>)<span class="ck-visually-hidden">[^<]*<\/span>/g, '$1')
+    expect(seen.replace(/<[^>]+>/g, '').replace(/[\u00a0\u202f]/g, ' ')).toContain('120 000 → 150 000 ₸')
     expect(html).toContain('<span class="limits-history-text">')
     expect(html).toContain('class="limits-history-badge limits-history-up"')
     expect(html).not.toContain('201 → 180')

@@ -68,7 +68,7 @@ describe('the amount calculator (no eval)', () => {
     expect(html).toContain('<button type="button" class="ck-icon-button expense-calc-key" aria-label="Плюс">+</button>')
     expect(html).toContain('<button type="button" class="ck-icon-button expense-calc-key" aria-label="Разделить">÷</button>')
     expect(html).toContain('<output class="expense-calc-result" for="expense-amount">= 12\u00a0350</output>')
-    expect(html).toContain('Сохранить · <span class="ck-money ck-money--inline"><span class="ck-money-int">12\u202f350</span><span class="ck-money-cur">\u202f₸</span></span>')
+    expect(html).toContain('Сохранить · <span class="ck-money ck-money--inline"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">12\u202f350</span><span class="ck-money-cur">\u202f₸</span></span><span class="ck-visually-hidden">12\u202f350\u202f₸</span></span>')
   })
 })
 
@@ -112,7 +112,7 @@ describe('past spends under «Скажите словами» (no model)', () =>
     expect(typed).toContain('<span class="ck-row-title">CLAUDE.AI SUBSCRIPTION</span><span class="ck-row-meta">Связь и подписки · 12.09</span>')
     // A 2.0 row: the tile of a repeat, the title and meta, the amount by <Money>.
     expect(typed).toMatch(/<button type="button" class="ck-row expense-suggest-row"><span class="ck-row-badge" aria-hidden="true"><svg/)
-    expect(typed).toContain('<span class="ck-row-amount"><span class="ck-money ck-money--row"><span class="ck-money-int">225</span><span class="ck-money-cur">\u202f$</span></span></span>')
+    expect(typed).toContain('<span class="ck-row-amount"><span class="ck-money ck-money--row"><span class="ck-money-digits" aria-hidden="true"><span class="ck-money-int">225</span><span class="ck-money-cur">\u202f$</span></span><span class="ck-visually-hidden">225\u202f$</span></span></span>')
     expect(typed).not.toContain('Частые траты')
     const empty = renderToStaticMarkup(<TextHintView text="" view={{ kind: 'repeated' }} onText={noop} onSubmit={noop}
       suggestions={[claude]} frequent={[claude]} />)
